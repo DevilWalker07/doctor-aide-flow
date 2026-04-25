@@ -94,23 +94,74 @@ export async function saveEvolution(patientId: string, evolutionText: string) {
 
 export function usePatients() {
   const [patients, setPatients] = useState<Patient[]>(seed);
-  useEffect(() => { setPatients(read()); }, []);
-  const refresh = () => setPatients(read());
+  const [loading, setLoading] = useState(true);
+
+  const refresh = async () => {
+    if (hasSupabaseConfig) {
+      try {
+        const { data, error } = await supabase
+          .from("patients")
+          .select("*")
+          .order("bed", { ascending: true });
+        
+        if (error) throw error;
+        
+        if (data) {
+          const mapped: Patient[] = data.map(p => ({
+            id: p.id,
+            bed: p.bed,
+            name: p.name,
+            age: p.age,
+            sex: p.sex as "M" | "F",
+            sector: p.ward,
+            admission: p.admission_date,
+            hda: p.hda || "",
+            status: p.status || "PENDENTE",
+            data: p.diagnoses_json as PatientData
+          }));
+          setPatients(mapped);
+          write(mapped);
+        }
+      } catch (e) {
+        console.error("Erro ao buscar pacientes do Supabase, usando local", e);
+        setPatients(read());
+      }
+    } else {
+      setPatients(read());
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    refresh();
+
+    if (hasSupabaseConfig) {
+      const channel = supabase
+        .channel("patients_changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "patients" }, () => {
+          refresh();
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, []);
   
   const updatePatient = async (id: string, updates: Partial<Patient>) => {
     const p = getPatient(id);
     if (!p) return;
     const updated = { ...p, ...updates };
     await savePatient(updated);
-    refresh();
+    // O refresh virá via subscrição ou manual
+    if (!hasSupabaseConfig) refresh();
   };
 
   const deletePatientStore = async (id: string) => {
     await deletePatient(id);
-    refresh();
+    if (!hasSupabaseConfig) refresh();
   };
 
-  return { patients, refresh, setPatients, updatePatient, deletePatient: deletePatientStore };
+  return { patients, refresh, setPatients, updatePatient, deletePatient: deletePatientStore, loading };
 }
 
 export function getPatient(id: string): Patient | undefined {
@@ -124,7 +175,7 @@ export async function savePatient(p: Patient) {
   if (idx >= 0) list[idx] = p; else list.push(p);
   write(list);
 
-  if (hasSupabaseConfig && p.id.length > 10) { // IDs mockados têm 2 chars, UUIDs são maiores
+  if (hasSupabaseConfig) {
     try {
       await supabase.from("patients").upsert({
         id: p.id,
@@ -136,6 +187,7 @@ export async function savePatient(p: Patient) {
         admission_date: p.admission,
         hda: p.hda,
         diagnoses_json: p.data,
+        status: p.status
       });
     } catch (e) {
       console.error("Falha ao sincronizar paciente com Supabase", e);
@@ -163,6 +215,8 @@ export async function addPatient(p: Omit<Patient, "id" | "status">): Promise<Pat
         ward: np.sector,
         admission_date: np.admission,
         hda: np.hda,
+        status: np.status,
+        diagnoses_json: np.data
       });
     } catch (e) {
       console.error("Falha ao salvar paciente no Supabase", e);

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCw, FlaskConical, FileText, Sparkles, Copy, X, Loader2, AlertTriangle, FileUp, ImageIcon, ClipboardPaste, Check, Stethoscope, Shield } from "lucide-react";
+import { ArrowLeft, RefreshCw, FlaskConical, FileText, Sparkles, Copy, X, Loader2, AlertTriangle, FileUp, ImageIcon, ClipboardPaste, Check, Stethoscope, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checklist, type ChecklistItem } from "@/components/evolucao/Checklist";
 import { getPatient, savePatient, usePatients, type Patient, type PatientData } from "@/lib/store";
@@ -8,6 +8,7 @@ import { ckdEpi2021, ckdStage, hgtStats, abxDay, formatDateBR, pcrTrend, getLabA
 import { toast } from "sonner";
 import { extractLabWithAI, generateEvolutionWithAI } from "@/lib/aiService";
 import { saveEvolution } from "@/lib/store";
+import { SettingsModal } from "@/components/SettingsModal";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -23,6 +24,7 @@ function EvolucaoPage() {
   const [labOpen, setLabOpen] = useState(false);
   const [evolOpen, setEvolOpen] = useState(false);
   const [labEdit, setLabEdit] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const p = getPatient(id);
@@ -81,6 +83,7 @@ function EvolucaoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-28">
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
       {/* Header */}
       <header className="bg-background/90 backdrop-blur-xl border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1500px] mx-auto px-6 py-4 flex items-center gap-4 flex-wrap">
@@ -98,16 +101,24 @@ function EvolucaoPage() {
             {abx && <Badge variant="ai">ATB D{abxD}/{abx.durDays}</Badge>}
             {trend === "rebound" && <Badge variant="destructive">PCR REASCENDENTE</Badge>}
           </div>
-
           <div className="ml-auto flex items-center gap-2.5">
             <button onClick={() => {
               if (patient) {
                 savePatient(patient);
                 toast.success("Sincronizado com sucesso!");
               }
-            }} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-[11px] font-bold uppercase tracking-widest hover:bg-secondary hover:border-border transition-all"><RefreshCw className="h-3.5 w-3.5" /> <span className="hidden sm:inline">SINCRONIZAR</span></button>
-            <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all"><FlaskConical className="h-3.5 w-3.5" /> <span className="hidden sm:inline">IMPORTAR LAB</span></button>
-            <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"><FileText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">GERAR EVOLUÇÃO</span></button>
+            }} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-[11px] font-bold uppercase tracking-widest hover:bg-secondary hover:border-border transition-all">
+              <RefreshCw className="h-3.5 w-3.5" /> <span className="hidden sm:inline">SINCRONIZAR</span>
+            </button>
+            <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all">
+              <FlaskConical className="h-3.5 w-3.5" /> <span className="hidden sm:inline">IMPORTAR LAB</span>
+            </button>
+            <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all">
+              <FileText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">GERAR EVOLUÇÃO</span>
+            </button>
+            <button onClick={() => setShowSettings(true)} className="h-10 w-10 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
+              <SettingsIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -1009,9 +1020,17 @@ function EvolutionModal({ open, close, content, pId }: { open: boolean; close: (
     if (open && pat) {
       setGenerating(true);
       // Tentamos a IA, mas se falhar ou demorar, o fallback local já é padrão-ouro
-      generateEvolutionWithAI(pat.data || {})
+      generateEvolutionWithAI({
+        name: pat.name,
+        age: pat.age,
+        sex: pat.sex,
+        hda: pat.hda,
+        data: pat.data,
+        previa: content
+      })
         .then(res => setFinalContent(res.toUpperCase()))
-        .catch(() => {
+        .catch((err) => {
+          console.error("AI Error:", err);
           const egfr = ckdEpi2021(parseFloat(pat.data?.lab?.raw?.["Creatinina"]?.replace(",", ".") || "0"), pat.age, pat.sex);
           const stage = ckdStage(egfr);
           const hgt = hgtStats([pat.data?.hgt?.h06, pat.data?.hgt?.h12, pat.data?.hgt?.h18, pat.data?.hgt?.h00]);

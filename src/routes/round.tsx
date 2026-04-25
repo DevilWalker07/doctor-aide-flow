@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { motorLuanService } from "@/lib/motorLuanService";
 import {
-  Stethoscope, Users, FileText, FlaskConical, Clock, Settings,
+  Stethoscope, Users, FileText, FlaskConical, Clock, Settings as SettingsIcon,
   AlertTriangle, Shield, Brain, Sparkles, Copy, ChevronRight,
   Map as MapIcon, Mic, ArrowLeft, X, Printer, Download, Share2,
   Search, FileOutput, Plus, Upload, ImageIcon, ClipboardPaste, Check, Loader2, Info

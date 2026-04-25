@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Stethoscope, Plus, Settings, Map, LayoutGrid, BedDouble, ArrowLeft, AlertCircle, ChevronRight, ArrowRight, FileUp } from "lucide-react";
+import { Stethoscope, Plus, Settings as SettingsIcon, Map, LayoutGrid, BedDouble, ArrowLeft, AlertCircle, ChevronRight, ArrowRight, FileUp, ClipboardPaste } from "lucide-react";
 import { usePatients, deletePatient, addPatient, type Patient } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { extractBulkPatientsWithAI } from "@/lib/bulkService";
+
+import { SettingsModal } from "@/components/SettingsModal";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -26,11 +28,34 @@ function Dashboard() {
   const [tab, setTab] = useState<"gestao" | "mapa">("gestao");
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPaste, setShowPaste] = useState(false);
+  const [pasteText, setPasteText] = useState("");
   const nav = useNavigate();
   
   const today = new Date().toISOString().split("T")[0];
   const shiftPatients = patients.filter((p) => p.admission === today);
   const sel = shiftPatients.find((p) => p.id === selected) || shiftPatients[0];
+
+  const handlePasteImport = async () => {
+    if (!pasteText.trim()) return;
+    setIsProcessing(true);
+    setShowPaste(false);
+    toast.info("Processando texto com IA...");
+    try {
+      const newPatients = await extractBulkPatientsWithAI(pasteText, "CLÍNICA MÉDICA", "Texto Colado");
+      for (const p of newPatients) {
+        await addPatient({ ...p, admission: today, hda: p.hda || "" });
+      }
+      toast.success(`${newPatients.length} paciente(s) adicionado(s)!`);
+      setPasteText("");
+      refresh();
+    } catch (e: any) {
+      toast.error(`Falha ao processar: ${e.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleFileUpload = async (files: FileList) => {
     setIsProcessing(true);
@@ -92,6 +117,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
       <header className="bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1500px] mx-auto px-6 h-16 flex items-center gap-6">
           <Link to="/tipo" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -129,9 +155,9 @@ function Dashboard() {
             >
               <Map className="h-4 w-4" /> <span className="hidden sm:inline">ROUND</span>
             </button>
-            <Link to="/configuracoes" className="h-10 w-10 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-border transition-all">
-              <Settings className="h-4 w-4" />
-            </Link>
+            <button onClick={() => setShowSettings(true)} className="h-10 w-10 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-border transition-all">
+              <SettingsIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -182,18 +208,51 @@ function Dashboard() {
                 <p className="font-bold text-sm tracking-widest text-ai uppercase">MÉDICO VIRTUAL LENDO PRONTUÁRIOS...</p>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">Extraindo dados vitais e identificação. Isso pode levar alguns segundos.</p>
               </div>
+            ) : showPaste ? (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                <h3 className="font-extrabold text-lg tracking-tight">COLAR EVOLUÇÕES</h3>
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Cole aqui o texto de uma ou mais evoluções... O sistema identificará cada paciente automaticamente."
+                  className="w-full h-48 bg-secondary/50 border border-border rounded-2xl p-4 text-xs font-bold uppercase placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ai/30 transition-all"
+                />
+                <div className="flex items-center justify-center gap-3">
+                  <button 
+                    onClick={() => setShowPaste(false)}
+                    className="px-6 py-2.5 rounded-xl border border-border text-[11px] font-bold uppercase tracking-widest hover:bg-secondary transition-all"
+                  >
+                    CANCELAR
+                  </button>
+                  <button 
+                    onClick={handlePasteImport}
+                    disabled={!pasteText.trim()}
+                    className="px-8 py-2.5 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 hover:-translate-y-0.5 disabled:opacity-50 transition-all"
+                  >
+                    PROCESSAR TEXTO
+                  </button>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <div className="h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center mx-auto mb-4 text-ai">
                   <FileUp className="h-8 w-8" />
                 </div>
-                <h3 className="font-extrabold text-lg tracking-tight mb-2">IMPORTAÇÃO EM LOTE</h3>
+                <h3 className="font-extrabold text-lg tracking-tight mb-2">EVOLUÇÕES ANTERIORES: IMPORTAR LOTE DE PACIENTES</h3>
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">ARRASTE PDFs OU DOCs DE VÁRIOS PACIENTES AQUI</p>
-                <label className="cursor-pointer inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 hover:-translate-y-0.5 transition-all">
-                  SELECIONAR ARQUIVOS
-                  <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
-                </label>
+                <div className="flex items-center justify-center gap-3">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 hover:-translate-y-0.5 transition-all">
+                    <FileUp className="h-4 w-4" /> SELECIONAR ARQUIVOS
+                    <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
+                  </label>
+                  <button 
+                    onClick={() => setShowPaste(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-ai/20 text-ai text-[11px] font-bold uppercase tracking-widest hover:bg-ai/5 transition-all"
+                  >
+                    <ClipboardPaste className="h-4 w-4" /> COLAR TEXTO
+                  </button>
+                </div>
               </>
             )}
           </div>
