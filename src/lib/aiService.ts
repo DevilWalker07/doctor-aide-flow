@@ -81,7 +81,7 @@ export async function saveLabExam(patientId: string, ai: AILabResult) {
     formatted_text: ai.texto_formatado,
     eas_formatted: ai.eas_formatado,
     alerts_json: ai.alertas,
-    raw_ai_response_json: ai as unknown as Record<string, unknown>,
+    raw_ai_response_json: ai as any,
   }]);
   if (error) console.warn("Falha ao salvar lab_exam (mantendo apenas local):", error.message);
 }
@@ -110,7 +110,7 @@ export async function persistPatient(p: Patient) {
     admission_date: p.admission || null,
     hda: p.hda,
     status: p.status,
-    data_json: (p.data ?? {}) as unknown as Record<string, unknown>,
+    data_json: (p.data ?? {}) as any,
   }]);
   if (error) console.warn("Falha ao persistir paciente:", error.message);
 }
