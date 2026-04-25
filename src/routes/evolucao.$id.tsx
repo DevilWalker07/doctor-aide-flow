@@ -295,7 +295,7 @@ function EvolucaoPage() {
         </div>
       </div>
 
-      {labOpen && <LabModal onClose={() => setLabOpen(false)} onUse={(lab) => {
+      {labOpen && <LabModal patient={patient} onClose={() => setLabOpen(false)} onUse={(lab) => {
         update("lab", lab);
         toast.success("Laboratório importado e formatado");
         setLabOpen(false);
