@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TipoRouteImport } from './routes/tipo'
+import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TipoRoute = TipoRouteImport.update({
   id: '/tipo',
   path: '/tipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovoPacienteRoute = NovoPacienteRouteImport.update({
+  id: '/novo-paciente',
+  path: '/novo-paciente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/tipo'
+  fullPaths: '/' | '/dashboard' | '/novo-paciente' | '/tipo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/tipo'
-  id: '__root__' | '/' | '/dashboard' | '/tipo'
+  to: '/' | '/dashboard' | '/novo-paciente' | '/tipo'
+  id: '__root__' | '/' | '/dashboard' | '/novo-paciente' | '/tipo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  NovoPacienteRoute: typeof NovoPacienteRoute
   TipoRoute: typeof TipoRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/tipo'
       fullPath: '/tipo'
       preLoaderRoute: typeof TipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/novo-paciente': {
+      id: '/novo-paciente'
+      path: '/novo-paciente'
+      fullPath: '/novo-paciente'
+      preLoaderRoute: typeof NovoPacienteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  NovoPacienteRoute: NovoPacienteRoute,
   TipoRoute: TipoRoute,
 }
 export const routeTree = rootRouteImport
