@@ -1,1 +1,7 @@
 project_id = "wnnvwippgiztsigeuwbe"
+
+[functions.lab-extractor]
+verify_jwt = false
+
+[functions.evolution-generator]
+verify_jwt = false
