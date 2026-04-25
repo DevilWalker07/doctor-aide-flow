@@ -98,7 +98,11 @@ function EvolucaoPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary"><RefreshCw className="h-3.5 w-3.5"/> SINCRONIZAR</button>
+            <button onClick={async () => {
+              if (!patient) return;
+              try { await persistPatient({ ...patient, data }); toast.success("Sincronizado com Cloud"); }
+              catch (e: any) { toast.error(e?.message || "Falha ao sincronizar"); }
+            }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary"><RefreshCw className="h-3.5 w-3.5"/> SINCRONIZAR</button>
             <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide hover:opacity-90"><FlaskConical className="h-3.5 w-3.5"/> IMPORTAR LAB</button>
             <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90"><FileText className="h-3.5 w-3.5"/> GERAR EVOLUÇÃO</button>
           </div>
