@@ -3,6 +3,7 @@ import { Upload, FileText, X, FileUp, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { addPatient } from "@/lib/store";
 import { toast } from "sonner";
+import { createPatientRemote } from "@/lib/aiService";
 
 export const Route = createFileRoute("/novo-paciente")({
   component: NovoPaciente,
@@ -17,12 +18,12 @@ function NovoPaciente() {
     name: "", age: "", sex: "F" as "F" | "M", bed: "", hda: "",
   });
 
-  function submit() {
+  async function submit() {
     if (!form.name || !form.age || !form.bed) {
       toast.error("Preencha nome, idade e leito");
       return;
     }
-    const p = addPatient({
+    const base = {
       name: form.name.toUpperCase(),
       age: Number(form.age),
       sex: form.sex,
@@ -30,7 +31,18 @@ function NovoPaciente() {
       sector: form.sex === "F" ? "CLÍNICA MÉDICA FEMININA" : "CLÍNICA MÉDICA MASCULINA",
       admission: new Date().toISOString().slice(0, 10),
       hda: form.hda.toUpperCase(),
-    });
+    };
+    let p = addPatient(base);
+    // Tenta persistir no backend (se falhar, mantém só local)
+    try {
+      const remoteId = await createPatientRemote(base);
+      if (remoteId) {
+        // Atualiza id local para casar com o remoto
+        p = { ...p, id: remoteId } as any;
+      }
+    } catch (e) {
+      console.warn("Backend indisponível, paciente salvo apenas localmente", e);
+    }
     toast.success("Paciente cadastrado");
     nav({ to: "/evolucao/$id", params: { id: p.id } });
   }
