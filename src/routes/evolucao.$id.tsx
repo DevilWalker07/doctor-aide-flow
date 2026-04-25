@@ -6,6 +6,7 @@ import { Checklist, type ChecklistItem } from "@/components/evolucao/Checklist";
 import { getPatient, savePatient, type Patient, type PatientData } from "@/lib/store";
 import { ckdEpi2021, ckdStage, hgtStats, abxDay, formatDateBR, pcrTrend } from "@/lib/medical";
 import { toast } from "sonner";
+import { extractLabWithAI, generateEvolutionWithAI, saveLabExam, saveEvolution, persistPatient } from "@/lib/aiService";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -97,7 +98,11 @@ function EvolucaoPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary"><RefreshCw className="h-3.5 w-3.5"/> SINCRONIZAR</button>
+            <button onClick={async () => {
+              if (!patient) return;
+              try { await persistPatient({ ...patient, data }); toast.success("Sincronizado com Cloud"); }
+              catch (e: any) { toast.error(e?.message || "Falha ao sincronizar"); }
+            }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary"><RefreshCw className="h-3.5 w-3.5"/> SINCRONIZAR</button>
             <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide hover:opacity-90"><FlaskConical className="h-3.5 w-3.5"/> IMPORTAR LAB</button>
             <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90"><FileText className="h-3.5 w-3.5"/> GERAR EVOLUÇÃO</button>
           </div>
@@ -294,7 +299,7 @@ function EvolucaoPage() {
         </div>
       </div>
 
-      {labOpen && <LabModal onClose={() => setLabOpen(false)} onUse={(lab) => {
+      {labOpen && <LabModal patient={patient} onClose={() => setLabOpen(false)} onUse={(lab) => {
         update("lab", lab);
         toast.success("Laboratório importado e formatado");
         setLabOpen(false);
@@ -403,33 +408,71 @@ function buildPrevia(p: Patient, d: PatientData, hgt: ReturnType<typeof hgtStats
 
 // ---------------- LAB MODAL ----------------
 
-function LabModal({ onClose, onUse }: { onClose: () => void; onUse: (lab: PatientData["lab"]) => void }) {
+function LabModal({ onClose, onUse, patient }: { onClose: () => void; onUse: (lab: PatientData["lab"]) => void; patient: Patient }) {
   const [tab, setTab] = useState<"text" | "pdf" | "img">("text");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<PatientData["lab"] | null>(null);
+  const [aiPayload, setAiPayload] = useState<any>(null);
 
   const STEPS = ["LENDO EXAME...", "IDENTIFICANDO DATA...", "EXTRAINDO VALORES...", "FORMATANDO NO PADRÃO DR. LUAN..."];
 
-  function process() {
+  async function process() {
+    if (tab !== "text") {
+      toast.info("Upload de PDF/imagem em etapa futura — use COLAR TEXTO");
+      return;
+    }
+    if (!text.trim()) {
+      toast.error("Cole o texto do laboratório");
+      return;
+    }
     setLoading(true);
     setStep(0);
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      if (i >= STEPS.length) {
-        clearInterval(interval);
-        setLoading(false);
-        setResult({
-          date: "24/04/2026",
-          raw: { Hb: "11,2", Ht: "34,1", Leuco: "12.800", Seg: "80%", Bastoes: "5%", Plaquetas: "178.000", Creatinina: "1,1", Ureia: "53", Na: "138", K: "4,2", PCR: "53" },
-          formatted: "LAB ATUAL (24/04/2026): HB 11,2 / HT 34,1 / LEUCO 12.800 (80% SEG / 5% BAST) / PLQ 178.000 / CR 1,1 / UR 53 / NA 138 / K 4,2 / PCR 53\n\nEAS (24/04/2026): 38 PIÓCITOS/CAMPO / NITRITO NEGATIVO",
-        });
-      } else {
-        setStep(i);
-      }
-    }, 600);
+    const stepInterval = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 600);
+    try {
+      const ai = await extractLabWithAI(text, { age: patient.age, sex: patient.sex === "F" ? "FEMININO" : "MASCULINO" });
+      clearInterval(stepInterval);
+      setStep(STEPS.length);
+      const v = ai.valores;
+      const dateBR = ai.data_exame ? ai.data_exame.split("-").reverse().join("/") : "";
+      const raw: Record<string, string> = {};
+      if (v.hb != null) raw["Hb"] = String(v.hb).replace(".", ",");
+      if (v.ht != null) raw["Ht"] = String(v.ht).replace(".", ",");
+      if (v.leucocitos != null) raw["Leuco"] = String(v.leucocitos);
+      if (v.segmentados_percent != null) raw["Seg"] = `${v.segmentados_percent}%`;
+      if (v.bastoes_percent != null) raw["Bastoes"] = `${v.bastoes_percent}%`;
+      if (v.plaquetas != null) raw["Plaquetas"] = String(v.plaquetas);
+      if (v.creatinina != null) raw["Creatinina"] = String(v.creatinina).replace(".", ",");
+      if (v.ureia != null) raw["Ureia"] = String(v.ureia);
+      if (v.sodio != null) raw["Na"] = String(v.sodio);
+      if (v.potassio != null) raw["K"] = String(v.potassio).replace(".", ",");
+      if (v.pcr != null) raw["PCR"] = String(v.pcr);
+      const formatted = [ai.texto_formatado, ai.eas_formatado].filter(Boolean).join("\n\n");
+      setResult({ date: dateBR, raw, formatted });
+      setAiPayload(ai);
+      setLoading(false);
+      toast.success("Laboratório extraído com IA");
+    } catch (e: any) {
+      clearInterval(stepInterval);
+      setLoading(false);
+      console.error(e);
+      toast.error(e?.message || "Falha na IA — usando fallback local");
+      // Fallback mockado conforme PRD
+      setResult({
+        date: "24/04/2026",
+        raw: { Hb: "11,2", Ht: "34,1", Leuco: "12.800", Seg: "80%", Bastoes: "5%", Plaquetas: "178.000", Creatinina: "1,1", Ureia: "53", Na: "138", K: "4,2", PCR: "53" },
+        formatted: "LAB ATUAL (24/04/2026): HB 11,2 / HT 34,1 / LEUCO 12.800 (80% SEG / 5% BAST) / PLQ 178.000 / CR 1,1 / UR 53 / NA 138 / K 4,2 / PCR 53\n\nEAS (24/04/2026): 38 PIÓCITOS/CAMPO / NITRITO NEGATIVO",
+      });
+    }
+  }
+
+  async function handleUse() {
+    if (!result) return;
+    onUse(result);
+    if (aiPayload) {
+      try { await saveLabExam(patient.id, aiPayload); } catch (e) { console.warn(e); }
+    }
   }
 
   return (
@@ -505,7 +548,7 @@ function LabModal({ onClose, onUse }: { onClose: () => void; onUse: (lab: Patien
               <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed">{result.formatted}</pre>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => onUse(result)} className="py-3 rounded-lg bg-success text-success-foreground text-xs font-bold uppercase tracking-wide">USAR NA EVOLUÇÃO</button>
+              <button onClick={handleUse} className="py-3 rounded-lg bg-success text-success-foreground text-xs font-bold uppercase tracking-wide">USAR NA EVOLUÇÃO</button>
               <button onClick={() => setResult(null)} className="py-3 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">EDITAR VALORES</button>
               <button onClick={onClose} className="py-3 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive">DESCARTAR</button>
             </div>
@@ -521,8 +564,45 @@ function Circle({ className }: { className?: string }) { return <div className={
 // ---------------- EVOLUTION MODAL ----------------
 
 function EvolutionModal({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa, onClose }: any) {
-  const text = useMemo(() => buildEvolution({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa }), [patient, data, egfr, stage, abx, abxD, hgt, trend, previa]);
+  const localText = useMemo(() => buildEvolution({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa }), [patient, data, egfr, stage, abx, abxD, hgt, trend, previa]);
+  const [text, setText] = useState<string>(localText);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [usedAI, setUsedAI] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function genWithAI() {
+    setAiLoading(true);
+    try {
+      const aiText = await generateEvolutionWithAI({
+        patient: { name: patient.name, age: patient.age, sex: patient.sex, bed: patient.bed, sector: patient.sector, admission: patient.admission, hda: patient.hda },
+        data,
+        egfr,
+        stage: stage ? { stage: stage.stage, label: stage.label } : null,
+        abxDay: abxD,
+      });
+      setText(aiText.toUpperCase());
+      setUsedAI(true);
+      toast.success("Evolução gerada com IA");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "IA indisponível — usando template local");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function saveToBackend() {
+    setSaving(true);
+    try {
+      await saveEvolution(patient.id, text, usedAI ? "AI" : "TEMPLATE");
+      toast.success("Evolução salva");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao salvar (mantida local)");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-navy/60 backdrop-blur-sm p-4">
@@ -531,14 +611,28 @@ function EvolutionModal({ patient, data, egfr, stage, abx, abxD, hgt, trend, pre
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-warning"/>
             <h3 className="font-extrabold uppercase tracking-tight">EVOLUÇÃO PADRÃO-OURO</h3>
+            {usedAI && <Badge variant="ai">IA</Badge>}
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-md hover:bg-white/10 grid place-items-center"><X className="h-4 w-4"/></button>
         </header>
         <div className="flex-1 overflow-y-auto p-6">
-          <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed bg-input-bg border border-border rounded-lg p-5">{text}</pre>
+          {aiLoading ? (
+            <div className="py-16 text-center">
+              <Loader2 className="h-10 w-10 mx-auto text-ai animate-spin"/>
+              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-muted-foreground">GERANDO EVOLUÇÃO COM IA...</p>
+            </div>
+          ) : (
+            <textarea value={text} onChange={(e) => setText(e.target.value.toUpperCase())} className="w-full min-h-[55vh] whitespace-pre-wrap text-xs font-mono leading-relaxed bg-input-bg border border-border rounded-lg p-5 focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+          )}
         </div>
-        <footer className="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
+        <footer className="px-6 py-4 border-t border-border flex items-center justify-end gap-2 flex-wrap">
           <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">FECHAR</button>
+          <button onClick={genWithAI} disabled={aiLoading} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide hover:opacity-90 disabled:opacity-50">
+            <Sparkles className="h-4 w-4"/> {aiLoading ? "GERANDO..." : "GERAR COM IA"}
+          </button>
+          <button onClick={saveToBackend} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary disabled:opacity-50">
+            {saving ? "SALVANDO..." : "SALVAR"}
+          </button>
           <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); toast.success("Evolução copiada"); setTimeout(() => setCopied(false), 1500); }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90">
             {copied ? <Check className="h-4 w-4"/> : <Copy className="h-4 w-4"/>} {copied ? "COPIADO" : "COPIAR EVOLUÇÃO"}
