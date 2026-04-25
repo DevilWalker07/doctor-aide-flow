@@ -560,8 +560,45 @@ function Circle({ className }: { className?: string }) { return <div className={
 // ---------------- EVOLUTION MODAL ----------------
 
 function EvolutionModal({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa, onClose }: any) {
-  const text = useMemo(() => buildEvolution({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa }), [patient, data, egfr, stage, abx, abxD, hgt, trend, previa]);
+  const localText = useMemo(() => buildEvolution({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa }), [patient, data, egfr, stage, abx, abxD, hgt, trend, previa]);
+  const [text, setText] = useState<string>(localText);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [usedAI, setUsedAI] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function genWithAI() {
+    setAiLoading(true);
+    try {
+      const aiText = await generateEvolutionWithAI({
+        patient: { name: patient.name, age: patient.age, sex: patient.sex, bed: patient.bed, sector: patient.sector, admission: patient.admission, hda: patient.hda },
+        data,
+        egfr,
+        stage: stage ? { stage: stage.stage, label: stage.label } : null,
+        abxDay: abxD,
+      });
+      setText(aiText.toUpperCase());
+      setUsedAI(true);
+      toast.success("Evolução gerada com IA");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "IA indisponível — usando template local");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function saveToBackend() {
+    setSaving(true);
+    try {
+      await saveEvolution(patient.id, text, usedAI ? "AI" : "TEMPLATE");
+      toast.success("Evolução salva");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao salvar (mantida local)");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-navy/60 backdrop-blur-sm p-4">
@@ -570,14 +607,28 @@ function EvolutionModal({ patient, data, egfr, stage, abx, abxD, hgt, trend, pre
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-warning"/>
             <h3 className="font-extrabold uppercase tracking-tight">EVOLUÇÃO PADRÃO-OURO</h3>
+            {usedAI && <Badge variant="ai">IA</Badge>}
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-md hover:bg-white/10 grid place-items-center"><X className="h-4 w-4"/></button>
         </header>
         <div className="flex-1 overflow-y-auto p-6">
-          <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed bg-input-bg border border-border rounded-lg p-5">{text}</pre>
+          {aiLoading ? (
+            <div className="py-16 text-center">
+              <Loader2 className="h-10 w-10 mx-auto text-ai animate-spin"/>
+              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-muted-foreground">GERANDO EVOLUÇÃO COM IA...</p>
+            </div>
+          ) : (
+            <textarea value={text} onChange={(e) => setText(e.target.value.toUpperCase())} className="w-full min-h-[55vh] whitespace-pre-wrap text-xs font-mono leading-relaxed bg-input-bg border border-border rounded-lg p-5 focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+          )}
         </div>
-        <footer className="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
+        <footer className="px-6 py-4 border-t border-border flex items-center justify-end gap-2 flex-wrap">
           <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">FECHAR</button>
+          <button onClick={genWithAI} disabled={aiLoading} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide hover:opacity-90 disabled:opacity-50">
+            <Sparkles className="h-4 w-4"/> {aiLoading ? "GERANDO..." : "GERAR COM IA"}
+          </button>
+          <button onClick={saveToBackend} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary disabled:opacity-50">
+            {saving ? "SALVANDO..." : "SALVAR"}
+          </button>
           <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); toast.success("Evolução copiada"); setTimeout(() => setCopied(false), 1500); }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90">
             {copied ? <Check className="h-4 w-4"/> : <Copy className="h-4 w-4"/>} {copied ? "COPIADO" : "COPIAR EVOLUÇÃO"}
