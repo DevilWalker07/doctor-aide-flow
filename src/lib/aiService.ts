@@ -61,7 +61,7 @@ export async function generateEvolutionWithAI(payload: EvolutionPayload): Promis
 
 export async function saveLabExam(patientId: string, ai: AILabResult) {
   const v = ai.valores;
-  const { error } = await supabase.from("lab_exams").insert({
+  const { error } = await supabase.from("lab_exams").insert([{
     patient_id: patientId,
     exam_date: ai.data_exame,
     source: "TEXTO_IA",
@@ -82,16 +82,16 @@ export async function saveLabExam(patientId: string, ai: AILabResult) {
     eas_formatted: ai.eas_formatado,
     alerts_json: ai.alertas,
     raw_ai_response_json: ai as unknown as Record<string, unknown>,
-  });
+  }]);
   if (error) console.warn("Falha ao salvar lab_exam (mantendo apenas local):", error.message);
 }
 
 export async function saveEvolution(patientId: string, text: string, generatedBy: "AI" | "TEMPLATE" = "AI") {
-  const { error } = await supabase.from("evolutions").insert({
+  const { error } = await supabase.from("evolutions").insert([{
     patient_id: patientId,
     evolution_text: text,
     generated_by: generatedBy,
-  });
+  }]);
   if (error) console.warn("Falha ao salvar evolução (mantendo apenas local):", error.message);
 }
 
@@ -99,7 +99,7 @@ export async function persistPatient(p: Patient) {
   // upsert simples no backend; ignora erro silenciosamente se UUID não bater (paciente seed local)
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
   if (!isUuid) return;
-  const { error } = await supabase.from("patients").upsert({
+  const { error } = await supabase.from("patients").upsert([{
     id: p.id,
     name: p.name,
     age: p.age,
@@ -111,14 +111,14 @@ export async function persistPatient(p: Patient) {
     hda: p.hda,
     status: p.status,
     data_json: (p.data ?? {}) as unknown as Record<string, unknown>,
-  });
+  }]);
   if (error) console.warn("Falha ao persistir paciente:", error.message);
 }
 
 export async function createPatientRemote(p: Omit<Patient, "id" | "status">): Promise<string | null> {
   const { data, error } = await supabase
     .from("patients")
-    .insert({
+    .insert([{
       name: p.name,
       age: p.age,
       sex: p.sex,
@@ -128,7 +128,7 @@ export async function createPatientRemote(p: Omit<Patient, "id" | "status">): Pr
       admission_date: p.admission || null,
       hda: p.hda,
       status: "PENDENTE",
-    })
+    }])
     .select("id")
     .single();
   if (error) {
