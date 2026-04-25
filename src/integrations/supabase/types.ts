@@ -14,7 +14,285 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      antibiotics: {
+        Row: {
+          active: boolean
+          created_at: string
+          d0_or_d1: string | null
+          dose: string | null
+          end_date: string | null
+          frequency: string | null
+          id: string
+          name: string
+          patient_id: string
+          planned_duration_days: number | null
+          route: string | null
+          start_date: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          d0_or_d1?: string | null
+          dose?: string | null
+          end_date?: string | null
+          frequency?: string | null
+          id?: string
+          name: string
+          patient_id: string
+          planned_duration_days?: number | null
+          route?: string | null
+          start_date?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          d0_or_d1?: string | null
+          dose?: string | null
+          end_date?: string | null
+          frequency?: string | null
+          id?: string
+          name?: string
+          patient_id?: string
+          planned_duration_days?: number | null
+          route?: string | null
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "antibiotics_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evolutions: {
+        Row: {
+          created_at: string
+          evolution_text: string
+          generated_by: string | null
+          id: string
+          patient_id: string
+          shift_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evolution_text: string
+          generated_by?: string | null
+          id?: string
+          patient_id: string
+          shift_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evolution_text?: string
+          generated_by?: string | null
+          id?: string
+          patient_id?: string
+          shift_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evolutions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evolutions_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_exams: {
+        Row: {
+          alerts_json: Json | null
+          bands_percent: number | null
+          created_at: string
+          creatinine: number | null
+          crp: number | null
+          eas_formatted: string | null
+          eas_nitrite: string | null
+          eas_piocitos: string | null
+          exam_date: string | null
+          formatted_text: string | null
+          hb: number | null
+          ht: number | null
+          id: string
+          leukocytes: number | null
+          patient_id: string
+          platelets: number | null
+          potassium: number | null
+          raw_ai_response_json: Json | null
+          segmented_percent: number | null
+          sodium: number | null
+          source: string | null
+          urea: number | null
+        }
+        Insert: {
+          alerts_json?: Json | null
+          bands_percent?: number | null
+          created_at?: string
+          creatinine?: number | null
+          crp?: number | null
+          eas_formatted?: string | null
+          eas_nitrite?: string | null
+          eas_piocitos?: string | null
+          exam_date?: string | null
+          formatted_text?: string | null
+          hb?: number | null
+          ht?: number | null
+          id?: string
+          leukocytes?: number | null
+          patient_id: string
+          platelets?: number | null
+          potassium?: number | null
+          raw_ai_response_json?: Json | null
+          segmented_percent?: number | null
+          sodium?: number | null
+          source?: string | null
+          urea?: number | null
+        }
+        Update: {
+          alerts_json?: Json | null
+          bands_percent?: number | null
+          created_at?: string
+          creatinine?: number | null
+          crp?: number | null
+          eas_formatted?: string | null
+          eas_nitrite?: string | null
+          eas_piocitos?: string | null
+          exam_date?: string | null
+          formatted_text?: string | null
+          hb?: number | null
+          ht?: number | null
+          id?: string
+          leukocytes?: number | null
+          patient_id?: string
+          platelets?: number | null
+          potassium?: number | null
+          raw_ai_response_json?: Json | null
+          segmented_percent?: number | null
+          sodium?: number | null
+          source?: string | null
+          urea?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_exams_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          admission_date: string | null
+          age: number | null
+          allergy: string | null
+          antecedentes: string | null
+          bed: string | null
+          created_at: string
+          data_json: Json | null
+          diagnoses_json: Json | null
+          hda: string | null
+          id: string
+          name: string
+          sex: string | null
+          shift_id: string | null
+          status: string | null
+          unit: string | null
+          updated_at: string
+          ward: string | null
+        }
+        Insert: {
+          admission_date?: string | null
+          age?: number | null
+          allergy?: string | null
+          antecedentes?: string | null
+          bed?: string | null
+          created_at?: string
+          data_json?: Json | null
+          diagnoses_json?: Json | null
+          hda?: string | null
+          id?: string
+          name: string
+          sex?: string | null
+          shift_id?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string
+          ward?: string | null
+        }
+        Update: {
+          admission_date?: string | null
+          age?: number | null
+          allergy?: string | null
+          antecedentes?: string | null
+          bed?: string | null
+          created_at?: string
+          data_json?: Json | null
+          diagnoses_json?: Json | null
+          hda?: string | null
+          id?: string
+          name?: string
+          sex?: string | null
+          shift_id?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string
+          ward?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          active: boolean
+          created_at: string
+          date: string
+          ended_at: string | null
+          id: string
+          sector: string | null
+          workplace: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          date?: string
+          ended_at?: string | null
+          id?: string
+          sector?: string | null
+          workplace?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          date?: string
+          ended_at?: string | null
+          id?: string
+          sector?: string | null
+          workplace?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
