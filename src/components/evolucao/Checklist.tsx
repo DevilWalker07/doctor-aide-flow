@@ -4,7 +4,7 @@ export type ChecklistStatus = "done" | "pending" | "warn" | "crit";
 
 export type ChecklistItem = { id: string; label: string; status: ChecklistStatus };
 
-export function Checklist({ items }: { items: ChecklistItem[] }) {
+export function Checklist({ items, onNavigate }: { items: ChecklistItem[]; onNavigate?: (id: string) => void }) {
   const doneCount = items.filter((i) => i.status === "done").length;
   const progress = (doneCount / items.length) * 100;
 
@@ -26,7 +26,11 @@ export function Checklist({ items }: { items: ChecklistItem[] }) {
 
         <ul className="space-y-1">
           {items.map((it) => (
-            <li key={it.id} className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors cursor-default">
+            <li
+              key={it.id}
+              onClick={() => onNavigate?.(it.id)}
+              className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+            >
               <StatusIcon s={it.status} />
               <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${it.status === "done" ? "text-white" : "text-white/50 group-hover:text-white/80"}`}>
                 {it.label}
@@ -54,4 +58,4 @@ function StatusIcon({ s }: { s: ChecklistStatus }) {
   if (s === "warn") return <div className="h-5 w-5 rounded-full bg-warning flex items-center justify-center shrink-0 shadow-lg shadow-warning/30"><AlertTriangle className="h-3 w-3 text-warning-foreground"/></div>;
   if (s === "crit") return <div className="h-5 w-5 rounded-full bg-destructive flex items-center justify-center shrink-0 shadow-lg shadow-destructive/30"><AlertOctagon className="h-3 w-3 text-white"/></div>;
   return <Circle className="h-5 w-5 text-white/20 shrink-0" />;
-}
+}

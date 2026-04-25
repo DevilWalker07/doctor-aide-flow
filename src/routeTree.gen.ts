@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TipoRouteImport } from './routes/tipo'
+import { Route as RoundRouteImport } from './routes/round'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -20,6 +21,11 @@ import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 const TipoRoute = TipoRouteImport.update({
   id: '/tipo',
   path: '/tipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoundRoute = RoundRouteImport.update({
+  id: '/round',
+  path: '/round',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovoPacienteRoute = NovoPacienteRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/round'
     | '/tipo'
     | '/evolucao/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/round'
     | '/tipo'
     | '/evolucao/$id'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/round'
     | '/tipo'
     | '/evolucao/$id'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
+  RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
 }
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/tipo'
       fullPath: '/tipo'
       preLoaderRoute: typeof TipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/round': {
+      id: '/round'
+      path: '/round'
+      fullPath: '/round'
+      preLoaderRoute: typeof RoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/novo-paciente': {
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NovoPacienteRoute: NovoPacienteRoute,
+  RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
 }

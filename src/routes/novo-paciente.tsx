@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Upload, FileText, X, FileUp, ClipboardList, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { addPatient } from "@/lib/store";
+import { extractBulkPatientsWithAI } from "@/lib/bulkService";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/novo-paciente")({
@@ -11,11 +12,65 @@ export const Route = createFileRoute("/novo-paciente")({
 
 function NovoPaciente() {
   const [mode, setMode] = useState<null | "upload" | "manual">(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const nav = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
 
   const [form, setForm] = useState({
     name: "", age: "", sex: "F" as "F" | "M", bed: "", hda: "",
   });
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    toast.info(`Lendo ${file.name}...`);
+
+    try {
+      let fileText = "";
+
+      if (file.type === "application/pdf") {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let j = 1; j <= pdf.numPages; j++) {
+          const page = await pdf.getPage(j);
+          const content = await page.getTextContent();
+          fileText += content.items.map((item: any) => item.str).join(" ") + "\n";
+        }
+      } else if (file.name.endsWith(".docx")) {
+        const mammoth = (await import("mammoth")).default;
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        fileText = result.value;
+      } else if (file.type === "text/plain") {
+        fileText = await file.text();
+      }
+
+      if (!fileText.trim()) {
+        toast.error("Nenhum texto encontrado no arquivo.");
+        return;
+      }
+
+      toast.info("Enviando para o Médico Virtual (IA)...");
+      const patients = await extractBulkPatientsWithAI(fileText, "CLÍNICA MÉDICA", file.name);
+
+      if (!patients || patients.length === 0) {
+        toast.error("A IA não encontrou dados de paciente no arquivo.");
+        return;
+      }
+
+      const p = await addPatient({ ...patients[0], admission: today, hda: patients[0].hda || "" });
+      toast.success("Paciente importado com sucesso!");
+      nav({ to: "/evolucao/$id", params: { id: p.id } });
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
 
   async function submit() {
     if (!form.name || !form.age || !form.bed) {
@@ -28,7 +83,7 @@ function NovoPaciente() {
       sex: form.sex,
       bed: form.bed.toUpperCase(),
       sector: form.sex === "F" ? "CLÍNICA MÉDICA FEMININA" : "CLÍNICA MÉDICA MASCULINA",
-      admission: new Date().toISOString().slice(0, 10),
+      admission: today,
       hda: form.hda.toUpperCase(),
     });
     toast.success("Paciente cadastrado com sucesso");
@@ -61,10 +116,10 @@ function NovoPaciente() {
                 <FileUp className="h-8 w-8" />
               </div>
               <h3 className="relative font-extrabold text-foreground tracking-tight text-lg mb-2">UPLOAD DE ARQUIVO</h3>
-              <p className="relative text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">PDF · WORD · TXT · IMG</p>
-              <p className="relative text-sm text-muted-foreground leading-relaxed">Importe o sumário de alta, prontuário ou foto do prontuário físico e deixe a IA preencher.</p>
+              <p className="relative text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">PDF · WORD · TXT</p>
+              <p className="relative text-sm text-muted-foreground leading-relaxed">Importe o prontuário ou evolução e deixe a IA preencher os dados automaticamente.</p>
             </button>
-            
+
             <button onClick={() => setMode("manual")} className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -85,18 +140,30 @@ function NovoPaciente() {
               </button>
               <span className="label-tech text-ai">MÉTODO IA</span>
             </div>
-            
+
             <h3 className="text-2xl font-extrabold tracking-tight text-foreground mb-6 text-center">UPLOAD DE ARQUIVO</h3>
-            
-            <div className="border-2 border-dashed border-border rounded-3xl p-12 text-center hover:border-ai/50 hover:bg-ai/5 transition-all duration-300 group cursor-pointer">
-              <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Upload className="h-10 w-10 text-muted-foreground group-hover:text-ai transition-colors" />
+
+            {isProcessing ? (
+              <div className="border-2 border-ai/30 bg-ai/5 rounded-3xl p-12 text-center">
+                <div className="h-16 w-16 rounded-full bg-ai/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Upload className="h-8 w-8 text-ai animate-spin" />
+                </div>
+                <p className="font-bold text-sm tracking-widest text-ai uppercase mb-2">MÉDICO VIRTUAL LENDO O ARQUIVO...</p>
+                <p className="text-xs text-muted-foreground">Extraindo dados do paciente. Aguarde.</p>
               </div>
-              <p className="font-extrabold text-lg tracking-tight mb-2">ARRASTE O ARQUIVO AQUI</p>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6">PDF · DOCX · TXT · JPG · PNG</p>
-              <button className="px-8 py-3.5 rounded-xl bg-ai text-ai-foreground text-xs font-bold uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all">SELECIONAR ARQUIVO</button>
-            </div>
-            <p className="text-[11px] font-medium text-muted-foreground mt-6 text-center uppercase tracking-widest bg-secondary py-2 rounded-lg">FUNCIONALIDADE VISUAL — IA SERÁ CONECTADA EM ETAPA POSTERIOR</p>
+            ) : (
+              <label className="block border-2 border-dashed border-border rounded-3xl p-12 text-center hover:border-ai/50 hover:bg-ai/5 transition-all duration-300 group cursor-pointer">
+                <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Upload className="h-10 w-10 text-muted-foreground group-hover:text-ai transition-colors" />
+                </div>
+                <p className="font-extrabold text-lg tracking-tight mb-2">ARRASTE O ARQUIVO AQUI</p>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6">PDF · DOCX · TXT</p>
+                <span className="px-8 py-3.5 rounded-xl bg-ai text-ai-foreground text-xs font-bold uppercase tracking-widest shadow-lg shadow-ai/20">
+                  SELECIONAR ARQUIVO
+                </span>
+                <input type="file" accept=".pdf,.docx,.txt" className="hidden" onChange={handleFile} />
+              </label>
+            )}
           </div>
         )}
 

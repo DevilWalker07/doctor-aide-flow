@@ -5,11 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { extractBulkPatientsWithAI } from "@/lib/bulkService";
-import * as pdfjsLib from "pdfjs-dist";
-import mammoth from "mammoth";
-
-// Setup do worker do PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -40,48 +35,53 @@ function Dashboard() {
   const handleFileUpload = async (files: FileList) => {
     setIsProcessing(true);
     toast.info("Processando arquivos...");
-    
-    let combinedText = "";
-    
+
+    // Imports dinâmicos para evitar erro de DOMMatrix no SSR (Node.js)
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    const mammoth = (await import("mammoth")).default;
+
     try {
+      let totalAdded = 0;
+
+      // Processa cada arquivo individualmente para respeitar limite de tokens da IA
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        toast.info(`Processando arquivo ${i + 1}/${files.length}: ${file.name}...`);
+
+        let fileText = "";
+
         if (file.type === "application/pdf") {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           for (let j = 1; j <= pdf.numPages; j++) {
             const page = await pdf.getPage(j);
             const content = await page.getTextContent();
-            const text = content.items.map((item: any) => item.str).join(" ");
-            combinedText += text + "\n\n";
+            fileText += content.items.map((item: any) => item.str).join(" ") + "\n";
           }
         } else if (file.name.endsWith(".docx")) {
           const arrayBuffer = await file.arrayBuffer();
           const result = await mammoth.extractRawText({ arrayBuffer });
-          combinedText += result.value + "\n\n";
+          fileText = result.value;
         } else if (file.type === "text/plain") {
-          const text = await file.text();
-          combinedText += text + "\n\n";
+          fileText = await file.text();
+        }
+
+        if (!fileText.trim()) continue;
+
+        const newPatients = await extractBulkPatientsWithAI(fileText, "CLÍNICA MÉDICA", file.name);
+
+        for (const p of newPatients) {
+          await addPatient({ ...p, admission: today, hda: p.hda || "" });
+          totalAdded++;
         }
       }
 
-      if (!combinedText.trim()) {
-        toast.error("Nenhum texto encontrado nos arquivos.");
-        return;
+      if (totalAdded === 0) {
+        toast.warning("Nenhum paciente encontrado nos arquivos.");
+      } else {
+        toast.success(`${totalAdded} paciente(s) adicionado(s) ao plantão!`);
       }
-
-      toast.info("Enviando para o Médico Virtual (IA)...");
-      const newPatients = await extractBulkPatientsWithAI(combinedText, "CLÍNICA MÉDICA");
-      
-      for (const p of newPatients) {
-        await addPatient({
-          ...p,
-          admission: today,
-          hda: p.hda || ""
-        });
-      }
-      
-      toast.success(`${newPatients.length} pacientes adicionados ao plantão!`);
       refresh();
     } catch (e: any) {
       toast.error(`Falha ao processar: ${e.message}`);
@@ -123,6 +123,12 @@ function Dashboard() {
             >
               <Plus className="h-4 w-4" /> <span className="hidden sm:inline">NOVO PACIENTE</span>
             </button>
+            <button
+              onClick={() => nav({ to: "/round" })}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-navy text-white text-xs font-bold uppercase tracking-widest shadow-lg hover:shadow-navy/40 hover:-translate-y-0.5 transition-all duration-300"
+            >
+              <Map className="h-4 w-4" /> <span className="hidden sm:inline">ROUND</span>
+            </button>
             <Link to="/configuracoes" className="h-10 w-10 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-foreground hover:bg-secondary hover:border-border transition-all">
               <Settings className="h-4 w-4" />
             </Link>
@@ -146,7 +152,7 @@ function Dashboard() {
                 className={`group w-full text-left rounded-2xl border p-4 transition-all duration-300 ${sel?.id === p.id ? "bg-white border-primary shadow-xl shadow-primary/10 ring-1 ring-primary/20" : "bg-card border-border hover:border-primary/40 hover:shadow-md"}`}
               >
                 <div className="flex items-start gap-3">
-                  <Badge variant={sel?.id === p.id ? "primary" : "navy"} size="lg" className="font-mono shadow-sm">{p.bed}</Badge>
+                  <Badge variant={sel?.id === p.id ? "brand" : "navy"} size="lg" className="font-mono shadow-sm">{p.bed}</Badge>
                   <div className="flex-1 min-w-0">
                     <div className="font-extrabold text-sm text-foreground truncate mb-0.5">{p.name}</div>
                     <div className="text-[11px] font-medium text-muted-foreground tracking-wide">{p.age} ANOS · {p.sex === "F" ? "FEM" : "MASC"}</div>
@@ -282,6 +288,7 @@ function Dashboard() {
               )}
             </div>
           )}
+          </div>
         </main>
       </div>
     </div>
