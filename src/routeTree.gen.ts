@@ -14,6 +14,7 @@ import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 
 const TipoRoute = TipoRouteImport.update({
   id: '/tipo',
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
+  id: '/evolucao/$id',
+  path: '/evolucao/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
+  '/evolucao/$id': typeof EvolucaoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
+  '/evolucao/$id': typeof EvolucaoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +70,25 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/tipo': typeof TipoRoute
+  '/evolucao/$id': typeof EvolucaoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/configuracoes' | '/dashboard' | '/novo-paciente' | '/tipo'
+  fullPaths:
+    | '/'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/novo-paciente'
+    | '/tipo'
+    | '/evolucao/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/configuracoes' | '/dashboard' | '/novo-paciente' | '/tipo'
+  to:
+    | '/'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/novo-paciente'
+    | '/tipo'
+    | '/evolucao/$id'
   id:
     | '__root__'
     | '/'
@@ -75,6 +96,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/novo-paciente'
     | '/tipo'
+    | '/evolucao/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,6 +105,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
   TipoRoute: typeof TipoRoute
+  EvolucaoIdRoute: typeof EvolucaoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -122,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/evolucao/$id': {
+      id: '/evolucao/$id'
+      path: '/evolucao/$id'
+      fullPath: '/evolucao/$id'
+      preLoaderRoute: typeof EvolucaoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -131,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   NovoPacienteRoute: NovoPacienteRoute,
   TipoRoute: TipoRoute,
+  EvolucaoIdRoute: EvolucaoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
