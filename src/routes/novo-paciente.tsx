@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Upload, FileText, X, FileUp, ClipboardList } from "lucide-react";
 import { useState } from "react";
-import { addPatient } from "@/lib/store";
+import { addPatient, savePatient } from "@/lib/store";
 import { toast } from "sonner";
 import { createPatientRemote } from "@/lib/aiService";
 
@@ -37,8 +37,10 @@ function NovoPaciente() {
     try {
       const remoteId = await createPatientRemote(base);
       if (remoteId) {
-        // Atualiza id local para casar com o remoto
-        p = { ...p, id: remoteId } as any;
+        // Atualiza id local para casar com o remoto (cria nova entrada local com mesmo UUID)
+        const updated = { ...p, id: remoteId };
+        savePatient(updated);
+        p = updated;
       }
     } catch (e) {
       console.warn("Backend indisponível, paciente salvo apenas localmente", e);
