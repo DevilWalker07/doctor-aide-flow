@@ -60,28 +60,128 @@ function write(list: Patient[]) {
   if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(list));
 }
 
+import { supabase, hasSupabaseConfig } from "./supabase";
+
+export async function saveEvolution(patientId: string, evolutionText: string) {
+  const evolutionsStr = localStorage.getItem("doutor_ajuda_evolutions") || "{}";
+  const evolutions = JSON.parse(evolutionsStr);
+  
+  if (!evolutions[patientId]) {
+    evolutions[patientId] = [];
+  }
+  
+  const record = {
+    id: Date.now().toString(),
+    text: evolutionText,
+    created_at: new Date().toISOString()
+  };
+  
+  evolutions[patientId].push(record);
+  localStorage.setItem("doutor_ajuda_evolutions", JSON.stringify(evolutions));
+
+  if (hasSupabaseConfig && patientId.length > 10) {
+    try {
+      await supabase.from("evolutions").insert({
+        patient_id: patientId,
+        content: evolutionText,
+        author: "Dr. Luan Carvalho"
+      });
+    } catch (e) {
+      console.error("Falha ao salvar evolução no Supabase, mantendo local", e);
+    }
+  }
+}
+
 export function usePatients() {
   const [patients, setPatients] = useState<Patient[]>(seed);
   useEffect(() => { setPatients(read()); }, []);
   const refresh = () => setPatients(read());
-  return { patients, refresh, setPatients };
+  
+  const updatePatient = async (id: string, updates: Partial<Patient>) => {
+    const p = getPatient(id);
+    if (!p) return;
+    const updated = { ...p, ...updates };
+    await savePatient(updated);
+    refresh();
+  };
+
+  const deletePatientStore = async (id: string) => {
+    await deletePatient(id);
+    refresh();
+  };
+
+  return { patients, refresh, setPatients, updatePatient, deletePatient: deletePatientStore };
 }
 
 export function getPatient(id: string): Patient | undefined {
   return read().find((p) => p.id === id);
 }
 
-export function savePatient(p: Patient) {
+// Salva no localStorage imediatamente e faz push assíncrono pro Supabase
+export async function savePatient(p: Patient) {
   const list = read();
   const idx = list.findIndex((x) => x.id === p.id);
   if (idx >= 0) list[idx] = p; else list.push(p);
   write(list);
+
+  if (hasSupabaseConfig && p.id.length > 10) { // IDs mockados têm 2 chars, UUIDs são maiores
+    try {
+      await supabase.from("patients").upsert({
+        id: p.id,
+        name: p.name,
+        age: p.age,
+        sex: p.sex,
+        bed: p.bed,
+        ward: p.sector,
+        admission_date: p.admission,
+        hda: p.hda,
+        diagnoses_json: p.data,
+      });
+    } catch (e) {
+      console.error("Falha ao sincronizar paciente com Supabase", e);
+    }
+  }
 }
 
-export function addPatient(p: Omit<Patient, "id" | "status">): Patient {
+export async function addPatient(p: Omit<Patient, "id" | "status">): Promise<Patient> {
   const list = read();
-  const np: Patient = { ...p, id: `p${Date.now()}`, status: "PENDENTE" };
+  // Se Supabase offline, usa timestamp
+  const id = hasSupabaseConfig ? crypto.randomUUID() : `p${Date.now()}`;
+  const np: Patient = { ...p, id, status: "PENDENTE" };
+  
   list.push(np);
   write(list);
+
+  if (hasSupabaseConfig) {
+    try {
+      await supabase.from("patients").insert({
+        id: np.id,
+        name: np.name,
+        age: np.age,
+        sex: np.sex,
+        bed: np.bed,
+        ward: np.sector,
+        admission_date: np.admission,
+        hda: np.hda,
+      });
+    } catch (e) {
+      console.error("Falha ao salvar paciente no Supabase", e);
+    }
+  }
   return np;
 }
+
+export async function deletePatient(id: string) {
+  const list = read();
+  const newList = list.filter(p => p.id !== id);
+  write(newList);
+
+  if (hasSupabaseConfig && id.length > 10) {
+    try {
+      await supabase.from("patients").delete().eq("id", id);
+    } catch (e) {
+      console.error("Falha ao deletar paciente no Supabase", e);
+    }
+  }
+}
+

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Upload, FileText, X, FileUp, ClipboardList } from "lucide-react";
+import { Upload, FileText, X, FileUp, ClipboardList, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { addPatient } from "@/lib/store";
 import { toast } from "sonner";
@@ -17,12 +17,12 @@ function NovoPaciente() {
     name: "", age: "", sex: "F" as "F" | "M", bed: "", hda: "",
   });
 
-  function submit() {
+  async function submit() {
     if (!form.name || !form.age || !form.bed) {
       toast.error("Preencha nome, idade e leito");
       return;
     }
-    const p = addPatient({
+    const p = await addPatient({
       name: form.name.toUpperCase(),
       age: Number(form.age),
       sex: form.sex,
@@ -31,100 +31,126 @@ function NovoPaciente() {
       admission: new Date().toISOString().slice(0, 10),
       hda: form.hda.toUpperCase(),
     });
-    toast.success("Paciente cadastrado");
+    toast.success("Paciente cadastrado com sucesso");
     nav({ to: "/evolucao/$id", params: { id: p.id } });
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-destructive">
-          <X className="h-4 w-4" /> CANCELAR CADASTRO
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
+          <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center group-hover:bg-secondary transition-colors">
+            <X className="h-4 w-4" />
+          </div>
+          <span className="hidden sm:inline">CANCELAR</span>
         </Link>
-        <span className="label-tech">NOVO PACIENTE</span>
+        <span className="label-tech text-primary">CADASTRO</span>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 pb-20">
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">CADASTRO DE NOVO PACIENTE</h1>
-        <p className="text-muted-foreground mt-2">Escolha como deseja iniciar o registro do paciente</p>
+      <main className="max-w-4xl mx-auto px-6 py-12 flex-1 w-full">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">NOVO PACIENTE</h1>
+          <p className="text-lg text-muted-foreground">Escolha o método de cadastro para o novo leito</p>
+        </div>
 
         {!mode && (
-          <div className="grid md:grid-cols-2 gap-5 mt-10">
-            <button onClick={() => setMode("upload")} className="text-left bg-card border border-border rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:shadow-ai/10 hover:border-ai/40 transition-all">
-              <div className="h-14 w-14 rounded-xl bg-ai/10 grid place-items-center text-ai">
-                <FileUp className="h-7 w-7" />
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto">
+            <button onClick={() => setMode("upload")} className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500">
+                <FileUp className="h-8 w-8" />
               </div>
-              <h3 className="mt-5 font-bold text-foreground uppercase tracking-tight">UPLOAD DE ARQUIVO</h3>
-              <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">PDF / WORD / TXT / IMG</p>
-              <p className="text-sm text-muted-foreground mt-3">Importe o sumário de alta, prontuário ou foto do prontuário.</p>
+              <h3 className="relative font-extrabold text-foreground tracking-tight text-lg mb-2">UPLOAD DE ARQUIVO</h3>
+              <p className="relative text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">PDF · WORD · TXT · IMG</p>
+              <p className="relative text-sm text-muted-foreground leading-relaxed">Importe o sumário de alta, prontuário ou foto do prontuário físico e deixe a IA preencher.</p>
             </button>
-            <button onClick={() => setMode("manual")} className="text-left bg-card border border-border rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/40 transition-all">
-              <div className="h-14 w-14 rounded-xl bg-primary/10 grid place-items-center text-primary">
-                <ClipboardList className="h-7 w-7" />
+            
+            <button onClick={() => setMode("manual")} className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500">
+                <ClipboardList className="h-8 w-8" />
               </div>
-              <h3 className="mt-5 font-bold text-foreground uppercase tracking-tight">PREENCHIMENTO MANUAL</h3>
-              <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">CAIXAS DE MARCAR / TEXTO</p>
-              <p className="text-sm text-muted-foreground mt-3">Cadastre o paciente preenchendo o formulário estruturado.</p>
+              <h3 className="relative font-extrabold text-foreground tracking-tight text-lg mb-2">PREENCHIMENTO MANUAL</h3>
+              <p className="relative text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">FORMULÁRIO ESTRUTURADO</p>
+              <p className="relative text-sm text-muted-foreground leading-relaxed">Cadastre o paciente preenchendo os dados vitais e de identificação manualmente.</p>
             </button>
           </div>
         )}
 
         {mode === "upload" && (
-          <div className="mt-10 bg-card border border-border rounded-2xl p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold uppercase tracking-tight">UPLOAD DE ARQUIVO</h3>
-              <button onClick={() => setMode(null)} className="label-tech hover:text-foreground">VOLTAR</button>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white border border-border rounded-[2rem] p-8 md:p-12 shadow-sm max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <button onClick={() => setMode(null)} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronLeft className="h-4 w-4" /> VOLTAR
+              </button>
+              <span className="label-tech text-ai">MÉTODO IA</span>
             </div>
-            <div className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:border-ai/50 transition-colors">
-              <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
-              <p className="mt-4 font-bold uppercase tracking-tight">ARRASTE O ARQUIVO AQUI</p>
-              <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">PDF · DOCX · TXT · JPG · PNG</p>
-              <button className="mt-5 px-5 py-2 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide">SELECIONAR ARQUIVO</button>
+            
+            <h3 className="text-2xl font-extrabold tracking-tight text-foreground mb-6 text-center">UPLOAD DE ARQUIVO</h3>
+            
+            <div className="border-2 border-dashed border-border rounded-3xl p-12 text-center hover:border-ai/50 hover:bg-ai/5 transition-all duration-300 group cursor-pointer">
+              <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Upload className="h-10 w-10 text-muted-foreground group-hover:text-ai transition-colors" />
+              </div>
+              <p className="font-extrabold text-lg tracking-tight mb-2">ARRASTE O ARQUIVO AQUI</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6">PDF · DOCX · TXT · JPG · PNG</p>
+              <button className="px-8 py-3.5 rounded-xl bg-ai text-ai-foreground text-xs font-bold uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all">SELECIONAR ARQUIVO</button>
             </div>
-            <p className="text-xs text-muted-foreground mt-4 text-center">FUNCIONALIDADE VISUAL — IA SERÁ CONECTADA EM ETAPA POSTERIOR</p>
+            <p className="text-[11px] font-medium text-muted-foreground mt-6 text-center uppercase tracking-widest bg-secondary py-2 rounded-lg">FUNCIONALIDADE VISUAL — IA SERÁ CONECTADA EM ETAPA POSTERIOR</p>
           </div>
         )}
 
         {mode === "manual" && (
-          <div className="mt-10 bg-card border border-border rounded-2xl p-8 space-y-5">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold uppercase tracking-tight">PREENCHIMENTO MANUAL</h3>
-              <button onClick={() => setMode(null)} className="label-tech hover:text-foreground">VOLTAR</button>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white border border-border rounded-[2rem] p-8 md:p-12 shadow-sm max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <button onClick={() => setMode(null)} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronLeft className="h-4 w-4" /> VOLTAR
+              </button>
+              <span className="label-tech text-primary">MANUAL</span>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <Field label="NOME COMPLETO">
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-input-bg border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" />
-              </Field>
-              <Field label="IDADE">
-                <input value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} type="number"
-                  className="w-full bg-input-bg border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              </Field>
+            <h3 className="text-2xl font-extrabold tracking-tight text-foreground mb-8">DADOS DE IDENTIFICAÇÃO</h3>
+
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <Field label="NOME COMPLETO">
+                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Maria da Silva"
+                    className="w-full bg-input-bg border border-border rounded-xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 uppercase transition-all" />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="IDADE">
+                    <input value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} type="number" placeholder="Ex: 65"
+                      className="w-full bg-input-bg border border-border rounded-xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all" />
+                  </Field>
+                  <Field label="LEITO">
+                    <input value={form.bed} onChange={(e) => setForm({ ...form, bed: e.target.value })} placeholder="Ex: L05"
+                      className="w-full bg-input-bg border border-border rounded-xl px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 uppercase transition-all" />
+                  </Field>
+                </div>
+              </div>
+
               <Field label="SEXO">
-                <div className="flex bg-input-bg border border-border rounded-lg p-1">
+                <div className="flex bg-input-bg border border-border rounded-xl p-1.5 w-full md:w-1/2">
                   {(["F", "M"] as const).map((s) => (
                     <button key={s} onClick={() => setForm({ ...form, sex: s })}
-                      className={`flex-1 py-2 rounded-md text-xs font-bold tracking-wide ${form.sex === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                      className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-widest transition-all ${form.sex === s ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}>
                       {s === "F" ? "FEMININO" : "MASCULINO"}
                     </button>
                   ))}
                 </div>
               </Field>
-              <Field label="LEITO">
-                <input value={form.bed} onChange={(e) => setForm({ ...form, bed: e.target.value })} placeholder="L05"
-                  className="w-full bg-input-bg border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" />
+
+              <Field label="HISTÓRIA DA DOENÇA ATUAL (OPCIONAL)">
+                <textarea value={form.hda} onChange={(e) => setForm({ ...form, hda: e.target.value })} rows={5} placeholder="Descreva brevemente o motivo da internação..."
+                  className="w-full bg-input-bg border border-border rounded-xl px-4 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 leading-relaxed transition-all" />
               </Field>
+
+              <div className="pt-6 mt-6 border-t border-border">
+                <button onClick={submit} className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3">
+                  <FileText className="h-5 w-5" /> CADASTRAR E EVOLUIR
+                </button>
+              </div>
             </div>
-
-            <Field label="HISTÓRIA DA DOENÇA ATUAL">
-              <textarea value={form.hda} onChange={(e) => setForm({ ...form, hda: e.target.value })} rows={5}
-                className="w-full bg-input-bg border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 leading-relaxed" />
-            </Field>
-
-            <button onClick={submit} className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-wide hover:bg-primary/90 transition-colors">
-              <FileText className="inline h-4 w-4 mr-2" /> CADASTRAR MANUALMENTE
-            </button>
           </div>
         )}
       </main>
@@ -135,7 +161,7 @@ function NovoPaciente() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="label-tech block mb-1.5">{label}</label>
+      <label className="label-tech block mb-2 font-bold ml-1">{label}</label>
       {children}
     </div>
   );

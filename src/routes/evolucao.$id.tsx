@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCw, FlaskConical, FileText, Sparkles, Copy, X, Loader2, AlertTriangle, FileUp, ImageIcon, ClipboardPaste, Check } from "lucide-react";
+import { ArrowLeft, RefreshCw, FlaskConical, FileText, Sparkles, Copy, X, Loader2, AlertTriangle, FileUp, ImageIcon, ClipboardPaste, Check, Stethoscope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checklist, type ChecklistItem } from "@/components/evolucao/Checklist";
-import { getPatient, savePatient, type Patient, type PatientData } from "@/lib/store";
+import { getPatient, savePatient, usePatients, type Patient, type PatientData } from "@/lib/store";
 import { ckdEpi2021, ckdStage, hgtStats, abxDay, formatDateBR, pcrTrend } from "@/lib/medical";
 import { toast } from "sonner";
+import { extractLabWithAI, generateEvolutionWithAI } from "@/lib/aiService";
+import { saveEvolution } from "@/lib/store";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -79,27 +81,32 @@ function EvolucaoPage() {
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-30">
+      <header className="bg-background/90 backdrop-blur-xl border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1500px] mx-auto px-6 py-4 flex items-center gap-4 flex-wrap">
-          <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
+          <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-5 w-5"/>
           </Link>
-          <Badge variant="navy" size="xl" className="font-mono">{patient.bed}</Badge>
+          <Badge variant="navy" size="xl" className="font-mono shadow-sm">{patient.bed}</Badge>
           <div className="min-w-0">
-            <h1 className="font-extrabold text-base truncate">{patient.name}</h1>
-            <p className="text-xs text-muted-foreground">{patient.age}A · {patient.sex === "F" ? "FEMININO" : "MASCULINO"} · {patient.sector}</p>
+            <h1 className="font-extrabold text-lg tracking-tight truncate leading-tight">{patient.name}</h1>
+            <p className="text-xs font-medium text-muted-foreground tracking-wide mt-0.5">{patient.age}A · {patient.sex === "F" ? "FEMININO" : "MASCULINO"} · {patient.sector}</p>
           </div>
 
-          <div className="flex items-center gap-1.5 ml-2 flex-wrap">
+          <div className="flex items-center gap-2 ml-2 flex-wrap">
             {stage && <Badge variant={stage.warn ? "destructive" : "soft"}>TFGe {egfr} · {stage.stage}</Badge>}
             {abx && <Badge variant="ai">ATB D{abxD}/{abx.durDays}</Badge>}
             {trend === "rebound" && <Badge variant="destructive">PCR REASCENDENTE</Badge>}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary"><RefreshCw className="h-3.5 w-3.5"/> SINCRONIZAR</button>
-            <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ai text-ai-foreground text-xs font-bold uppercase tracking-wide hover:opacity-90"><FlaskConical className="h-3.5 w-3.5"/> IMPORTAR LAB</button>
-            <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90"><FileText className="h-3.5 w-3.5"/> GERAR EVOLUÇÃO</button>
+          <div className="ml-auto flex items-center gap-2.5">
+            <button onClick={() => {
+              if (patient) {
+                savePatient(patient);
+                toast.success("Sincronizado com sucesso!");
+              }
+            }} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-[11px] font-bold uppercase tracking-widest hover:bg-secondary hover:border-border transition-all"><RefreshCw className="h-3.5 w-3.5"/> <span className="hidden sm:inline">SINCRONIZAR</span></button>
+            <button onClick={() => setLabOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all"><FlaskConical className="h-3.5 w-3.5"/> <span className="hidden sm:inline">IMPORTAR LAB</span></button>
+            <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"><FileText className="h-3.5 w-3.5"/> <span className="hidden sm:inline">GERAR EVOLUÇÃO</span></button>
           </div>
         </div>
       </header>
@@ -266,30 +273,30 @@ function EvolucaoPage() {
 
         {/* Right column: previa */}
         <div className="space-y-4">
-          <div className="bg-card border border-border rounded-2xl p-5 sticky top-24">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest">PRÉVIA DA EVOLUÇÃO</h3>
-              <Badge variant="soft">AO VIVO</Badge>
+          <div className="bg-white border border-border rounded-[2rem] p-6 md:p-8 sticky top-24 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-navy">PRÉVIA DA EVOLUÇÃO</h3>
+              <Badge variant="soft" className="animate-pulse">AO VIVO</Badge>
             </div>
-            <div className="rounded-lg bg-input-bg border border-border p-4 max-h-[60vh] overflow-y-auto">
-              <p className="text-xs leading-relaxed whitespace-pre-wrap">{previa}</p>
+            <div className="rounded-2xl bg-input-bg border border-border p-5 max-h-[55vh] overflow-y-auto custom-scrollbar">
+              <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap text-foreground/80">{previa}</p>
             </div>
             <button onClick={() => { navigator.clipboard.writeText(previa); toast.success("Prévia copiada"); }}
-              className="w-full mt-3 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">
-              <Copy className="h-3.5 w-3.5"/> COPIAR PRÉVIA
+              className="w-full mt-4 py-3.5 rounded-xl border-2 border-dashed border-ai/40 bg-ai/5 text-ai text-[11px] font-bold uppercase tracking-widest hover:border-ai hover:bg-ai/10 transition-all flex items-center justify-center gap-2">
+              <FlaskConical className="h-4 w-4" /> COLAR TEXTO LIVRE E IMPORTAR COM IA
             </button>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-30">
-        <div className="max-w-[1500px] mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border z-30 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+        <div className="max-w-[1500px] mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="text-xs font-medium text-muted-foreground tracking-wide">
             CHECKLIST: <b className="text-foreground">{checklist.filter(c => c.status === "done").length}/{checklist.length}</b> COMPLETO
           </div>
-          <button onClick={() => setEvolOpen(true)} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-navy text-navy-foreground font-bold uppercase tracking-wide hover:opacity-90 shadow-lg shadow-navy/20">
-            <Sparkles className="h-4 w-4"/> EVOLUÇÃO PADRÃO-OURO
+          <button onClick={() => setEvolOpen(true)} className="group inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl bg-navy text-navy-foreground font-bold uppercase tracking-widest hover:shadow-2xl hover:shadow-navy/30 hover:-translate-y-0.5 transition-all duration-300">
+            <Sparkles className="h-4 w-4 text-warning group-hover:rotate-12 transition-transform duration-300"/> EVOLUÇÃO PADRÃO-OURO
           </button>
         </div>
       </div>
@@ -298,13 +305,16 @@ function EvolucaoPage() {
         update("lab", lab);
         toast.success("Laboratório importado e formatado");
         setLabOpen(false);
-      }} />}
+      }} 
+      patientContext={{ age: patient?.age, sex: patient?.sex }} 
+    />}
 
-      {evolOpen && <EvolutionModal patient={patient} data={data} egfr={egfr} stage={stage} abx={abx} abxD={abxD} hgt={hgt} trend={trend} previa={previa} onClose={() => {
-        setEvolOpen(false);
-        if (patient) savePatient({ ...patient, status: "EVOLUÇÃO GERADA", data });
-        toast.success("Evolução gerada");
-      }} />}
+      <EvolutionModal 
+        open={evolOpen} 
+        close={() => setEvolOpen(false)} 
+        content={previa} 
+        pId={patient?.id || ""} 
+      />
     </div>
   );
 }
@@ -319,12 +329,12 @@ const DEFAULT_EXAM = {
 
 function SectionCard({ title, icon, extra, children }: { title: string; icon?: string; extra?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="bg-card border border-border rounded-2xl overflow-hidden">
-      <header className="px-5 py-3.5 border-b border-border flex items-center justify-between bg-secondary/30">
-        <h3 className="text-xs font-bold uppercase tracking-widest">{icon && <span className="mr-2">{icon}</span>}{title}</h3>
+    <section className="bg-white border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <header className="px-6 py-4 border-b border-border flex items-center justify-between bg-secondary/30">
+        <h3 className="text-[11px] font-bold uppercase tracking-widest text-navy">{icon && <span className="mr-2 text-base">{icon}</span>}{title}</h3>
         <div className="flex items-center gap-2">{extra}</div>
       </header>
-      <div className="p-5 space-y-4">{children}</div>
+      <div className="p-6 space-y-5">{children}</div>
     </section>
   );
 }
@@ -332,15 +342,15 @@ function SectionCard({ title, icon, extra, children }: { title: string; icon?: s
 function SmallInput({ label, unit, value, onChange }: { label: string; unit: string; value?: number | string; onChange: (v: number) => void }) {
   return (
     <div>
-      <label className="label-tech block mb-1">{label}</label>
+      <label className="label-tech block mb-1.5 ml-1">{label}</label>
       <div className="relative">
         <input
           type="number"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value === "" ? (undefined as any) : Number(e.target.value))}
-          className="w-full bg-input-bg border border-border rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
+          className="w-full bg-input-bg border border-border rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all pr-12"
         />
-        {unit && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-wide text-muted-foreground">{unit}</span>}
+        {unit && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{unit}</span>}
       </div>
     </div>
   );
@@ -349,11 +359,11 @@ function SmallInput({ label, unit, value, onChange }: { label: string; unit: str
 function Seg({ label, value, options, onChange }: { label: string; value?: string; options: string[]; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="label-tech block mb-1.5">{label}</label>
-      <div className="flex flex-wrap gap-1.5 bg-input-bg border border-border rounded-lg p-1">
+      <label className="label-tech block mb-2 ml-1">{label}</label>
+      <div className="flex flex-wrap gap-1.5 bg-input-bg border border-border rounded-xl p-1.5">
         {options.map((o) => (
           <button key={o} onClick={() => onChange(o)}
-            className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wide transition-colors ${value === o ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}>
+            className={`px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${value === o ? "bg-white text-primary shadow-sm ring-1 ring-border scale-100" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 scale-95 hover:scale-100"}`}>
             {o}
           </button>
         ))}
@@ -364,11 +374,11 @@ function Seg({ label, value, options, onChange }: { label: string; value?: strin
 
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between bg-input-bg border border-border rounded-lg px-3 py-2">
-      <span className="label-tech">{label}</span>
-      <div className="flex bg-card border border-border rounded-md p-0.5">
-        <button onClick={() => onChange(false)} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${!value ? "bg-secondary" : ""}`}>NÃO</button>
-        <button onClick={() => onChange(true)} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${value ? "bg-primary text-primary-foreground" : ""}`}>SIM</button>
+    <div className="flex items-center justify-between bg-input-bg border border-border rounded-xl px-4 py-2.5">
+      <span className="label-tech font-bold">{label}</span>
+      <div className="flex bg-white border border-border rounded-lg p-1 shadow-sm">
+        <button onClick={() => onChange(false)} className={`px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${!value ? "bg-secondary text-foreground" : "text-muted-foreground"}`}>NÃO</button>
+        <button onClick={() => onChange(true)} className={`px-4 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}>SIM</button>
       </div>
     </div>
   );
@@ -377,9 +387,9 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "warn" | "danger" }) {
   const cls = tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning" : "text-foreground";
   return (
-    <div className="rounded-lg bg-input-bg border border-border p-3 text-center">
-      <div className="label-tech">{label}</div>
-      <div className={`text-2xl font-extrabold mt-1 ${cls}`}>{value}</div>
+    <div className="rounded-xl bg-input-bg border border-border p-4 text-center">
+      <div className="label-tech font-bold">{label}</div>
+      <div className={`text-3xl font-extrabold mt-1.5 tracking-tight ${cls}`}>{value}</div>
     </div>
   );
 }
@@ -403,146 +413,199 @@ function buildPrevia(p: Patient, d: PatientData, hgt: ReturnType<typeof hgtStats
 
 // ---------------- LAB MODAL ----------------
 
-function LabModal({ onClose, onUse }: { onClose: () => void; onUse: (lab: PatientData["lab"]) => void }) {
+function LabModal({ onClose, onUse, patientContext }: { onClose: () => void; onUse: (lab: PatientData["lab"]) => void; patientContext: any }) {
   const [tab, setTab] = useState<"text" | "pdf" | "img">("text");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<PatientData["lab"] | null>(null);
 
-  const STEPS = ["LENDO EXAME...", "IDENTIFICANDO DATA...", "EXTRAINDO VALORES...", "FORMATANDO NO PADRÃO DR. LUAN..."];
-
-  function process() {
+  async function process() {
     setLoading(true);
     setStep(0);
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      if (i >= STEPS.length) {
-        clearInterval(interval);
-        setLoading(false);
-        setResult({
-          date: "24/04/2026",
-          raw: { Hb: "11,2", Ht: "34,1", Leuco: "12.800", Seg: "80%", Bastoes: "5%", Plaquetas: "178.000", Creatinina: "1,1", Ureia: "53", Na: "138", K: "4,2", PCR: "53" },
-          formatted: "LAB ATUAL (24/04/2026): HB 11,2 / HT 34,1 / LEUCO 12.800 (80% SEG / 5% BAST) / PLQ 178.000 / CR 1,1 / UR 53 / NA 138 / K 4,2 / PCR 53\n\nEAS (24/04/2026): 38 PIÓCITOS/CAMPO / NITRITO NEGATIVO",
-        });
-      } else {
-        setStep(i);
-      }
-    }, 600);
+    const progressInterval = setInterval(() => {
+      setStep(s => s < 3 ? s + 1 : s);
+    }, 1500);
+
+    try {
+      const resultData = await extractLabWithAI(text, patientContext);
+      clearInterval(progressInterval);
+      setStep(4);
+      setResult({
+        date: resultData.data_exame || new Date().toLocaleDateString('pt-BR'),
+        raw: resultData.valores || {},
+        formatted: resultData.texto_formatado || "",
+      });
+    } catch (e) {
+      clearInterval(progressInterval);
+      toast.error("Falha ao usar IA. Verifique conexão.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-navy/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-3xl bg-card rounded-2xl shadow-2xl overflow-hidden">
-        <header className="px-6 py-4 border-b border-border flex items-center justify-between bg-gradient-to-r from-ai to-ai/80 text-ai-foreground">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-white/20 grid place-items-center"><Sparkles className="h-5 w-5"/></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2rem] shadow-2xl shadow-navy/30 w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+        <header className="px-8 py-6 border-b border-border flex items-center justify-between bg-ai text-ai-foreground">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h3 className="font-extrabold uppercase tracking-tight">IMPORTAR LABORATÓRIO COM IA</h3>
-              <p className="text-xs opacity-80">DR. LUAN · PADRÃO DE FORMATAÇÃO</p>
+              <h2 className="text-xl font-extrabold tracking-tight">IMPORTAÇÃO INTELIGENTE</h2>
+              <p className="text-xs font-bold uppercase tracking-widest opacity-80 mt-1">ESTRUTURAÇÃO AUTOMÁTICA DE LABORATÓRIO</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-8 w-8 rounded-md hover:bg-white/10 grid place-items-center"><X className="h-4 w-4"/></button>
+          <button onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"><X className="h-5 w-5 text-white"/></button>
         </header>
 
-        {!result && !loading && (
-          <>
-            <div className="px-6 pt-5 flex gap-1 border-b border-border">
-              {[
-                { id: "text", label: "COLAR TEXTO", icon: ClipboardPaste },
-                { id: "pdf", label: "ENVIAR PDF", icon: FileUp },
-                { id: "img", label: "FOTO / PRINT", icon: ImageIcon },
-              ].map((t) => (
-                <button key={t.id} onClick={() => setTab(t.id as any)}
-                  className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wide border-b-2 -mb-px ${tab === t.id ? "border-ai text-ai" : "border-transparent text-muted-foreground"}`}>
-                  <t.icon className="inline h-3.5 w-3.5 mr-1.5"/>{t.label}
+        <div className="flex-1 overflow-y-auto bg-input-bg p-8 custom-scrollbar">
+          {!result && !loading && (
+            <div className="bg-white border border-border shadow-sm rounded-2xl p-8">
+              <p className="text-sm font-medium text-muted-foreground leading-relaxed mb-6">
+                Cole abaixo o resultado do laboratório (qualquer formato, sujo, de outro sistema ou com texto misturado). A IA irá limpar e estruturar no padrão Doutor Ajuda para a evolução médica.
+              </p>
+              <textarea
+                className="w-full h-48 bg-input-bg border border-border rounded-2xl p-5 text-sm focus:outline-none focus:ring-2 focus:ring-ai/40 focus:border-ai/40 leading-relaxed transition-all resize-none"
+                placeholder="Ex: Hgb 12.5 ht 38 leuco 12000 plaq 250k..."
+                value={text} onChange={(e) => setText(e.target.value)}
+              />
+              <div className="mt-6 flex justify-end">
+                <button onClick={process} disabled={!text.trim()} className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest hover:opacity-90 disabled:opacity-50 shadow-xl shadow-ai/20 hover:-translate-y-0.5 transition-all">
+                  <Sparkles className="h-4 w-4" /> PROCESSAR LABORATÓRIO
                 </button>
-              ))}
-            </div>
-
-            <div className="p-6">
-              {tab === "text" && (
-                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10} placeholder="Cole aqui o resultado do laboratório..."
-                  className="w-full bg-input-bg border border-border rounded-lg px-4 py-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ai/30"/>
-              )}
-              {tab !== "text" && (
-                <div className="border-2 border-dashed border-border rounded-xl p-12 text-center">
-                  {tab === "pdf" ? <FileUp className="h-10 w-10 mx-auto text-muted-foreground"/> : <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground"/>}
-                  <p className="mt-3 font-bold uppercase tracking-tight text-sm">{tab === "pdf" ? "ARRASTE O PDF AQUI" : "ENVIE FOTO OU PRINT"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-2 uppercase tracking-wide">UI VISUAL · CONEXÃO REAL EM ETAPA POSTERIOR</p>
-                </div>
-              )}
-
-              <button onClick={process} className="w-full mt-5 py-3 rounded-xl bg-ai text-ai-foreground font-bold uppercase tracking-wide hover:opacity-90">
-                <Sparkles className="inline h-4 w-4 mr-2"/> PROCESSAR LABORATÓRIO
-              </button>
-            </div>
-          </>
-        )}
-
-        {loading && (
-          <div className="p-12 text-center">
-            <Loader2 className="h-10 w-10 mx-auto text-ai animate-spin"/>
-            <ul className="mt-6 space-y-2 max-w-xs mx-auto">
-              {STEPS.map((s, i) => (
-                <li key={s} className={`flex items-center gap-2 text-xs uppercase tracking-wide transition-opacity ${i <= step ? "opacity-100" : "opacity-30"}`}>
-                  {i < step ? <Check className="h-3.5 w-3.5 text-success"/> : i === step ? <Loader2 className="h-3.5 w-3.5 animate-spin text-ai"/> : <Circle className="h-3.5 w-3.5"/>}
-                  <span className="font-bold">{s}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {result && (
-          <div className="p-6 space-y-4">
-            <div className="rounded-xl border border-ai/30 bg-ai/5 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="label-tech text-ai">DATA EXTRAÍDA</span>
-                <Badge variant="ai">{result.date}</Badge>
               </div>
-              <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed">{result.formatted}</pre>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => onUse(result)} className="py-3 rounded-lg bg-success text-success-foreground text-xs font-bold uppercase tracking-wide">USAR NA EVOLUÇÃO</button>
-              <button onClick={() => setResult(null)} className="py-3 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">EDITAR VALORES</button>
-              <button onClick={onClose} className="py-3 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive">DESCARTAR</button>
+          )}
+
+          {loading && (
+            <div className="p-16 text-center">
+              <RefreshCw className="h-12 w-12 mx-auto text-ai animate-spin mb-8" />
+              <ul className="space-y-4 max-w-sm mx-auto text-left bg-white border border-border shadow-sm p-8 rounded-2xl">
+                {STEPS.map((s, idx) => (
+                  <li key={s} className={`flex items-center gap-3 text-xs font-bold uppercase tracking-widest transition-opacity duration-300 ${idx <= step ? "opacity-100" : "opacity-30"}`}>
+                    {idx < step ? <Check className="h-5 w-5 text-success" /> : idx === step ? <RefreshCw className="h-5 w-5 animate-spin text-ai" /> : <div className="h-5 w-5 rounded-full border-2 border-border" />}
+                    <span className={idx === step ? "text-ai" : "text-foreground"}>{s}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        )}
+          )}
+
+          {result && (
+            <div className="space-y-6">
+              <div className="bg-white border border-border shadow-sm rounded-2xl p-8">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="label-tech text-ai">DADOS ESTRUTURADOS COM SUCESSO</span>
+                  <Badge variant="ai">DATA: {result.date}</Badge>
+                </div>
+                <div className="bg-input-bg border border-border rounded-xl p-6">
+                  <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed text-foreground/90">{result.formatted}</pre>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setResult(null)} className="px-6 py-4 rounded-xl border-2 border-border text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:bg-secondary transition-all">EDITAR RESULTADO</button>
+                <button onClick={() => { onUse(result); onClose(); }} className="px-8 py-4 rounded-xl bg-success text-success-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-success/20 hover:shadow-success/40 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                  <Check className="h-4 w-4" /> USAR NA EVOLUÇÃO
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Circle({ className }: { className?: string }) { return <div className={`h-3.5 w-3.5 rounded-full border ${className || ""}`}/>; }
-
 // ---------------- EVOLUTION MODAL ----------------
 
-function EvolutionModal({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa, onClose }: any) {
-  const text = useMemo(() => buildEvolution({ patient, data, egfr, stage, abx, abxD, hgt, trend, previa }), [patient, data, egfr, stage, abx, abxD, hgt, trend, previa]);
+function EvolutionModal({ open, close, content, pId }: { open: boolean; close: () => void; content: string; pId: string }) {
   const [copied, setCopied] = useState(false);
+  const [finalContent, setFinalContent] = useState(content);
+  const [generating, setGenerating] = useState(false);
+  const { updatePatient, patients } = usePatients();
+
+  // Effect to load AI content when modal opens
+  useEffect(() => {
+    if (open) {
+      const pat = patients.find(p => p.id === pId);
+      if (pat) {
+        setGenerating(true);
+        generateEvolutionWithAI(pat.data || {})
+          .then(res => setFinalContent(res))
+          .catch(e => {
+            console.error("Usando fallback de template local", e);
+            setFinalContent(content); // Fallback to local template
+          })
+          .finally(() => setGenerating(false));
+      } else {
+        setFinalContent(content);
+      }
+    }
+  }, [open, pId, content, patients]);
+
+  if (!open) return null;
+
+  async function finish() {
+    await saveEvolution(pId, finalContent);
+    await updatePatient(pId, { status: "EVOLUÇÃO GERADA" });
+    close();
+  }
+
+  function copy() {
+    navigator.clipboard.writeText(finalContent);
+    setCopied(true);
+    toast.success("Evolução copiada com sucesso");
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-navy/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-card rounded-2xl shadow-2xl overflow-hidden">
-        <header className="px-6 py-4 border-b border-border flex items-center justify-between bg-navy text-navy-foreground">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-warning"/>
-            <h3 className="font-extrabold uppercase tracking-tight">EVOLUÇÃO PADRÃO-OURO</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-navy/80 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2rem] shadow-2xl shadow-primary/20 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <header className="px-8 py-6 border-b border-border flex items-center justify-between bg-primary text-primary-foreground">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight">EVOLUÇÃO MÉDICA PRONTA</h2>
+              <p className="text-xs font-bold uppercase tracking-widest opacity-80 mt-1">REVISE E COPIE PARA O PRONTUÁRIO OFICIAL</p>
+            </div>
           </div>
-          <button onClick={onClose} className="h-8 w-8 rounded-md hover:bg-white/10 grid place-items-center"><X className="h-4 w-4"/></button>
+          <button onClick={close} className="h-8 w-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"><X className="h-5 w-5 text-white"/></button>
         </header>
-        <div className="flex-1 overflow-y-auto p-6">
-          <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed bg-input-bg border border-border rounded-lg p-5">{text}</pre>
+
+        <div className="flex-1 overflow-y-auto p-8 bg-input-bg custom-scrollbar relative">
+          <div className="absolute inset-0 pointer-events-none flex justify-center items-center opacity-[0.02]">
+            <Stethoscope className="w-96 h-96" />
+          </div>
+          <div className="bg-white border border-border shadow-sm rounded-2xl p-8 relative z-10 min-h-[300px]">
+            {generating ? (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-12">
+                <RefreshCw className="h-10 w-10 text-primary animate-spin" />
+                <p className="font-bold text-sm tracking-widest text-primary uppercase">MÉDICO VIRTUAL TRABALHANDO...</p>
+                <p className="text-xs text-muted-foreground max-w-xs">A IA está estruturando o texto no padrão ouro. Isso pode levar alguns segundos.</p>
+              </div>
+            ) : (
+              <pre className="text-[13px] font-mono leading-relaxed whitespace-pre-wrap text-foreground/90">{finalContent}</pre>
+            )}
+          </div>
         </div>
-        <footer className="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-border text-xs font-bold uppercase tracking-wide hover:bg-secondary">FECHAR</button>
-          <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); toast.success("Evolução copiada"); setTimeout(() => setCopied(false), 1500); }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide hover:bg-primary/90">
-            {copied ? <Check className="h-4 w-4"/> : <Copy className="h-4 w-4"/>} {copied ? "COPIADO" : "COPIAR EVOLUÇÃO"}
-          </button>
+
+        <footer className="px-8 py-6 border-t border-border bg-white flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground text-center sm:text-left">
+            CERTIFIQUE-SE DE CHECAR OS DADOS ANTES DE ASSINAR.
+          </p>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button onClick={copy} disabled={generating} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border-2 border-border font-bold uppercase tracking-widest text-[11px] hover:bg-secondary hover:border-primary/40 disabled:opacity-50 transition-all">
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+              {copied ? "COPIADO" : "COPIAR TEXTO"}
+            </button>
+            <button onClick={finish} disabled={generating} className="flex-1 sm:flex-none px-8 py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-primary/20 hover:shadow-primary/40 disabled:opacity-50 transition-all">
+              FINALIZAR ATENDIMENTO
+            </button>
+          </div>
         </footer>
       </div>
     </div>
