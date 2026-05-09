@@ -1,5 +1,5 @@
-// Serviço de IA do DOUTOR AJUDA — chama edge functions do Lovable Cloud
-// As edge functions usam Lovable AI Gateway internamente. Nenhuma chave fica no frontend.
+// Serviço de IA do DOUTOR AJUDA — chama Supabase Edge Functions com OpenAI no servidor.
+// Nenhuma chave da OpenAI fica no frontend.
 import { supabase } from "@/integrations/supabase/client";
 import type { PatientData, Patient } from "@/lib/store";
 
@@ -27,6 +27,11 @@ export type AILabResult = {
   valores_duvidosos: string[];
   campos_nao_encontrados: string[];
 };
+
+async function getCurrentUserId() {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
 
 export async function extractLabWithAI(
   inputText: string,
@@ -57,11 +62,15 @@ export async function generateEvolutionWithAI(payload: EvolutionPayload): Promis
   return (data as { evolution_text: string }).evolution_text;
 }
 
-// ---------------- Persistência ----------------
+// ---------------- Persistência SaaS ----------------
 
 export async function saveLabExam(patientId: string, ai: AILabResult) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
   const v = ai.valores;
-  const { error } = await supabase.from("lab_exams").insert([{
+  const db = supabase as any;
+  const { error } = await db.from("lab_exams").insert([{
+    user_id: userId,
     patient_id: patientId,
     exam_date: ai.data_exame,
     source: "TEXTO_IA",
@@ -87,26 +96,34 @@ export async function saveLabExam(patientId: string, ai: AILabResult) {
 }
 
 export async function saveEvolution(patientId: string, text: string, generatedBy: "AI" | "TEMPLATE" = "AI") {
-  const { error } = await supabase.from("evolutions").insert([{
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+  const db = supabase as any;
+  const { error } = await db.from("evolutions").insert([{
+    user_id: userId,
     patient_id: patientId,
-    evolution_text: text,
-    generated_by: generatedBy,
+    content: text,
+    generated_by_ai: generatedBy === "AI",
+    reviewed_by_physician: false,
   }]);
   if (error) console.warn("Falha ao salvar evolução (mantendo apenas local):", error.message);
 }
 
 export async function persistPatient(p: Patient) {
-  // upsert simples no backend; ignora erro silenciosamente se UUID não bater (paciente seed local)
+  const userId = await getCurrentUserId();
+  if (!userId) return;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
   if (!isUuid) return;
-  const { error } = await supabase.from("patients").upsert([{
+  const db = supabase as any;
+  const { error } = await db.from("patients").upsert([{
     id: p.id,
+    user_id: userId,
     name: p.name,
-    age: p.age,
+    age: String(p.age),
     sex: p.sex,
     bed: p.bed,
     ward: p.sector,
-    unit: p.sector,
+    hospital_unit: p.sector,
     admission_date: p.admission || null,
     hda: p.hda,
     status: p.status,
@@ -116,18 +133,23 @@ export async function persistPatient(p: Patient) {
 }
 
 export async function createPatientRemote(p: Omit<Patient, "id" | "status">): Promise<string | null> {
-  const { data, error } = await supabase
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+  const db = supabase as any;
+  const { data, error } = await db
     .from("patients")
     .insert([{
+      user_id: userId,
       name: p.name,
-      age: p.age,
+      age: String(p.age),
       sex: p.sex,
       bed: p.bed,
       ward: p.sector,
-      unit: p.sector,
+      hospital_unit: p.sector,
       admission_date: p.admission || null,
       hda: p.hda,
       status: "PENDENTE",
+      data_json: (p.data ?? {}) as any,
     }])
     .select("id")
     .single();
