@@ -1,37 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Sparkles, KeyRound, Database, CheckCircle2, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Database, Save, Server, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/configuracoes")({
   component: Settings,
-  head: () => ({ meta: [{ title: "Configurações — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Configurações - DOUTOR AJUDA" }] }),
 });
 
 const AI_ENGINES = [
-  { id: "openai", label: "OPENAI", color: "bg-ai text-ai-foreground" },
-  { id: "groq", label: "GROQ", color: "bg-primary text-primary-foreground" },
+  { id: "backend", label: "BACKEND", color: "bg-ai text-ai-foreground" },
   { id: "mock", label: "MOCK", color: "bg-secondary text-muted-foreground" },
 ];
 
 function Settings() {
-  const [engine, setEngine] = useState<string>(
-    () => localStorage.getItem("ai_engine") || "openai"
-  );
-  const [apiKey, setApiKey] = useState<string>(
-    () => localStorage.getItem("ai_api_key") || ""
-  );
-  const [showKey, setShowKey] = useState(false);
+  const [engine, setEngine] = useState<string>(() => localStorage.getItem("ai_engine") || "backend");
 
   const handleSave = () => {
     localStorage.setItem("ai_engine", engine);
-    localStorage.setItem("ai_api_key", apiKey);
     toast.success("Configurações salvas com sucesso!");
   };
 
   const handleClearData = () => {
     if (confirm("Deseja apagar TODOS os pacientes salvos localmente?")) {
       localStorage.removeItem("doutor_ajuda_patients_v1");
+      localStorage.removeItem("doutor_ajuda_patients_v2");
       toast.success("Dados locais apagados.");
     }
   };
@@ -48,7 +41,6 @@ function Settings() {
       <main className="max-w-3xl mx-auto px-6 py-4 space-y-6">
         <h1 className="text-3xl font-extrabold tracking-tight">CONFIGURAÇÕES</h1>
 
-        {/* Motor de IA */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="h-10 w-10 rounded-lg bg-ai/10 text-ai grid place-items-center">
@@ -56,71 +48,31 @@ function Settings() {
             </div>
             <div>
               <h3 className="font-bold uppercase tracking-tight">MOTOR DE IA</h3>
-              <p className="text-xs text-muted-foreground">Escolha o provedor de inteligência artificial</p>
+              <p className="text-xs text-muted-foreground">O frontend chama um backend seguro ou usa mocks locais.</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {AI_ENGINES.map((e) => (
               <button
                 key={e.id}
                 onClick={() => setEngine(e.id)}
                 className={`relative px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all duration-200 ${
-                  engine === e.id
-                    ? `${e.color} shadow-lg scale-[1.02]`
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  engine === e.id ? `${e.color} shadow-lg scale-[1.02]` : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 }`}
               >
-                {engine === e.id && (
-                  <CheckCircle2 className="absolute top-1.5 right-1.5 h-3.5 w-3.5 opacity-80" />
-                )}
+                {engine === e.id && <CheckCircle2 className="absolute top-1.5 right-1.5 h-3.5 w-3.5 opacity-80" />}
                 {e.label}
               </button>
             ))}
           </div>
-          {engine === "mock" && (
-            <p className="mt-3 text-xs text-warning font-medium">
-              ⚠️ Modo MOCK: A IA não é real. Os pacientes importados serão dados fictícios.
-            </p>
-          )}
-        </div>
-
-        {/* Chave de API */}
-        {engine !== "mock" && (
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
-                <KeyRound className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold uppercase tracking-tight">CHAVE DE API</h3>
-                <p className="text-xs text-muted-foreground">
-                  {engine === "openai" ? "Chave da OpenAI (sk-...)" : "Chave do Groq (gsk_...)"}
-                </p>
-              </div>
-            </div>
-            <div className="relative">
-              <input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={engine === "openai" ? "sk-..." : "gsk_..."}
-                className="w-full bg-input border border-border rounded-xl px-4 py-3 text-sm font-mono pr-24 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
-              >
-                {showKey ? "OCULTAR" : "MOSTRAR"}
-              </button>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              A chave fica salva apenas no seu navegador (localStorage). Nunca é enviada a terceiros.
+          <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4 flex gap-3">
+            <Server className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Configure a chave real apenas em <code>server/.env</code>. O navegador nunca armazena nem envia <code>OPENAI_API_KEY</code> diretamente para a OpenAI.
             </p>
           </div>
-        )}
+        </div>
 
-        {/* Salvar */}
         <button
           onClick={handleSave}
           className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-navy text-navy-foreground text-xs font-bold uppercase tracking-widest shadow-xl hover:-translate-y-0.5 transition-all"
@@ -128,7 +80,6 @@ function Settings() {
           <Save className="h-4 w-4" /> SALVAR CONFIGURAÇÕES
         </button>
 
-        {/* Persistência Local */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

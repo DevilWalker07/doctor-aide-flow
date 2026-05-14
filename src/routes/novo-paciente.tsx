@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Upload, FileText, X, FileUp, ClipboardList, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { addPatient } from "@/lib/store";
-import { extractBulkPatientsWithAI } from "@/lib/bulkService";
+import { startClinicalExtractionJob } from "@/lib/documentExtractor";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/novo-paciente")({
@@ -25,49 +25,14 @@ function NovoPaciente() {
     if (!file) return;
 
     setIsProcessing(true);
-    toast.info(`Lendo ${file.name}...`);
+    toast.info(`Iniciando upload de ${file.name}...`);
 
     try {
-      let fileText = "";
-
-      if (file.type === "application/pdf") {
-        const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        for (let j = 1; j <= pdf.numPages; j++) {
-          const page = await pdf.getPage(j);
-          const content = await page.getTextContent();
-          fileText += content.items.map((item: any) => item.str).join(" ") + "\n";
-        }
-      } else if (file.name.endsWith(".docx")) {
-        const mammoth = (await import("mammoth")).default;
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        fileText = result.value;
-      } else if (file.type === "text/plain") {
-        fileText = await file.text();
-      }
-
-      if (!fileText.trim()) {
-        toast.error("Nenhum texto encontrado no arquivo.");
-        return;
-      }
-
-      toast.info("Enviando para o Médico Virtual (IA)...");
-      const patients = await extractBulkPatientsWithAI(fileText, "CLÍNICA MÉDICA", file.name);
-
-      if (!patients || patients.length === 0) {
-        toast.error("A IA não encontrou dados de paciente no arquivo.");
-        return;
-      }
-
-      const p = await addPatient({ ...patients[0], admission: today, hda: patients[0].hda || "" });
-      toast.success("Paciente importado com sucesso!");
-      nav({ to: "/evolucao/$id", params: { id: p.id } });
+      const jobId = await startClinicalExtractionJob(file);
+      // Navigate immediately to processing screen
+      nav({ to: "/processando/$jobId", params: { jobId } });
     } catch (err: any) {
       toast.error(`Erro: ${err.message}`);
-    } finally {
       setIsProcessing(false);
     }
   }

@@ -842,38 +842,8 @@ function LabModal({ onClose, onUse, patientContext }: { onClose: () => void; onU
         extractedText = res.value;
       } else if (file.type.startsWith("image/")) {
         // Imagem: envia para OpenAI Vision via base64
-        const { engine, apiKey } = (() => {
-          const engine = localStorage.getItem("ai_engine") || "openai";
-          const apiKey = localStorage.getItem("ai_api_key") || (import.meta as any).env?.VITE_OPENAI_API_KEY || "";
-          return { engine, apiKey };
-        })();
+        throw new Error("Importacao por foto/print sera processada pelo backend em etapa futura. Cole a transcricao do laboratorio por enquanto.");
 
-        if (!apiKey) throw new Error("Configure sua chave OpenAI nas Configurações para usar importação por imagem.");
-
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve((ev.target?.result as string).split(",")[1]);
-          reader.readAsDataURL(file);
-        });
-
-        const visionRes = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [{
-              role: "user",
-              content: [
-                { type: "text", text: "Leia esta imagem de resultado de exame laboratorial e transcreva TODOS os valores encontrados em texto simples. Inclua nome do exame e valor. Se for um print/foto de sistema hospitalar, transcreva tudo que conseguir ler." },
-                { type: "image_url", image_url: { url: `data:${file.type};base64,${base64}` } }
-              ]
-            }],
-            max_tokens: 1500,
-          }),
-        });
-        const visionData = await visionRes.json();
-        if (!visionRes.ok) throw new Error(visionData.error?.message || "Erro ao ler imagem");
-        extractedText = visionData.choices[0].message.content;
       } else if (file.type === "text/plain") {
         extractedText = await file.text();
       }
@@ -903,7 +873,7 @@ function LabModal({ onClose, onUse, patientContext }: { onClose: () => void; onU
       setStep(4);
       setResult({
         date: resultData.data_exame || new Date().toLocaleDateString('pt-BR'),
-        raw: resultData.valores || {},
+        raw: Object.fromEntries(Object.entries(resultData.valores || {}).map(([key, value]) => [key, value == null ? "" : String(value)])),
         formatted: resultData.texto_formatado || "",
       });
     } catch (e) {

@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
+import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 
 const TipoRoute = TipoRouteImport.update({
@@ -26,6 +28,11 @@ const TipoRoute = TipoRouteImport.update({
 const RoundRoute = RoundRouteImport.update({
   id: '/round',
   path: '/round',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevisarExtracaoRoute = RevisarExtracaoRouteImport.update({
+  id: '/revisar-extracao',
+  path: '/revisar-extracao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovoPacienteRoute = NovoPacienteRouteImport.update({
@@ -53,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProcessandoJobIdRoute = ProcessandoJobIdRouteImport.update({
+  id: '/processando/$jobId',
+  path: '/processando/$jobId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   id: '/evolucao/$id',
   path: '/evolucao/$id',
@@ -65,9 +77,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +89,11 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +102,11 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,9 +116,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/processando/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,9 +128,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/processando/$jobId'
   id:
     | '__root__'
     | '/'
@@ -118,9 +140,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/processando/$jobId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,9 +153,11 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
+  RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
+  ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -148,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/round'
       fullPath: '/round'
       preLoaderRoute: typeof RoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revisar-extracao': {
+      id: '/revisar-extracao'
+      path: '/revisar-extracao'
+      fullPath: '/revisar-extracao'
+      preLoaderRoute: typeof RevisarExtracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/novo-paciente': {
@@ -185,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/processando/$jobId': {
+      id: '/processando/$jobId'
+      path: '/processando/$jobId'
+      fullPath: '/processando/$jobId'
+      preLoaderRoute: typeof ProcessandoJobIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evolucao/$id': {
       id: '/evolucao/$id'
       path: '/evolucao/$id'
@@ -201,9 +241,11 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NovoPacienteRoute: NovoPacienteRoute,
+  RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
+  ProcessandoJobIdRoute: ProcessandoJobIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

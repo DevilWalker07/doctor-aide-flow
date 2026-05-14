@@ -89,7 +89,8 @@ function RoundInteligente() {
   };
 
   const handleGerarRelatorio = (tipo: "transferencia" | "alta" | "obito") => {
-    const text = motorLuanService.gerarRelatorio(tipo, patient);
+    if (!patient) return;
+    const text = motorLuanService.gerarRelatorio(tipo, patient as any);
     setGeneratedRelatorio(text);
   };
 
