@@ -1,84 +1,153 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Stethoscope, ArrowRight, Activity, ShieldCheck } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { 
+  Stethoscope, ArrowRight, Play, Settings2, 
+  Activity, ShieldCheck, Clock, Users, AlertTriangle 
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
-  head: () => ({ meta: [{ title: "DOUTOR AJUDA — Iniciar Plantão" }] }),
+  head: () => ({ meta: [{ title: "Doutor Ajuda — Seu Assistente Clínico" }] }),
 });
 
 function HomePage() {
+  const [nomeMedico, setNomeMedico] = useState(() => localStorage.getItem("da_nome_medico") || "Médico");
+  const [plantaoAtivo, setPlantaoAtivo] = useState<any>(null);
+  const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
+  const nav = useNavigate();
+
+  useEffect(() => {
+    const active = localStorage.getItem("da_plantao_ativo");
+    if (active) {
+      const parsed = JSON.parse(active);
+      if (parsed.status === "active") {
+        setPlantaoAtivo(parsed);
+        
+        // Calculate stats
+        const pacientes = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        let pendCount = 0;
+        pacientes.forEach((p: any) => {
+          pendCount += (p.pendingIssues?.length || 0) + (p.pendencias?.length || 0);
+        });
+        setStats({ pacientes: pacientes.length, pendencias: pendCount });
+      }
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
-      {/* Premium ambient backgrounds */}
+      {/* Background Decor */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[100px] animate-pulse duration-10000" />
-        <div className="absolute top-[30%] -right-[15%] h-[600px] w-[600px] rounded-full bg-brand/5 blur-[100px]" />
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-ai/5 rounded-full blur-[100px] translate-y-1/4 -translate-x-1/4" />
       </div>
 
-      <header className="relative px-8 py-6 flex items-center justify-between max-w-7xl mx-auto w-full z-10">
+      <header className="relative px-8 py-10 flex items-center justify-between max-w-7xl mx-auto w-full z-10">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-navy text-navy-foreground flex items-center justify-center shadow-lg shadow-navy/20">
-            <Stethoscope className="h-5 w-5" />
+          <div className="h-12 w-12 rounded-2xl bg-navy text-white flex items-center justify-center shadow-2xl shadow-navy/20">
+            <Stethoscope className="h-6 w-6" />
           </div>
-          <span className="font-extrabold tracking-tight text-foreground text-lg">DOUTOR AJUDA</span>
+          <div>
+            <span className="block font-black tracking-tight text-foreground text-xl leading-none">DOUTOR AJUDA</span>
+            <span className="text-[9px] font-black tracking-[0.3em] uppercase text-muted-foreground mt-1">SISTEMA MÉDICO INTELIGENTE</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-          </span>
-          <span className="label-tech text-success">SISTEMA ONLINE</span>
-        </div>
+        <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+           <Settings2 className="h-5 w-5" />
+        </Link>
       </header>
 
-      <main className="relative flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-6 py-12 text-center z-10">
-        <div className="group relative mb-8">
-          <div className="absolute inset-0 bg-primary blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-700 rounded-full" />
-          <div className="relative h-24 w-24 rounded-[2rem] bg-gradient-to-br from-primary to-brand flex items-center justify-center shadow-2xl shadow-primary/30 transition-transform duration-500 hover:scale-105">
-            <Stethoscope className="h-12 w-12 text-white" />
-          </div>
+      <main className="relative flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto px-6 py-12 text-center z-10">
+        
+        <div className="mb-12 animate-in fade-in zoom-in duration-700">
+           <div className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+              BEM-VINDO À FASE 2
+           </div>
+           <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground mb-6 leading-none">
+              EVOLUÇÕES <br /> <span className="text-primary italic">DR(A). {nomeMedico.split(' ')[1] || nomeMedico}</span>
+           </h1>
+           <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground font-medium leading-relaxed">
+              Sua central inteligente para evolução médica, prescrição e passagem de plantão com tecnologia assistida por IA.
+           </p>
         </div>
 
-        <p className="label-tech mb-4 text-primary font-bold tracking-widest">SISTEMA DE EVOLUÇÕES MÉDICAS</p>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-foreground mb-4">
-          EVOLUÇÕES
-        </h1>
-        <p className="text-xl md:text-2xl font-medium text-navy/80 mb-8 tracking-tight">
-          Dr. Luan Carvalho · Plantonista
-        </p>
+        <div className="flex flex-col gap-4 w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+           <button 
+             onClick={() => nav({ to: "/iniciar-plantao" })}
+             className="group relative flex items-center justify-center gap-4 py-6 px-10 rounded-[2.5rem] bg-navy text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-navy/30 hover:shadow-navy/50 hover:-translate-y-1 transition-all"
+           >
+              <Play className="h-5 w-5 fill-current" /> INICIAR NOVO PLANTÃO
+           </button>
 
-        <p className="max-w-2xl mx-auto text-base md:text-lg text-muted-foreground leading-relaxed mb-12">
-          Organize seu plantão, importe laboratórios via IA simulada e gere evoluções padrão-ouro
-          estruturadas, em caixa alta, com rapidez e extrema segurança clínica.
-        </p>
+           {plantaoAtivo && (
+             <div className="bg-white border-2 border-primary/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4">
+                   <div className="flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                   </div>
+                </div>
+                
+                <div className="text-left space-y-4">
+                   <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">PLANTÃO EM ANDAMENTO</span>
+                   </div>
+                   
+                   <div>
+                      <h3 className="text-2xl font-black text-foreground uppercase leading-tight">{plantaoAtivo.setor || "Clínica Médica"}</h3>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">{plantaoAtivo.data_formatada || plantaoAtivo.data}</p>
+                   </div>
 
-        <Link
-          to="/iniciar-plantao"
-          className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-navy text-navy-foreground font-bold uppercase tracking-widest shadow-xl shadow-navy/20 hover:shadow-navy/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-          <span className="relative z-10 flex items-center gap-3 text-sm md:text-base">
-            INICIAR PLANTÃO
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-          </span>
-        </Link>
+                   <div className="flex items-center gap-6 pt-2">
+                      <div className="flex items-center gap-2">
+                         <Users className="h-4 w-4 text-muted-foreground" />
+                         <span className="text-xs font-black">{stats.pacientes} PACIENTES</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <AlertTriangle className="h-4 w-4 text-amber-500" />
+                         <span className="text-xs font-black text-amber-600">{stats.pendencias} PENDÊNCIAS</span>
+                      </div>
+                   </div>
 
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
-          {[
-            { icon: Activity, label: "CHECKLIST DINÂMICO", desc: "Organização visual do plantão" },
-            { icon: ShieldCheck, label: "CÁLCULOS CLÍNICOS", desc: "D4/7, TFGe e curva HGT automáticos" },
-            { icon: Stethoscope, label: "PADRÃO-OURO", desc: "Texto gerado no padrão ouro médico" },
-          ].map((f) => (
-            <div key={f.label} className="group rounded-2xl bg-white/60 hover:bg-white backdrop-blur-md border border-border hover:border-primary/20 p-6 flex flex-col items-center gap-3 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-1 group-hover:scale-110 transition-transform duration-300">
-                <f.icon className="h-6 w-6" />
-              </div>
-              <span className="font-bold text-[11px] uppercase tracking-widest text-navy">{f.label}</span>
-              <span className="text-[11px] text-muted-foreground">{f.desc}</span>
-            </div>
-          ))}
+                   <button 
+                     onClick={() => nav({ to: "/dashboard" })}
+                     className="w-full mt-4 py-4 rounded-2xl bg-secondary text-foreground font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+                   >
+                      CONTINUAR PLANTÃO <ArrowRight className="h-4 w-4" />
+                   </button>
+                </div>
+             </div>
+           )}
+
+           <button 
+             onClick={() => nav({ to: "/configuracoes" })}
+             className="py-5 rounded-[2.5rem] bg-white border border-border text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] hover:bg-secondary transition-all"
+           >
+              CONFIGURAÇÕES DO PERFIL
+           </button>
+        </div>
+
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl opacity-60">
+           {[
+             { icon: Activity, label: "CHECKLIST DINÂMICO", desc: "Controle total do setor" },
+             { icon: ShieldCheck, label: "CÁLCULOS CLÍNICOS", desc: "Segurança na prescrição" },
+             { icon: Stethoscope, label: "PADRÃO-OURO", desc: "Evoluções em caixa alta" },
+           ].map((f) => (
+             <div key={f.label} className="flex flex-col items-center gap-2">
+                <div className="h-10 w-10 rounded-xl bg-secondary/50 flex items-center justify-center text-muted-foreground mb-1">
+                   <f.icon className="h-5 w-5" />
+                </div>
+                <span className="font-black text-[9px] uppercase tracking-widest text-navy">{f.label}</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">{f.desc}</span>
+             </div>
+           ))}
         </div>
       </main>
+
+      <footer className="py-12 text-center relative z-10">
+         <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em]">SISTEMA DESENVOLVIDO PARA DOUTORES · FASE 2.0</p>
+      </footer>
     </div>
   );
 }
