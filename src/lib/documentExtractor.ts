@@ -70,7 +70,7 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${BACKEND_URL}/api/extract/extract-async`, {
+  const response = await fetch(`${BACKEND_URL}/extract-async`, {
     method: "POST",
     body: formData,
   });
@@ -91,7 +91,7 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
 export async function getClinicalExtractionJob(jobId: string): Promise<JobStatusResponse> {
   if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
 
-  const response = await fetch(`${BACKEND_URL}/api/extract/job/${jobId}`);
+  const response = await fetch(`${BACKEND_URL}/job/${jobId}`);
   if (!response.ok) {
     if (response.status === 404) throw new Error("Job não encontrado. O servidor pode ter reiniciado.");
     throw new Error(`Erro ao consultar job (${response.status}).`);
@@ -148,21 +148,21 @@ export async function extractClinicalDocument(
 
 /** Saves extraction result to localStorage in both formats */
 export function saveExtractionResult(result: ClinicalExtractionResult, fileName: string) {
-  const session: ExtractionSession = {
-    fileName,
-    engine: result.engine || "openai-direct",
+  const session = {
+    fileName: result.fileName || fileName || "documento",
+    engine: result.engine || "openai-vision",
     markdown: result.markdown || result.hda || "",
     extracted: result,
     createdAt: new Date().toISOString(),
   };
 
-  localStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(result));
+  localStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(session));
   localStorage.setItem(EXTRACTION_SESSION_KEY, JSON.stringify(session));
 
   // Also write sessionStorage for tabs that might check it
   try {
     sessionStorage.setItem(EXTRACTION_SESSION_KEY, JSON.stringify(session));
-    sessionStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(result));
+    sessionStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(session));
   } catch {
     // sessionStorage might be restricted in some Safari modes
   }

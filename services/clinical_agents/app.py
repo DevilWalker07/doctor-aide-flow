@@ -199,6 +199,11 @@ async def get_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job não encontrado")
     return jobs_store[job_id]
 
+@app.get("/health")
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "service": "clinical-agents"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
