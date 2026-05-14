@@ -120,10 +120,11 @@ function NovoPaciente() {
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
               {/* Admissão Nova */}
               <button
-                onClick={() => setSituation("nova-admissao")}
+                type="button"
+                onClick={() => { console.log("CLICOU EM ADMISSÃO NOVA"); setSituation("nova-admissao"); }}
                 className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500">
                   <Plus className="h-8 w-8" />
                 </div>
@@ -139,10 +140,11 @@ function NovoPaciente() {
 
               {/* Já Internado */}
               <button
-                onClick={() => setSituation("ja-internado")}
+                type="button"
+                onClick={() => { console.log("CLICOU EM JÁ INTERNADO"); setSituation("ja-internado"); }}
                 className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500">
                   <BedDouble className="h-8 w-8" />
                 </div>
@@ -236,7 +238,7 @@ function NovoPaciente() {
               </Field>
 
               <div className="pt-6 mt-2 border-t border-border">
-                <button onClick={saveManual} className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3">
+                <button type="button" onClick={saveManual} className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3">
                   <FileText className="h-5 w-5" /> SALVAR PACIENTE
                 </button>
               </div>
@@ -405,7 +407,7 @@ function NovoPaciente() {
               </Field>
 
               <div className="pt-6 mt-2 border-t border-border">
-                <button onClick={saveManual} className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3">
+                <button type="button" onClick={saveManual} className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3">
                   <Stethoscope className="h-5 w-5" /> SALVAR PACIENTE
                 </button>
               </div>
