@@ -1,25 +1,26 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase, hasSupabaseConfig } from "@/lib/supabase";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
+
+const PUBLIC_ROUTES = ["/login", "/cadastro", "/recuperar-senha", "/nova-senha"];
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          A página que você procura não existe ou foi movida.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Voltar ao início
           </Link>
         </div>
       </div>
@@ -34,21 +35,16 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "DOUTOR AJUDA — Evoluções Médicas" },
       { name: "description", content: "Plataforma para gerar evoluções médicas hospitalares padronizadas." },
-      { name: "author", content: "Lovable" },
+      { name: "author", content: "Doutor Ajuda" },
       { property: "og:title", content: "DOUTOR AJUDA" },
       { property: "og:description", content: "Evoluções médicas padrão-ouro." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
     ],
   }),
   shellComponent: RootShell,
@@ -72,39 +68,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const router = useRouterState();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!hasSupabaseConfig) {
-      setLoading(false);
-      return;
-    }
-
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session && router.location.pathname !== "/login") {
-        navigate({ to: "/login" });
-      }
-      setLoading(false);
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && router.location.pathname !== "/login") {
-        navigate({ to: "/login" });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, router.location.pathname]);
-
-  if (loading) return null;
+  const isPublicRoute = PUBLIC_ROUTES.some(r => router.location.pathname.startsWith(r));
 
   return (
     <>
-      <Outlet />
+      {isPublicRoute ? <Outlet /> : <AuthGuard><Outlet /></AuthGuard>}
       <Toaster richColors position="top-right" />
     </>
   );
