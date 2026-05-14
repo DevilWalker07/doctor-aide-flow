@@ -73,8 +73,13 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
 
         elif ext == ".docx":
             update_job(job_id, "processing", "Extraindo texto do DOCX...")
-            result = mammoth.extract_text(io.BytesIO(file_bytes))
+            result = mammoth.extract_raw_text(io.BytesIO(file_bytes))
             extracted_text = result.value
+            if not extracted_text.strip():
+                raise ValueError("Não foi possível extrair texto do DOCX.")
+
+        elif ext == ".doc":
+            raise ValueError("Formato .doc antigo ainda não suportado. Converta para .docx ou PDF.")
 
         elif ext == ".pdf":
             update_job(job_id, "processing", "Extraindo texto do PDF...")
