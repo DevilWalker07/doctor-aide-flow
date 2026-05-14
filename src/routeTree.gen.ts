@@ -24,6 +24,7 @@ import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
+import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 
 const UploadIaRoute = UploadIaRouteImport.update({
@@ -101,6 +102,11 @@ const PacienteTempRoute = PacienteTempRouteImport.update({
   path: '/paciente/temp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PacienteIdRoute = PacienteIdRouteImport.update({
+  id: '/paciente/$id',
+  path: '/paciente/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   id: '/evolucao/$id',
   path: '/evolucao/$id',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/paciente/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/paciente/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/paciente/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
+  PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
 }
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacienteTempRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/paciente/$id': {
+      id: '/paciente/$id'
+      path: '/paciente/$id'
+      fullPath: '/paciente/$id'
+      preLoaderRoute: typeof PacienteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evolucao/$id': {
       id: '/evolucao/$id'
       path: '/evolucao/$id'
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
+  PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
 }
