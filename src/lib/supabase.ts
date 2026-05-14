@@ -1,10 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-// Pegamos das variáveis de ambiente. Se não existirem, usamos valores "mock" 
-// para evitar erro na inicialização, mas as chamadas para o supabase falharão graciosamente.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://sua-url-supabase.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "sua-anon-key";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Doutor Ajuda: variáveis VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não configuradas.')
+}
 
-export const hasSupabaseConfig = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '')
+
+// hasSupabaseConfig is kept for backward compatibility with store.ts fallback logic
+export const hasSupabaseConfig = !!supabaseUrl && !!supabaseAnonKey
