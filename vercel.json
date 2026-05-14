@@ -1,7 +1,16 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/clinical-agents/:path*",
+      "destination": "https://doctor-aide-flow-production.up.railway.app/:path*"
+    },
+    {
+      "source": "/((?!assets/.*|favicon.ico|robots.txt).*)",
+      "destination": "/index.html"
+    }
   ]
 }
