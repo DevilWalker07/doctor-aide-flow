@@ -207,7 +207,11 @@ async def get_job_status(job_id: str):
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "clinical-agents"}
+    return {
+        "status": "ok", 
+        "service": "clinical-agents",
+        "version": "docx-mammoth-extract-raw-text"
+    }
 
 if __name__ == "__main__":
     import uvicorn
