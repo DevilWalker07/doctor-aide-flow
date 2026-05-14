@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+Pillow
+pillow-heif
+docling
+mammoth
+openai
+pypdfium2

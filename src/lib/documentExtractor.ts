@@ -4,7 +4,9 @@
  * Gerencia upload → polling → resultado.
  */
 
-const BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || "").replace(/\/$/, "");
+import { VITE_CLINICAL_AGENTS_URL } from "./clinicalAgentsConfig";
+
+const BACKEND_URL = VITE_CLINICAL_AGENTS_URL.replace(/\/$/, "");
 
 export interface JobStatusResponse {
   job_id: string;
@@ -63,7 +65,7 @@ const EXTRACTION_SESSION_KEY = "extracao_session";
  * Never waits for AI processing.
  */
 export async function startClinicalExtractionJob(file: File): Promise<string> {
-  if (!BACKEND_URL) throw new Error("Backend de IA não configurado (VITE_AI_BACKEND_URL).");
+  if (!BACKEND_URL) throw new Error("Backend de IA não configurado (VITE_CLINICAL_AGENTS_URL).");
 
   const formData = new FormData();
   formData.append("file", file);

@@ -4,7 +4,9 @@ import type { ImportedRoundPatient } from "../types/round";
 import { fallbackEvolution, fallbackLabExtraction, gerarBriefingLocal, gerarMapaPassagemPlantao } from "./localFallbacks";
 import { mockImportedPatients } from "./mocks";
 
-const AI_BACKEND_URL = (import.meta.env.VITE_AI_BACKEND_URL || "").replace(/\/$/, "");
+import { VITE_CLINICAL_AGENTS_URL } from "../clinicalAgentsConfig";
+
+const AI_BACKEND_URL = VITE_CLINICAL_AGENTS_URL.replace(/\/$/, "");
 
 async function postBackend<T>(path: string, body: unknown): Promise<T> {
   if (!AI_BACKEND_URL) throw new Error("Backend de IA não configurado.");
