@@ -15,6 +15,7 @@ import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
 import { Route as PacienteInternadoRouteImport } from './routes/paciente-internado'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as IniciarPlantaoRouteImport } from './routes/iniciar-plantao'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CadastroManualRouteImport } from './routes/cadastro-manual'
@@ -52,6 +53,11 @@ const NovoPacienteRoute = NovoPacienteRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IniciarPlantaoRoute = IniciarPlantaoRouteImport.update({
+  id: '/iniciar-plantao',
+  path: '/iniciar-plantao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
+  '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
+  '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
+  '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
+    | '/iniciar-plantao'
     | '/login'
     | '/novo-paciente'
     | '/paciente-internado'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
+    | '/iniciar-plantao'
     | '/login'
     | '/novo-paciente'
     | '/paciente-internado'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
+    | '/iniciar-plantao'
     | '/login'
     | '/novo-paciente'
     | '/paciente-internado'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   CadastroManualRoute: typeof CadastroManualRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
+  IniciarPlantaoRoute: typeof IniciarPlantaoRoute
   LoginRoute: typeof LoginRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
   PacienteInternadoRoute: typeof PacienteInternadoRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/iniciar-plantao': {
+      id: '/iniciar-plantao'
+      path: '/iniciar-plantao'
+      fullPath: '/iniciar-plantao'
+      preLoaderRoute: typeof IniciarPlantaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -321,6 +341,7 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroManualRoute: CadastroManualRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
+  IniciarPlantaoRoute: IniciarPlantaoRoute,
   LoginRoute: LoginRoute,
   NovoPacienteRoute: NovoPacienteRoute,
   PacienteInternadoRoute: PacienteInternadoRoute,

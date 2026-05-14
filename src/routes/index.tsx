@@ -53,7 +53,7 @@ function HomePage() {
         </p>
 
         <Link
-          to="/tipo"
+          to="/iniciar-plantao"
           className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-navy text-navy-foreground font-bold uppercase tracking-widest shadow-xl shadow-navy/20 hover:shadow-navy/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
         >
           <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
