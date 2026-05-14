@@ -10,13 +10,14 @@ export const Route = createFileRoute("/upload-ia")({
     return {
       tipo: (search.tipo as string) || "admissao",
       engine: (search.engine as string) || "docling",
+      patient_id: (search.patient_id as string) || undefined,
     };
   },
   head: () => ({ meta: [{ title: "Upload IA — DOUTOR AJUDA" }] }),
 });
 
 function UploadIAPage() {
-  const { tipo, engine } = Route.useSearch();
+  const { tipo, engine, patient_id } = Route.useSearch();
   const nav = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -36,11 +37,13 @@ function UploadIAPage() {
     if (!file) return;
     setIsUploading(true);
     try {
-      // Passamos o engine para o extrator (se suportado pelo backend)
       const jobId = await startClinicalExtractionJob(file);
       localStorage.setItem("doutor_ajuda_job_ativo", jobId);
       localStorage.setItem("doutor_ajuda_job_arquivo", file.name);
       localStorage.setItem("doutor_ajuda_tipo_upload", tipo);
+      if (patient_id) {
+        localStorage.setItem("doutor_ajuda_job_patient_id", patient_id);
+      }
       
       toast.success("Arquivo enviado! Iniciando leitura com IA...");
       nav({ to: "/processando/$jobId", params: { jobId } });
@@ -50,11 +53,15 @@ function UploadIAPage() {
     }
   };
 
+  const goBackUrl = patient_id 
+    ? `/paciente/${patient_id}`
+    : (tipo === "admissao" ? "/admissao-nova" : "/paciente-internado");
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
         <Link
-          to={tipo === "admissao" ? "/admissao-nova" : "/paciente-internado"}
+          to={goBackUrl}
           className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
         >
           <ChevronLeft className="h-4 w-4" /> VOLTAR
