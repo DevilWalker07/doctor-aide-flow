@@ -1,47 +1,137 @@
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'
+import { getActiveShift as dbGetActiveShift, updateShift as dbUpdateShift, type Shift } from '../lib/db'
 
 export interface ShiftContext {
-  id: string;
-  data: string;
-  data_formatada: string;
-  hospital: string;
-  setor: string | null;
-  tipo: string | null;
-  status: 'active' | 'finished';
-  criado_em: number;
+  id: string
+  data: string
+  data_formatada: string
+  hospital: string
+  setor: string | null
+  tipo: string | null
+  status: 'active' | 'finished' | string
+  criado_em: number
+  // Supabase fields mapped for convenience
+  date?: string
+  sector?: string
+  type?: string
 }
 
 export function useShift() {
-  const getShift = useCallback((): ShiftContext | null => {
-    const raw = localStorage.getItem("da_plantao_ativo");
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch (e) {
-      return null;
+  const [shift, setShift] = useState<ShiftContext | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const s = await dbGetActiveShift()
+        if (s) {
+          const ctx = supabaseToContext(s)
+          setShift(ctx)
+          syncToLocal(s)
+        } else {
+          const local = readLocal()
+          if (local) setShift(local)
+        }
+      } catch {
+        const local = readLocal()
+        if (local) setShift(local)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, []);
+    load()
+  }, [])
+
+  const refreshShift = useCallback(() => {
+    setLoading(true)
+    dbGetActiveShift()
+      .then(s => {
+        if (s) {
+          const ctx = supabaseToContext(s)
+          setShift(ctx)
+          syncToLocal(s)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Legacy getShift for backward compat with cadastro-manual etc.
+  const getShift = useCallback((): ShiftContext | null => {
+    if (shift) return shift
+    return readLocal()
+  }, [shift])
 
   const getTipo = useCallback((): string | null => {
-    return localStorage.getItem("da_tipo_evolucao");
-  }, []);
+    if (shift?.tipo) return shift.tipo
+    return localStorage.getItem('da_tipo_evolucao')
+  }, [shift])
 
   const clearShift = useCallback(() => {
-    localStorage.removeItem("da_plantao_ativo");
-    localStorage.removeItem("da_tipo_evolucao");
-  }, []);
+    setShift(null)
+    localStorage.removeItem('da_plantao_ativo')
+    localStorage.removeItem('da_tipo_evolucao')
+    localStorage.removeItem('da_shift_id')
+  }, [])
 
-  const updateShift = useCallback((updates: Partial<ShiftContext>) => {
-    const current = getShift();
-    if (!current) return;
-    const updated = { ...current, ...updates };
-    localStorage.setItem("da_plantao_ativo", JSON.stringify(updated));
-  }, [getShift]);
+  // Legacy updateShift for local-only updates (used by tipo.tsx old path)
+  const updateShiftLocal = useCallback((updates: Partial<ShiftContext>) => {
+    setShift(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, ...updates }
+      localStorage.setItem('da_plantao_ativo', JSON.stringify(updated))
+      return updated
+    })
+  }, [])
 
   return {
+    shift,
+    loading,
+    refreshShift,
     getShift,
     getTipo,
     clearShift,
-    updateShift
-  };
+    updateShift: updateShiftLocal,
+  }
+}
+
+function readLocal(): ShiftContext | null {
+  try {
+    const raw = localStorage.getItem('da_plantao_ativo')
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function supabaseToContext(s: Shift): ShiftContext {
+  return {
+    id: s.id,
+    data: s.date,
+    data_formatada: formatDate(s.date),
+    hospital: s.hospital || '',
+    setor: s.sector || null,
+    tipo: s.type || null,
+    status: s.status || 'active',
+    criado_em: new Date(s.created_at).getTime(),
+    date: s.date,
+    sector: s.sector,
+    type: s.type,
+  }
+}
+
+function syncToLocal(s: Shift) {
+  localStorage.setItem('da_shift_id', s.id)
+  localStorage.setItem('da_plantao_ativo', JSON.stringify(supabaseToContext(s)))
+  localStorage.setItem('da_tipo_evolucao', s.type ?? '')
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-')
+    return `${d}/${m}/${y}`
+  } catch {
+    return dateStr
+  }
 }

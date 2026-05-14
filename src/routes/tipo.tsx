@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Stethoscope, Baby, HeartPulse, AlertTriangle, Building2, ChevronLeft, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
+import { updateShift as dbUpdateShift } from "@/lib/db";
 
 export const Route = createFileRoute("/tipo")({
   component: TipoPage,
@@ -9,50 +10,32 @@ export const Route = createFileRoute("/tipo")({
 });
 
 const sectors = [
-  { 
-    id: "enfermaria_clinica", 
-    title: "Enfermaria Clínica Médica", 
-    icon: Stethoscope, 
-    color: "text-primary", 
-    bg: "bg-primary/5" 
-  },
-  { 
-    id: "enfermaria_pediatrica", 
-    title: "Enfermaria Pediátrica", 
-    icon: Baby, 
-    color: "text-ai", 
-    bg: "bg-ai/5" 
-  },
-  { 
-    id: "uti", 
-    title: "UTI", 
-    icon: HeartPulse, 
-    color: "text-destructive", 
-    bg: "bg-destructive/5" 
-  },
-  { 
-    id: "upa", 
-    title: "UPA / Emergência", 
-    icon: AlertTriangle, 
-    color: "text-amber-500", 
-    bg: "bg-amber-500/5" 
-  },
-  { 
-    id: "ubs", 
-    title: "UBS / Ambulatório", 
-    icon: Building2, 
-    color: "text-emerald-500", 
-    bg: "bg-emerald-500/5" 
-  },
+  { id: "enfermaria_clinica", title: "Enfermaria Clínica Médica", icon: Stethoscope, color: "text-primary", bg: "bg-primary/5" },
+  { id: "enfermaria_pediatrica", title: "Enfermaria Pediátrica", icon: Baby, color: "text-ai", bg: "bg-ai/5" },
+  { id: "uti", title: "UTI", icon: HeartPulse, color: "text-destructive", bg: "bg-destructive/5" },
+  { id: "upa", title: "UPA / Emergência", icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/5" },
+  { id: "ubs", title: "UBS / Ambulatório", icon: Building2, color: "text-emerald-500", bg: "bg-emerald-500/5" },
 ];
 
 function TipoPage() {
   const nav = useNavigate();
   const { updateShift } = useShift();
 
-  const handleSelect = (sector: typeof sectors[0]) => {
+  const handleSelect = async (sector: typeof sectors[0]) => {
+    // Always update localStorage
     localStorage.setItem("da_tipo_evolucao", sector.id);
     updateShift({ tipo: sector.id, setor: sector.title });
+
+    // Try to update Supabase if we have a real shift ID
+    const shiftId = localStorage.getItem("da_shift_id");
+    if (shiftId && !shiftId.startsWith("temp_")) {
+      try {
+        await dbUpdateShift(shiftId, { type: sector.id, sector: sector.title });
+      } catch (err) {
+        console.warn("Falha ao atualizar tipo no Supabase", err);
+      }
+    }
+
     toast.success(`Setor selecionado: ${sector.title}`);
     nav({ to: "/dashboard" });
   };

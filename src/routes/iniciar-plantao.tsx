@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ArrowRight, Calendar, Building2, Stethoscope } from "lucide-react";
+import { ChevronLeft, ArrowRight, Calendar, Building2, Stethoscope, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
+import { createShift } from "@/lib/db";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
@@ -13,6 +14,7 @@ function IniciarPlantaoPage() {
   const nav = useNavigate();
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [hospital, setHospital] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     try {
@@ -23,10 +25,11 @@ function IniciarPlantaoPage() {
     }
   }, []);
 
-  const handleContinue = () => {
-    // Hospital agora é opcional conforme solicitado
+  const handleContinue = async () => {
+    if (saving) return;
+    setSaving(true);
+
     const hospitalValue = hospital.trim() || "Unidade não informada";
-    
     let displayDate = "Data não informada";
     try {
       if (data) {
@@ -39,20 +42,50 @@ function IniciarPlantaoPage() {
       console.error("Erro na formatação da data", e);
     }
 
-    const plantao = {
-      id: "plantao_" + Date.now(),
-      data: data || new Date().toISOString().slice(0, 10),
-      data_formatada: displayDate,
-      hospital: hospitalValue,
-      setor: null,
-      tipo: null,
-      status: "active",
-      criado_em: Date.now()
-    };
+    try {
+      // Try Supabase first
+      const shift = await createShift({
+        date: data || new Date().toISOString().slice(0, 10),
+        hospital: hospitalValue,
+      });
 
-    localStorage.setItem("da_plantao_ativo", JSON.stringify(plantao));
-    toast.success("Plantão iniciado com sucesso!");
-    nav({ to: "/tipo" });
+      // Sync to localStorage
+      const localShift = {
+        id: shift.id,
+        data: shift.date,
+        data_formatada: displayDate,
+        hospital: shift.hospital,
+        setor: shift.sector || null,
+        tipo: shift.type || null,
+        status: "active",
+        criado_em: new Date(shift.created_at).getTime(),
+      };
+      localStorage.setItem("da_shift_id", shift.id);
+      localStorage.setItem("da_plantao_ativo", JSON.stringify(localShift));
+      toast.success("Plantão iniciado com sucesso!");
+      nav({ to: "/tipo" });
+    } catch (err) {
+      console.warn("Supabase indisponível, salvando offline.", err);
+      toast.warning("Erro ao salvar plantão. Continuando offline.");
+
+      // Fallback: save only to localStorage with temporary ID
+      const tempId = "temp_" + Date.now();
+      const localShift = {
+        id: tempId,
+        data: data || new Date().toISOString().slice(0, 10),
+        data_formatada: displayDate,
+        hospital: hospitalValue,
+        setor: null,
+        tipo: null,
+        status: "active",
+        criado_em: Date.now(),
+      };
+      localStorage.setItem("da_shift_id", tempId);
+      localStorage.setItem("da_plantao_ativo", JSON.stringify(localShift));
+      nav({ to: "/tipo" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -103,9 +136,10 @@ function IniciarPlantaoPage() {
            <div className="pt-4">
               <button 
                 onClick={handleContinue}
-                className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                disabled={saving}
+                className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                CONTINUAR <ArrowRight className="h-5 w-5" />
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>CONTINUAR <ArrowRight className="h-5 w-5" /></>}
               </button>
            </div>
         </div>

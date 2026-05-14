@@ -1,9 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { 
   Stethoscope, ArrowRight, Play, Settings2, 
-  Activity, ShieldCheck, Clock, Users, AlertTriangle 
+  Activity, ShieldCheck, Clock, Users, AlertTriangle,
+  History, LogOut
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getActiveShift, getClosedShifts, type Shift } from "@/lib/db";
+import { getProfile } from "@/lib/db";
+import { signOut } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -11,32 +16,89 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const [nomeMedico, setNomeMedico] = useState(() => localStorage.getItem("da_nome_medico") || "Médico");
+  const [nomeMedico, setNomeMedico] = useState("Médico");
   const [plantaoAtivo, setPlantaoAtivo] = useState<any>(null);
+  const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
   const nav = useNavigate();
 
   useEffect(() => {
-    const active = localStorage.getItem("da_plantao_ativo");
-    if (active) {
-      const parsed = JSON.parse(active);
-      if (parsed.status === "active") {
-        setPlantaoAtivo(parsed);
-        
-        // Calculate stats
+    async function load() {
+      // 1. Load doctor name
+      try {
+        const profile = await getProfile();
+        if (profile?.name) {
+          setNomeMedico(profile.name);
+          localStorage.setItem("da_nome_medico", profile.name);
+        } else {
+          const local = localStorage.getItem("da_nome_medico");
+          if (local) setNomeMedico(local);
+        }
+      } catch {
+        const local = localStorage.getItem("da_nome_medico");
+        if (local) setNomeMedico(local);
+      }
+
+      // 2. Load active shift from Supabase, fallback to localStorage
+      try {
+        const shift = await getActiveShift();
+        if (shift) {
+          const ctx = {
+            id: shift.id,
+            data: shift.date,
+            data_formatada: formatDate(shift.date),
+            hospital: shift.hospital,
+            setor: shift.sector || null,
+            tipo: shift.type || null,
+            status: shift.status,
+          };
+          setPlantaoAtivo(ctx);
+          localStorage.setItem("da_plantao_ativo", JSON.stringify(ctx));
+          localStorage.setItem("da_shift_id", shift.id);
+        } else {
+          loadLocalFallback();
+        }
+      } catch {
+        loadLocalFallback();
+      }
+
+      // 3. Load closed shifts
+      try {
+        const closed = await getClosedShifts(5);
+        setClosedShifts(closed);
+      } catch { /* ignore */ }
+
+      // 4. Stats from localStorage (patients not migrated yet)
+      try {
         const pacientes = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
         let pendCount = 0;
         pacientes.forEach((p: any) => {
           pendCount += (p.pendingIssues?.length || 0) + (p.pendencias?.length || 0);
         });
         setStats({ pacientes: pacientes.length, pendencias: pendCount });
+      } catch { /* ignore */ }
+    }
+
+    function loadLocalFallback() {
+      const raw = localStorage.getItem("da_plantao_ativo");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.status === "active") setPlantaoAtivo(parsed);
       }
     }
+
+    load();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Sessão encerrada.");
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
-      {/* Background Decor */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-ai/5 rounded-full blur-[100px] translate-y-1/4 -translate-x-1/4" />
@@ -52,16 +114,20 @@ function HomePage() {
             <span className="text-[9px] font-black tracking-[0.3em] uppercase text-muted-foreground mt-1">SISTEMA MÉDICO INTELIGENTE</span>
           </div>
         </div>
-        <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
-           <Settings2 className="h-5 w-5" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+            <Settings2 className="h-5 w-5" />
+          </Link>
+          <button onClick={handleLogout} className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive transition-all shadow-sm">
+            <LogOut className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       <main className="relative flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto px-6 py-12 text-center z-10">
-        
         <div className="mb-12 animate-in fade-in zoom-in duration-700">
            <div className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-              BEM-VINDO À FASE 2
+              BEM-VINDO À FASE 3
            </div>
            <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-foreground mb-6 leading-none">
               EVOLUÇÕES <br /> <span className="text-primary italic">DR(A). {nomeMedico.split(' ')[1] || nomeMedico}</span>
@@ -87,18 +153,15 @@ function HomePage() {
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                    </div>
                 </div>
-                
                 <div className="text-left space-y-4">
                    <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-primary" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">PLANTÃO EM ANDAMENTO</span>
                    </div>
-                   
                    <div>
-                      <h3 className="text-2xl font-black text-foreground uppercase leading-tight">{plantaoAtivo.setor || "Clínica Médica"}</h3>
+                      <h3 className="text-2xl font-black text-foreground uppercase leading-tight">{plantaoAtivo.setor || plantaoAtivo.sector || "Clínica Médica"}</h3>
                       <p className="text-xs font-bold text-muted-foreground uppercase">{plantaoAtivo.data_formatada || plantaoAtivo.data}</p>
                    </div>
-
                    <div className="flex items-center gap-6 pt-2">
                       <div className="flex items-center gap-2">
                          <Users className="h-4 w-4 text-muted-foreground" />
@@ -109,13 +172,32 @@ function HomePage() {
                          <span className="text-xs font-black text-amber-600">{stats.pendencias} PENDÊNCIAS</span>
                       </div>
                    </div>
-
                    <button 
                      onClick={() => nav({ to: "/dashboard" })}
                      className="w-full mt-4 py-4 rounded-2xl bg-secondary text-foreground font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
                    >
                       CONTINUAR PLANTÃO <ArrowRight className="h-4 w-4" />
                    </button>
+                </div>
+             </div>
+           )}
+
+           {closedShifts.length > 0 && (
+             <div className="bg-white border border-border rounded-[2.5rem] p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                   <History className="h-4 w-4 text-muted-foreground" />
+                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">PLANTÕES ANTERIORES</span>
+                </div>
+                <div className="space-y-2">
+                   {closedShifts.map(s => (
+                     <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <div>
+                           <p className="text-xs font-black text-foreground uppercase">{s.sector || "Setor"}</p>
+                           <p className="text-[10px] text-muted-foreground font-bold">{formatDate(s.date)} · {s.hospital}</p>
+                        </div>
+                        <span className="text-[9px] font-black text-muted-foreground uppercase px-3 py-1 bg-secondary rounded-full">ENCERRADO</span>
+                     </div>
+                   ))}
                 </div>
              </div>
            )}
@@ -146,8 +228,17 @@ function HomePage() {
       </main>
 
       <footer className="py-12 text-center relative z-10">
-         <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em]">SISTEMA DESENVOLVIDO PARA DOUTORES · FASE 2.0</p>
+         <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em]">SISTEMA DESENVOLVIDO PARA DOUTORES · FASE 3.0</p>
       </footer>
     </div>
   );
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  } catch {
+    return dateStr;
+  }
 }
