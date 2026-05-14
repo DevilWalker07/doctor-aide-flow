@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UploadIaRouteImport } from './routes/upload-ia'
 import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
@@ -25,6 +26,11 @@ import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobI
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 
+const UploadIaRoute = UploadIaRouteImport.update({
+  id: '/upload-ia',
+  path: '/upload-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TipoRoute = TipoRouteImport.update({
   id: '/tipo',
   path: '/tipo',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
+  '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
+  '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
+  '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
+    | '/upload-ia'
     | '/evolucao/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
+    | '/upload-ia'
     | '/evolucao/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
+    | '/upload-ia'
     | '/evolucao/$id'
     | '/paciente/temp'
     | '/processando/$jobId'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
+  UploadIaRoute: typeof UploadIaRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
@@ -227,6 +240,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upload-ia': {
+      id: '/upload-ia'
+      path: '/upload-ia'
+      fullPath: '/upload-ia'
+      preLoaderRoute: typeof UploadIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tipo': {
       id: '/tipo'
       path: '/tipo'
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
+  UploadIaRoute: UploadIaRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
