@@ -17,6 +17,7 @@ import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as CadastroManualRouteImport } from './routes/cadastro-manual'
 import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
@@ -62,6 +63,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CadastroManualRoute = CadastroManualRouteImport.update({
+  id: '/cadastro-manual',
+  path: '/cadastro-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdmissaoNovaRoute = AdmissaoNovaRouteImport.update({
   id: '/admissao-nova',
   path: '/admissao-nova',
@@ -86,6 +92,7 @@ const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admissao-nova'
+    | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admissao-nova'
+    | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admissao-nova'
+    | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdmissaoNovaRoute: typeof AdmissaoNovaRoute
+  CadastroManualRoute: typeof CadastroManualRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cadastro-manual': {
+      id: '/cadastro-manual'
+      path: '/cadastro-manual'
+      fullPath: '/cadastro-manual'
+      preLoaderRoute: typeof CadastroManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admissao-nova': {
       id: '/admissao-nova'
       path: '/admissao-nova'
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdmissaoNovaRoute: AdmissaoNovaRoute,
+  CadastroManualRoute: CadastroManualRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
