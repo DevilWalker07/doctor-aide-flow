@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
+import { Route as PacienteInternadoRouteImport } from './routes/paciente-internado'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
@@ -33,6 +35,11 @@ const RoundRoute = RoundRouteImport.update({
 const RevisarExtracaoRoute = RevisarExtracaoRouteImport.update({
   id: '/revisar-extracao',
   path: '/revisar-extracao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacienteInternadoRoute = PacienteInternadoRouteImport.update({
+  id: '/paciente-internado',
+  path: '/paciente-internado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovoPacienteRoute = NovoPacienteRouteImport.update({
@@ -55,6 +62,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdmissaoNovaRoute = AdmissaoNovaRouteImport.update({
+  id: '/admissao-nova',
+  path: '/admissao-nova',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -73,10 +85,12 @@ const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admissao-nova': typeof AdmissaoNovaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/paciente-internado': typeof PacienteInternadoRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
@@ -85,10 +99,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admissao-nova': typeof AdmissaoNovaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/paciente-internado': typeof PacienteInternadoRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
@@ -98,10 +114,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admissao-nova': typeof AdmissaoNovaRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/novo-paciente': typeof NovoPacienteRoute
+  '/paciente-internado': typeof PacienteInternadoRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
@@ -112,10 +130,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admissao-nova'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/paciente-internado'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
@@ -124,10 +144,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admissao-nova'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/paciente-internado'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
@@ -136,10 +158,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admissao-nova'
     | '/configuracoes'
     | '/dashboard'
     | '/login'
     | '/novo-paciente'
+    | '/paciente-internado'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
@@ -149,10 +173,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdmissaoNovaRoute: typeof AdmissaoNovaRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
+  PacienteInternadoRoute: typeof PacienteInternadoRoute
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
@@ -183,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisarExtracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/paciente-internado': {
+      id: '/paciente-internado'
+      path: '/paciente-internado'
+      fullPath: '/paciente-internado'
+      preLoaderRoute: typeof PacienteInternadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/novo-paciente': {
       id: '/novo-paciente'
       path: '/novo-paciente'
@@ -211,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admissao-nova': {
+      id: '/admissao-nova'
+      path: '/admissao-nova'
+      fullPath: '/admissao-nova'
+      preLoaderRoute: typeof AdmissaoNovaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -237,10 +277,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdmissaoNovaRoute: AdmissaoNovaRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NovoPacienteRoute: NovoPacienteRoute,
+  PacienteInternadoRoute: PacienteInternadoRoute,
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
