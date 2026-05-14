@@ -21,6 +21,7 @@ import { Route as CadastroManualRouteImport } from './routes/cadastro-manual'
 import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
+import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 
 const TipoRoute = TipoRouteImport.update({
@@ -83,6 +84,11 @@ const ProcessandoJobIdRoute = ProcessandoJobIdRouteImport.update({
   path: '/processando/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PacienteTempRoute = PacienteTempRouteImport.update({
+  id: '/paciente/temp',
+  path: '/paciente/temp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   id: '/evolucao/$id',
   path: '/evolucao/$id',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
+  '/paciente/temp': typeof PacienteTempRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/paciente/temp'
     | '/processando/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/paciente/temp'
     | '/processando/$jobId'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/evolucao/$id'
+    | '/paciente/temp'
     | '/processando/$jobId'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
+  PacienteTempRoute: typeof PacienteTempRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
 }
 
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessandoJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/paciente/temp': {
+      id: '/paciente/temp'
+      path: '/paciente/temp'
+      fullPath: '/paciente/temp'
+      preLoaderRoute: typeof PacienteTempRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evolucao/$id': {
       id: '/evolucao/$id'
       path: '/evolucao/$id'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
+  PacienteTempRoute: PacienteTempRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
 }
 export const routeTree = rootRouteImport
