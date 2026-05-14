@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Stethoscope, Plus, Settings as SettingsIcon, Map, LayoutGrid, BedDouble, ArrowLeft, AlertCircle, ChevronRight, ArrowRight, FileUp, ClipboardPaste } from "lucide-react";
-import { usePatients, deletePatient, addPatient, type Patient } from "@/lib/store";
+import { Stethoscope, Plus, Settings as SettingsIcon, Map, LayoutGrid, BedDouble, ArrowLeft, AlertCircle, ChevronRight, ArrowRight, FileUp } from "lucide-react";
+import { usePatients, deletePatient, type Patient } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { extractBulkPatientsWithAI } from "@/lib/bulkService";
 
 import { SettingsModal } from "@/components/SettingsModal";
 
@@ -26,94 +25,19 @@ function Dashboard() {
   const { patients, refresh } = usePatients();
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<"gestao" | "mapa">("gestao");
-  const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showPaste, setShowPaste] = useState(false);
-  const [pasteText, setPasteText] = useState("");
   const nav = useNavigate();
+
   
   const today = new Date().toISOString().split("T")[0];
   const shiftPatients = patients.filter((p) => p.admission === today);
   const sel = shiftPatients.find((p) => p.id === selected) || shiftPatients[0];
 
-  const handlePasteImport = async () => {
-    if (!pasteText.trim()) return;
-    setIsProcessing(true);
-    setShowPaste(false);
-    toast.info("Processando texto com IA...");
-    try {
-      const newPatients = await extractBulkPatientsWithAI(pasteText, "CLÍNICA MÉDICA", "Texto Colado");
-      for (const p of newPatients) {
-        await addPatient({ ...p, admission: today, hda: p.hda || "" });
-      }
-      toast.success(`${newPatients.length} paciente(s) adicionado(s)!`);
-      setPasteText("");
-      refresh();
-    } catch (e: any) {
-      toast.error(`Falha ao processar: ${e.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleFileUpload = async (files: FileList) => {
-    setIsProcessing(true);
-    toast.info("Processando arquivos...");
-
-    // Imports dinâmicos para evitar erro de DOMMatrix no SSR (Node.js)
-    const pdfjsLib = await import("pdfjs-dist");
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-    const mammoth = (await import("mammoth")).default;
-
-    try {
-      let totalAdded = 0;
-
-      // Processa cada arquivo individualmente para respeitar limite de tokens da IA
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        toast.info(`Processando arquivo ${i + 1}/${files.length}: ${file.name}...`);
-
-        let fileText = "";
-
-        if (file.type === "application/pdf") {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          for (let j = 1; j <= pdf.numPages; j++) {
-            const page = await pdf.getPage(j);
-            const content = await page.getTextContent();
-            fileText += content.items.map((item: any) => item.str).join(" ") + "\n";
-          }
-        } else if (file.name.endsWith(".docx")) {
-          const arrayBuffer = await file.arrayBuffer();
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          fileText = result.value;
-        } else if (file.type === "text/plain") {
-          fileText = await file.text();
-        }
-
-        if (!fileText.trim()) continue;
-
-        const newPatients = await extractBulkPatientsWithAI(fileText, "CLÍNICA MÉDICA", file.name);
-
-        for (const p of newPatients) {
-          await addPatient({ ...p, admission: today, hda: p.hda || "" });
-          totalAdded++;
-        }
-      }
-
-      if (totalAdded === 0) {
-        toast.warning("Nenhum paciente encontrado nos arquivos.");
-      } else {
-        toast.success(`${totalAdded} paciente(s) adicionado(s) ao plantão!`);
-      }
-      refresh();
-    } catch (e: any) {
-      toast.error(`Falha ao processar: ${e.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // ── BLOCO DE IMPORTAÇÃO AUTOMÁTICA REMOVIDO ──────────────────────────────
+  // A criação de pacientes via upload em lote foi desativada para garantir
+  // que o médico sempre revise os dados antes de salvar.
+  // O fluxo correto é: /novo-paciente → upload → /processando → /revisar-extracao → salvar
+  // ──────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,67 +118,20 @@ function Dashboard() {
         </aside>
 
         <main className="flex flex-col gap-6">
-          <div 
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e.dataTransfer.files); }}
-            className={`bg-white border-2 border-dashed rounded-[2rem] p-8 text-center transition-all duration-300 relative overflow-hidden ${isDragging ? "border-ai bg-ai/5 scale-[1.02]" : "border-border hover:border-ai/50 hover:bg-ai/5"}`}
+          {/* ── ÁREA DE IMPORTAÇÃO (nova — redireciona para fluxo com revisão) ── */}
+          <div
+            onClick={() => nav({ to: "/novo-paciente" })}
+            className="bg-white border-2 border-dashed border-border rounded-[2rem] p-8 text-center transition-all duration-300 relative overflow-hidden hover:border-ai/50 hover:bg-ai/5 cursor-pointer group"
           >
-            {isProcessing ? (
-              <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                <div className="h-12 w-12 rounded-full bg-ai/20 flex items-center justify-center animate-pulse mb-2">
-                  <Stethoscope className="h-6 w-6 text-ai animate-spin" />
-                </div>
-                <p className="font-bold text-sm tracking-widest text-ai uppercase">MÉDICO VIRTUAL LENDO PRONTUÁRIOS...</p>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">Extraindo dados vitais e identificação. Isso pode levar alguns segundos.</p>
-              </div>
-            ) : showPaste ? (
-              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                <h3 className="font-extrabold text-lg tracking-tight">COLAR EVOLUÇÕES</h3>
-                <textarea
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  placeholder="Cole aqui o texto de uma ou mais evoluções... O sistema identificará cada paciente automaticamente."
-                  className="w-full h-48 bg-secondary/50 border border-border rounded-2xl p-4 text-xs font-bold uppercase placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ai/30 transition-all"
-                />
-                <div className="flex items-center justify-center gap-3">
-                  <button 
-                    onClick={() => setShowPaste(false)}
-                    className="px-6 py-2.5 rounded-xl border border-border text-[11px] font-bold uppercase tracking-widest hover:bg-secondary transition-all"
-                  >
-                    CANCELAR
-                  </button>
-                  <button 
-                    onClick={handlePasteImport}
-                    disabled={!pasteText.trim()}
-                    className="px-8 py-2.5 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 hover:-translate-y-0.5 disabled:opacity-50 transition-all"
-                  >
-                    PROCESSAR TEXTO
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center mx-auto mb-4 text-ai">
-                  <FileUp className="h-8 w-8" />
-                </div>
-                <h3 className="font-extrabold text-lg tracking-tight mb-2">EVOLUÇÕES ANTERIORES: IMPORTAR LOTE DE PACIENTES</h3>
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">ARRASTE PDFs OU DOCs DE VÁRIOS PACIENTES AQUI</p>
-                <div className="flex items-center justify-center gap-3">
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 hover:-translate-y-0.5 transition-all">
-                    <FileUp className="h-4 w-4" /> SELECIONAR ARQUIVOS
-                    <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
-                  </label>
-                  <button 
-                    onClick={() => setShowPaste(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-ai/20 text-ai text-[11px] font-bold uppercase tracking-widest hover:bg-ai/5 transition-all"
-                  >
-                    <ClipboardPaste className="h-4 w-4" /> COLAR TEXTO
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <div className="h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center mx-auto mb-4 text-ai group-hover:scale-110 transition-transform duration-300">
+              <FileUp className="h-8 w-8" />
+            </div>
+            <h3 className="font-extrabold text-lg tracking-tight mb-2">ADICIONAR PACIENTE AO PLANTÃO</h3>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Upload de documento ou cadastro manual — com revisão obrigatória</p>
+            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-ai text-ai-foreground text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-ai/20 group-hover:-translate-y-0.5 transition-all">
+              <Plus className="h-4 w-4" /> NOVO PACIENTE
+            </span>
           </div>
 
           <div className="bg-white border border-border rounded-[2rem] min-h-[500px] p-8 md:p-10 shadow-sm relative overflow-hidden flex-1">
