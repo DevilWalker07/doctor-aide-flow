@@ -47,7 +47,7 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
         update_job(job_id, "processing", "Identificando tipo de arquivo...")
         
         extracted_text = ""
-        image_base64 = None
+        image_base64_list = []
 
         if ext in [".heic", ".heif", ".jpg", ".jpeg", ".png", ".webp"]:
             update_job(job_id, "processing", "Preparando imagem...")
@@ -65,89 +65,127 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
                 image = image.convert("RGB")
             image.save(output, format="JPEG", quality=85)
             import base64
-            image_base64 = base64.b64encode(output.getvalue()).decode("utf-8")
+            image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
 
         elif ext in [".txt", ".md"]:
-            update_job(job_id, "processing", "Lendo texto do arquivo...")
+            update_job(job_id, "processing", "Lendo texto...")
             extracted_text = file_bytes.decode("utf-8", errors="replace")
 
         elif ext == ".docx":
-            update_job(job_id, "processing", "Extraindo texto do DOCX...")
-            result = mammoth.extract_raw_text(io.BytesIO(file_bytes))
-            extracted_text = result.value
+            update_job(job_id, "processing", "Lendo documento...")
+            # Tentar docling primeiro
+            try:
+                from docling.document_converter import DocumentConverter
+                with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = tmp.name
+                
+                converter = DocumentConverter()
+                doc = converter.convert(tmp_path)
+                extracted_text = doc.document.export_to_markdown()
+                os.remove(tmp_path)
+            except Exception as e:
+                # Fallback to mammoth se docling falhar
+                print("Docling falhou para DOCX, usando mammoth:", e)
+                result = mammoth.extract_raw_text(io.BytesIO(file_bytes))
+                extracted_text = result.value
+                
             if not extracted_text.strip():
                 raise ValueError("Não foi possível extrair texto do DOCX.")
 
-        elif ext == ".doc":
-            raise ValueError("Formato .doc antigo ainda não suportado. Converta para .docx ou PDF.")
-
         elif ext == ".pdf":
-            update_job(job_id, "processing", "Extraindo texto do PDF...")
-            # Use PyPDFium2 for quick text extraction
-            import pypdfium2 as pdfium
-            pdf = pdfium.PdfDocument(file_bytes)
-            text_pages = []
-            for i in range(len(pdf)):
-                page = pdf[i]
-                textpage = page.get_textpage()
-                text_pages.append(textpage.get_text_bounded())
-            
-            extracted_text = "\n".join(text_pages).strip()
-            
-            if len(extracted_text) < 100 and len(pdf) > 0:
-                update_job(job_id, "processing", "PDF parece ser imagem. Lendo com IA...")
-                # Convert first page to image
-                page = pdf[0]
-                bitmap = page.render(scale=2)
-                pil_image = bitmap.to_pil()
-                if pil_image.mode in ("RGBA", "P"):
-                    pil_image = pil_image.convert("RGB")
-                max_size = 1500
-                if max(pil_image.size) > max_size:
-                    ratio = max_size / max(pil_image.size)
-                    pil_image = pil_image.resize((int(pil_image.size[0] * ratio), int(pil_image.size[1] * ratio)), Image.LANCZOS)
+            update_job(job_id, "processing", "Lendo PDF...")
+            try:
+                from docling.document_converter import DocumentConverter
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = tmp.name
                 
-                output = io.BytesIO()
-                pil_image.save(output, format="JPEG", quality=85)
-                import base64
-                image_base64 = base64.b64encode(output.getvalue()).decode("utf-8")
+                converter = DocumentConverter()
+                doc = converter.convert(tmp_path)
+                extracted_text = doc.document.export_to_markdown()
+                os.remove(tmp_path)
+            except Exception as e:
+                print("Docling falhou para PDF:", e)
                 extracted_text = ""
+
+            if len(extracted_text) < 100:
+                update_job(job_id, "processing", "Processando páginas...")
+                # Fallback to images page by page
+                import pypdfium2 as pdfium
+                pdf = pdfium.PdfDocument(file_bytes)
+                for i in range(len(pdf)):
+                    page = pdf[i]
+                    bitmap = page.render(scale=2)
+                    pil_image = bitmap.to_pil()
+                    if pil_image.mode in ("RGBA", "P"):
+                        pil_image = pil_image.convert("RGB")
+                    max_size = 1500
+                    if max(pil_image.size) > max_size:
+                        ratio = max_size / max(pil_image.size)
+                        pil_image = pil_image.resize((int(pil_image.size[0] * ratio), int(pil_image.size[1] * ratio)), Image.LANCZOS)
+                    
+                    output = io.BytesIO()
+                    pil_image.save(output, format="JPEG", quality=85)
+                    import base64
+                    image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
+                extracted_text = ""
+
         else:
             raise Exception(f"Formato não suportado: {ext}")
 
-        update_job(job_id, "processing", "Lendo com IA (OpenAI)...")
+        update_job(job_id, "processing", "Organizando dados clínicos...")
 
         prompt = """Extraia os dados clínicos do documento e retorne ESTRITAMENTE um JSON com as seguintes chaves (sem formatação markdown ```json, apenas o JSON puramente):
-        {
-            "nome": "string ou null",
-            "idade": "numero ou null",
-            "sexo": "string ou null",
-            "leito": "string ou null",
-            "setor": "string ou null",
-            "data_admissao": "string ou null",
-            "hda": "string ou null",
-            "lista_de_problemas": ["string"],
-            "antibioticos": ["string"],
-            "medicacoes": ["string"],
-            "laboratorios": ["string"],
-            "exame_fisico": "string ou null",
-            "condutas": ["string"],
-            "pendencias": ["string"],
-            "alertas": ["string"]
-        }"""
+{
+  "nome": null ou string,
+  "idade": null ou string,
+  "sexo": null ou "M" / "F",
+  "leito": null ou string,
+  "setor": null ou string,
+  "data_admissao": null ou "DD/MM/YYYY",
+  "hda": null ou string,
+  "lista_de_problemas": ["string"],
+  "antibioticos": [
+    {
+      "nome": "string",
+      "dose": "string",
+      "via": "string",
+      "frequencia": "string",
+      "data_inicio": "DD/MM/YYYY"
+    }
+  ],
+  "medicacoes": ["string"],
+  "laboratorios": [
+    {
+      "data": "DD/MM/YYYY",
+      "texto_compacto": "string",
+      "valores": {}
+    }
+  ],
+  "exame_fisico": {
+    "geral": "string ou null",
+    "acv": "string ou null",
+    "ar": "string ou null",
+    "abdome": "string ou null",
+    "neuro": "string ou null",
+    "extremidades": "string ou null",
+    "pele": "string ou null"
+  },
+  "condutas": ["string"],
+  "pendencias": ["string"],
+  "alertas": ["string"]
+}"""
 
         messages = [
             {"role": "system", "content": "Você é um assistente médico especialista em extração de dados estruturados. Retorne apenas JSON válido."}
         ]
 
-        if image_base64:
-            messages.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
-                ]
-            })
+        if image_base64_list:
+            content = [{"type": "text", "text": prompt}]
+            for b64 in image_base64_list:
+                content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+            messages.append({"role": "user", "content": content})
         else:
             messages.append({
                 "role": "user",
@@ -158,11 +196,10 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             model="gpt-4o",
             messages=messages,
             temperature=0,
-            max_tokens=2000,
+            max_tokens=2500,
             response_format={ "type": "json_object" }
         )
 
-        update_job(job_id, "processing", "Organizando dados clínicos...")
         result_content = response.choices[0].message.content
         
         try:
@@ -171,7 +208,7 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             clinical_json = {"error": "Falha ao parsear JSON", "raw": result_content}
 
         clinical_json["fileName"] = filename
-        clinical_json["engine"] = "openai-vision" if image_base64 else "openai-text"
+        clinical_json["engine"] = "openai-vision" if image_base64_list else "openai-text"
         
         update_job(job_id, "done", "Pronto para revisão", result=clinical_json)
 
@@ -189,13 +226,18 @@ async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = Fi
         "job_id": job_id,
         "status": "queued",
         "stage": "Arquivo recebido",
+        "file_name": file.filename,
         "result": None,
         "error": None
     }
     
     background_tasks.add_task(process_document_background, job_id, file_bytes, file.filename, file.content_type)
     
-    return {"job_id": job_id}
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "stage": "Arquivo recebido"
+    }
 
 @app.get("/job/{job_id}")
 @app.get("/api/extract/job/{job_id}")
@@ -210,7 +252,7 @@ async def health_check():
     return {
         "status": "ok", 
         "service": "clinical-agents",
-        "version": "docx-mammoth-extract-raw-text"
+        "version": "async-extract-v2"
     }
 
 if __name__ == "__main__":
