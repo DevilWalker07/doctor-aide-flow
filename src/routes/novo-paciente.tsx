@@ -119,10 +119,11 @@ function NovoPaciente() {
 
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
               {/* Admissão Nova */}
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => { console.log("CLICOU EM ADMISSÃO NOVA"); setSituation("nova-admissao"); }}
-                className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden"
+                className="cursor-pointer group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -136,13 +137,14 @@ function NovoPaciente() {
                 <div className="relative mt-6 flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
                   Preencher manualmente <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </button>
+              </div>
 
               {/* Já Internado */}
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => { console.log("CLICOU EM JÁ INTERNADO"); setSituation("ja-internado"); }}
-                className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden"
+                className="cursor-pointer group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -156,7 +158,7 @@ function NovoPaciente() {
                 <div className="relative mt-6 flex items-center gap-2 text-ai text-xs font-bold uppercase tracking-widest">
                   Upload ou cadastro manual <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </button>
+              </div>
             </div>
           </div>
         )}
@@ -255,9 +257,11 @@ function NovoPaciente() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setJaMode("upload")}
-                className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden"
+                className="cursor-pointer group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/10 hover:border-ai/40 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -268,11 +272,13 @@ function NovoPaciente() {
                 <p className="relative text-sm text-muted-foreground leading-relaxed">
                   Envie uma evolução, prescrição ou foto do prontuário. A IA extrai os dados e você revisa antes de salvar.
                 </p>
-              </button>
+              </div>
 
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setJaMode("manual")}
-                className="group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden"
+                className="cursor-pointer group text-left bg-white border border-border rounded-[2rem] p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/40 relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -283,7 +289,7 @@ function NovoPaciente() {
                 <p className="relative text-sm text-muted-foreground leading-relaxed">
                   Preencha os dados clínicos do paciente manualmente no formulário estruturado.
                 </p>
-              </button>
+              </div>
             </div>
 
             <div className="mt-6 text-center">
