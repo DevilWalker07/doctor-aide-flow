@@ -31,6 +31,7 @@ import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 import { Route as EncaminhamentoIdRouteImport } from './routes/encaminhamento.$id'
+import { Route as EvolucaoIdHistoricoRouteImport } from './routes/evolucao.$id.historico'
 
 const UploadIaRoute = UploadIaRouteImport.update({
   id: '/upload-ia',
@@ -142,6 +143,11 @@ const EncaminhamentoIdRoute = EncaminhamentoIdRouteImport.update({
   path: '/encaminhamento/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EvolucaoIdHistoricoRoute = EvolucaoIdHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => EvolucaoIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -161,11 +167,12 @@ export interface FileRoutesByFullPath {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRoute
+  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -185,11 +192,12 @@ export interface FileRoutesByTo {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRoute
+  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -210,11 +218,12 @@ export interface FileRoutesById {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRoute
+  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/evolucao/$id/historico'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/evolucao/$id/historico'
   id:
     | '__root__'
     | '/'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/evolucao/$id/historico'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -309,7 +321,7 @@ export interface RootRouteChildren {
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
   EncaminhamentoIdRoute: typeof EncaminhamentoIdRoute
-  EvolucaoIdRoute: typeof EvolucaoIdRoute
+  EvolucaoIdRoute: typeof EvolucaoIdRouteWithChildren
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   PrescricaoIdRoute: typeof PrescricaoIdRoute
@@ -472,8 +484,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncaminhamentoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/evolucao/$id/historico': {
+      id: '/evolucao/$id/historico'
+      path: '/historico'
+      fullPath: '/evolucao/$id/historico'
+      preLoaderRoute: typeof EvolucaoIdHistoricoRouteImport
+      parentRoute: typeof EvolucaoIdRoute
+    }
   }
 }
+
+interface EvolucaoIdRouteChildren {
+  EvolucaoIdHistoricoRoute: typeof EvolucaoIdHistoricoRoute
+}
+
+const EvolucaoIdRouteChildren: EvolucaoIdRouteChildren = {
+  EvolucaoIdHistoricoRoute: EvolucaoIdHistoricoRoute,
+}
+
+const EvolucaoIdRouteWithChildren = EvolucaoIdRoute._addFileChildren(
+  EvolucaoIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -493,7 +524,7 @@ const rootRouteChildren: RootRouteChildren = {
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
   EncaminhamentoIdRoute: EncaminhamentoIdRoute,
-  EvolucaoIdRoute: EvolucaoIdRoute,
+  EvolucaoIdRoute: EvolucaoIdRouteWithChildren,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   PrescricaoIdRoute: PrescricaoIdRoute,

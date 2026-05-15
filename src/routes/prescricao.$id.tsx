@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
-import { getPatient } from "@/lib/store";
+import { getPatientById, createPrescription } from "@/lib/db";
 
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
@@ -41,6 +41,7 @@ function PrescricaoPage() {
   const nav = useNavigate();
   const [paciente, setPaciente] = useState<any>(null);
   const [tipoUnidade, setTipoUnidade] = useState<string>("enfermaria_clinica");
+  const [isSaving, setIsSaving] = useState(false);
 
   // State for all sections
   const [dieta, setDieta] = useState("");
@@ -61,15 +62,28 @@ function PrescricaoPage() {
   const [sedacao, setSedacao] = useState<any[]>([]);
 
   useEffect(() => {
-    const p = getPatient(id);
-    if (p) {
-      setPaciente(p);
-      setMedicacoes(p.medicacoes || []);
-      setAntibioticos(p.antibioticos || []);
-      setPendencias(p.pendencias?.map((item: any) => item.text) || []);
-      if (p.uti?.dva) setDvas(p.uti.dva);
-      if (p.uti?.sedacao) setSedacao([{ id: "sed_1", text: p.uti.sedacao }]);
+    async function load() {
+      try {
+        if (id.startsWith("temp_")) throw new Error("Local");
+        const p = await getPatientById(id);
+        setPaciente(p);
+        setMedicacoes((p.medications || []).map((m: string) => ({ id: Math.random().toString(), text: m })));
+        setAntibioticos(p.antibiotics || []);
+        setPendencias(p.pending_issues || []);
+      } catch (err) {
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const p = existing.find((x: any) => x.id === id);
+        if (p) {
+          setPaciente(p);
+          setMedicacoes(p.medicacoes || []);
+          setAntibioticos(p.antibioticos || []);
+          setPendencias(p.pendencias?.map((item: any) => item.text) || []);
+          if (p.uti?.dva) setDvas(p.uti.dva);
+          if (p.uti?.sedacao) setSedacao([{ id: "sed_1", text: p.uti.sedacao }]);
+        }
+      }
     }
+    load();
     const savedTipo = localStorage.getItem("da_tipo_evolucao") || localStorage.getItem("da_tipo_unidade");
     if (savedTipo) setTipoUnidade(savedTipo);
   }, [id]);
@@ -98,19 +112,55 @@ function PrescricaoPage() {
     toast.success("Prescrição copiada para a área de transferência!");
   };
 
-  const handleSave = () => {
-    const prescricao = {
-      patient_id: id,
-      data: new Date().toISOString(),
-      content: {
-        dieta, dietaComplemento, cuidados, vitalsFreq, vitalsParams,
-        medicacoes, antibioticos, sintomaticos, profilaxias,
-        hidratacao, exames, pendencias, dvas, sedacao
-      }
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    
+    const prescricaoContent = {
+      dieta: dietaComplemento ? `${dieta} (${dietaComplemento})` : dieta,
+      cuidados_gerais: cuidados,
+      sinais_vitais: `${vitalsFreq} ${vitalsParams.length > 0 ? `+ ${vitalsParams.join(", ")}` : ""}`,
+      medicacoes_continuas: medicacoes.map(m => m.text),
+      antibioticos: antibioticos.map(a => `${a.nome} ${a.dose} ${a.via} ${a.frequencia}`),
+      sintomaticos,
+      profilaxias,
+      hidratacao: hidratacao.active ? `${hidratacao.tipo} ${hidratacao.volume}ml (${hidratacao.velocidade}ml/h)` : "Nenhuma",
+      exames,
+      pendencias,
+      ...(tipoUnidade === "uti" ? {
+        dvas: dvas.map(d => d.text),
+        sedacao: sedacao.map(s => s.text)
+      } : {})
     };
-    const existing = JSON.parse(localStorage.getItem("da_prescricoes") || "[]");
-    localStorage.setItem("da_prescricoes", JSON.stringify([...existing, prescricao]));
-    toast.success("Prescrição salva com sucesso!");
+
+    try {
+      const shiftId = localStorage.getItem("da_shift_id");
+      if (shiftId && !shiftId.startsWith("temp_") && !id.startsWith("temp_")) {
+        await createPrescription({
+          patient_id: id,
+          shift_id: shiftId,
+          content: prescricaoContent
+        });
+        toast.success("Prescrição salva!");
+      } else {
+        throw new Error("Local fallback");
+      }
+    } catch (error) {
+      console.warn("Salvando prescrição localmente", error);
+      const prescricao = {
+        patient_id: id,
+        shift_id: localStorage.getItem("da_shift_id") || "unknown",
+        data: new Date().toISOString(),
+        content: prescricaoContent
+      };
+      const existing = JSON.parse(localStorage.getItem("da_prescricoes") || "[]");
+      existing.push(prescricao);
+      localStorage.setItem("da_prescricoes", JSON.stringify(existing));
+      toast.success("Prescrição salva localmente!");
+    } finally {
+      setIsSaving(false);
+      nav({ to: "/dashboard" });
+    }
   };
 
   if (!paciente) return null;
@@ -130,8 +180,8 @@ function PrescricaoPage() {
               </div>
            </div>
            <div className="flex items-center gap-3">
-              <button onClick={handleSave} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2">
-                 <Save className="h-3 w-3" /> SALVAR
+              <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
+                 <Save className="h-3 w-3" /> {isSaving ? "SALVANDO..." : "SALVAR"}
               </button>
               <button onClick={handleCopy} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2">
                  <Copy className="h-3 w-3" /> COPIAR

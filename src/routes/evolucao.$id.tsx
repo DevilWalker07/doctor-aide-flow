@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import { getPatient, saveEvolution, usePatients } from "@/lib/store";
+import { getPatientById, createEvolution } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 
 export const Route = createFileRoute("/evolucao/$id")({
@@ -179,8 +179,48 @@ function EvolucaoPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const p = getPatient(id);
-    if (p) setPaciente(p);
+    async function load() {
+      try {
+        if (id.startsWith("temp_")) throw new Error("Local");
+        const p = await getPatientById(id);
+        const mapped = {
+          name: p.name,
+          bed: p.bed,
+          admissionDate: p.admission_date,
+          pendingIssues: p.pending_issues || [],
+          data: {
+            abx: (p.antibiotics || []).map(a => ({
+              name: a.nome, d0: a.data_inicio
+            })),
+            lab: (p.labs?.length > 0) ? { 
+              formatted: p.labs[0].texto_compacto 
+            } : null,
+            resp: p.physical_exam || {} // Fallback simple mapping for UI
+          }
+        };
+        setPaciente(mapped);
+      } catch (err) {
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const p = existing.find((x: any) => x.id === id);
+        if (p) {
+          setPaciente({
+            name: p.nome || p.name,
+            bed: p.leito || p.bed,
+            admissionDate: p.data_admissao || p.admissionDate,
+            pendingIssues: (p.pendencias || []).map((t: any) => t.text || t),
+            data: {
+              abx: (p.antibioticos || []).map((a: any) => ({
+                name: a.nome, d0: a.dataInicio || a.data_inicio
+              })),
+              lab: (p.laboratorios?.length > 0) ? {
+                formatted: p.laboratorios[0].valor || p.laboratorios[0].texto_compacto
+              } : null
+            }
+          });
+        }
+      }
+    }
+    load();
     
     const savedTipo = localStorage.getItem("da_tipo_evolucao") || localStorage.getItem("da_tipo_unidade");
     if (savedTipo) setTipoUnidade(savedTipo);
@@ -239,12 +279,32 @@ function EvolucaoPage() {
     if (!evolutionText) return;
     setIsSaving(true);
     try {
-      await saveEvolution(id, evolutionText);
-      toast.success("Evolução salva com sucesso!");
+      const shiftId = localStorage.getItem("da_shift_id");
+      if (shiftId && !shiftId.startsWith("temp_") && !id.startsWith("temp_")) {
+        await createEvolution({
+          patient_id: id,
+          shift_id: shiftId,
+          content: evolutionText
+        });
+        toast.success("Evolução salva!");
+      } else {
+        throw new Error("Local fallback");
+      }
     } catch (error) {
-      toast.error("Erro ao salvar evolução.");
+      console.warn("Salvando evolução localmente", error);
+      const shiftId = localStorage.getItem("da_shift_id") || "unknown";
+      const existing = JSON.parse(localStorage.getItem("da_evolucoes") || "[]");
+      existing.push({
+        patient_id: id,
+        shift_id: shiftId,
+        content: evolutionText,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem("da_evolucoes", JSON.stringify(existing));
+      toast.success("Evolução salva localmente!");
     } finally {
       setIsSaving(false);
+      nav({ to: "/paciente/$id", params: { id } });
     }
   };
 

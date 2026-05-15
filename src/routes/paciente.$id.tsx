@@ -21,6 +21,7 @@ function PacienteDetailPage() {
   const [paciente, setPaciente] = useState<any>(null);
   const [evolutions, setEvolutions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalEvolucao, setModalEvolucao] = useState<any>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -365,16 +366,21 @@ function PacienteDetailPage() {
               <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm">
                  {lastEvolution ? (
                    <>
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">DATA: {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy HH:mm")}</p>
+                      <div className="flex justify-between items-center mb-3">
+                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA: {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy HH:mm")}</p>
+                         <button onClick={() => nav({ to: `/evolucao/${id}/historico` })} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1">
+                            VER HISTÓRICO <ArrowRight className="h-3 w-3" />
+                         </button>
+                      </div>
                       <p className="text-xs text-muted-foreground leading-relaxed italic mb-6 line-clamp-3">
                          {lastEvolution.content}
                       </p>
-                      <button onClick={() => nav({ to: "/evolucao/$id", params: { id } })} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
-                         VER EVOLUÇÃO COMPLETA
+                      <button onClick={() => setModalEvolucao(lastEvolution)} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
+                         VER COMPLETA
                       </button>
                    </>
                  ) : (
-                   <p className="text-xs text-muted-foreground leading-relaxed italic">Nenhuma evolução registrada.</p>
+                   <p className="text-xs text-muted-foreground italic">Nenhuma evolução registrada.</p>
                  )}
               </div>
            </div>
@@ -459,6 +465,36 @@ function PacienteDetailPage() {
             <TrendingUp className="h-5 w-5" /> EVOLUIR AGORA
          </button>
       </div>
+
+      {/* Modal Ver Completa */}
+      {modalEvolucao && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <header className="px-8 py-6 border-b border-border bg-secondary/30 flex items-center justify-between">
+              <div>
+                 <h2 className="text-sm font-black text-foreground uppercase tracking-widest mb-1">EVOLUÇÃO MÉDICA</h2>
+                 <p className="text-[10px] font-bold text-muted-foreground uppercase">{format(parseISO(modalEvolucao.created_at), "dd/MM/yyyy HH:mm")}</p>
+              </div>
+              <button onClick={() => setModalEvolucao(null)} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground uppercase">
+                {modalEvolucao.content}
+              </pre>
+            </div>
+            <footer className="px-8 py-6 border-t border-border bg-secondary/30 flex justify-end">
+              <button 
+                onClick={() => setModalEvolucao(null)}
+                className="px-8 py-4 rounded-xl bg-navy text-white font-black uppercase tracking-widest text-[10px] shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all"
+              >
+                FECHAR
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
