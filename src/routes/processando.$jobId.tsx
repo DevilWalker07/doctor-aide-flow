@@ -31,12 +31,17 @@ function ProcessandoRoute() {
   const [status, setStatus] = useState<"queued" | "processing" | "done" | "error">("queued");
   const [currentStage, setCurrentStage] = useState<string>("Arquivo recebido");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const pollingRef = useRef<boolean>(true);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     const deadline = Date.now() + 300_000; // 5 minutes timeout
     pollingRef.current = true;
+
+    const timerInterval = setInterval(() => {
+      setElapsed(prev => prev + 1);
+    }, 1000);
 
     const poll = async () => {
       if (!pollingRef.current) return;
@@ -107,6 +112,7 @@ function ProcessandoRoute() {
     return () => {
       pollingRef.current = false;
       if (timeoutId) clearTimeout(timeoutId);
+      clearInterval(timerInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [jobId, nav]); // Removed status from dependencies to avoid re-triggering poll loop on every status change
@@ -122,6 +128,13 @@ function ProcessandoRoute() {
     return index === -1 ? 0 : index;
   };
 
+  const getDynamicMessage = () => {
+    if (elapsed < 15) return "Extraindo texto e lendo com IA...";
+    if (elapsed < 45) return "Documento grande. Organizando dados clínicos.";
+    if (elapsed < 90) return "A análise está demorando mais que o normal.";
+    return "O servidor está levando mais tempo para estruturar este documento.";
+  };
+
   const currentStepIndex = getCurrentStepIndex();
 
   return (
@@ -132,10 +145,13 @@ function ProcessandoRoute() {
       <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative z-10">
         <div className="text-center mb-10">
           <h1 className="text-xs font-extrabold tracking-[0.3em] uppercase text-ai mb-4">PROCESSANDO DOCUMENTO</h1>
-          <div className="flex items-center justify-center gap-3 bg-secondary/50 py-3 px-6 rounded-2xl border border-border w-fit mx-auto">
+          <div className="flex items-center justify-center gap-3 bg-secondary/50 py-3 px-6 rounded-2xl border border-border w-fit mx-auto mb-4">
             <FileText className="h-5 w-5 text-ai" />
             <span className="font-bold text-sm truncate max-w-[200px]">{fileName}</span>
           </div>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest animate-pulse">
+            Tempo decorrido: {elapsed}s
+          </p>
         </div>
 
         {status === "error" ? (
@@ -191,8 +207,8 @@ function ProcessandoRoute() {
                         {step.label}
                       </p>
                       {isCurrent && (
-                        <p className="text-[10px] uppercase tracking-widest font-extrabold text-ai/60 mt-1 animate-pulse">
-                          {currentStage}
+                        <p className="text-[10px] uppercase tracking-widest font-extrabold text-ai/60 mt-1">
+                          {getDynamicMessage()}
                         </p>
                       )}
                     </div>
@@ -202,21 +218,45 @@ function ProcessandoRoute() {
             </div>
 
             <div className="pt-8 border-t border-border mt-10">
-              <div className="bg-ai/5 rounded-2xl p-4 mb-8">
-                <p className="text-[11px] font-bold text-ai uppercase tracking-widest text-center">
-                  Você pode minimizar o app. O resultado será salvo.
-                </p>
-              </div>
-              
-              <button
-                onClick={() => {
-                  pollingRef.current = false;
-                  nav({ to: "/dashboard" });
-                }}
-                className="w-full py-4 rounded-xl border border-border text-muted-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <X className="h-4 w-4" /> Cancelar Processamento
-              </button>
+              {elapsed > 90 ? (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="flex-1 py-4 rounded-xl bg-ai text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-ai/20 flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Aguardar mais
+                    </button>
+                    <button
+                      onClick={() => nav({ to: "/cadastro-manual" })}
+                      className="flex-1 py-4 rounded-xl bg-secondary text-foreground font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" /> Digitar Manual
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-center text-muted-foreground font-bold uppercase tracking-widest px-4">
+                    Documentos complexos podem levar até 3 minutos.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-ai/5 rounded-2xl p-4 mb-8">
+                    <p className="text-[11px] font-bold text-ai uppercase tracking-widest text-center">
+                      Você pode minimizar o app. O resultado será salvo.
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      pollingRef.current = false;
+                      nav({ to: "/dashboard" });
+                    }}
+                    className="w-full py-4 rounded-xl border border-border text-muted-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+                  >
+                    <X className="h-4 w-4" /> Cancelar Processamento
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

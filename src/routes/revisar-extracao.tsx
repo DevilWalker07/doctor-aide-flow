@@ -110,14 +110,65 @@ const SIDEBAR_ITEMS = [
   { id: "alertas", label: "Alertas", icon: AlertCircle },
 ];
 
+const Sidebar = memo(({ onScrollTo }: { onScrollTo: (id: string) => void }) => {
+  const [active, setActive] = useState("identificacao");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.find(e => e.isIntersecting);
+      if (visible) {
+        setActive(visible.target.id);
+      }
+    }, { threshold: 0.2, rootMargin: "-100px 0px -60% 0px" });
+
+    const sections = document.querySelectorAll("section[id]");
+    sections.forEach(s => observer.observe(s));
+    return () => sections.forEach(s => observer.unobserve(s));
+  }, []);
+
+  return (
+    <aside className="w-72 hidden md:block sticky top-32 self-start space-y-2">
+      <div className="bg-white/50 border border-slate-200 rounded-[2rem] p-3 space-y-1">
+        {SIDEBAR_ITEMS.map(item => {
+          const isActive = active === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onScrollTo(item.id)}
+              className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-left group ${isActive ? "bg-primary text-white shadow-xl shadow-primary/20 translate-x-1" : "hover:bg-white text-slate-500"}`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400 group-hover:text-primary"}`} />
+              <span className="text-[11px] font-black uppercase tracking-widest truncate">{item.label}</span>
+              {isActive && <ChevronRight className="h-3 w-3 ml-auto animate-in slide-in-from-left-1" />}
+            </button>
+          );
+        })}
+      </div>
+      <div className="p-6 text-center">
+         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+           Confirme as informações abaixo antes de salvar no prontuário.
+         </p>
+      </div>
+    </aside>
+  );
+});
+
 function inferFromFilename(filename: string) {
   if (!filename || filename === 'documento' || filename === 'Documento') return { nome: "", leito: "" };
+  
+  // Try to match "L03 - NAME" or "L03 NAME" or "L03-NAME"
+  const leitoMatch = filename.match(/^[Ll]\s*([0-9]{1,3})[A-Za-z]?/i);
+  const leito = leitoMatch ? `L${leitoMatch[1].padStart(2, '0')}` : "";
+  
   const nameOnly = filename.replace(/\.[^/.]+$/, "");
-  const parts = nameOnly.split(/\s*[-_]\s*/);
-  if (parts.length >= 2) {
-    return { nome: parts[0].trim(), leito: parts[1].trim() };
-  }
-  return { nome: nameOnly.trim(), leito: "" };
+  // Remove the bed part from name if found
+  const cleanName = leitoMatch ? nameOnly.replace(leitoMatch[0], "").replace(/^[\s\-_]+/, "") : nameOnly;
+  
+  const parts = cleanName.split(/\s*[-_]\s*/);
+  const nome = parts[0].trim().toUpperCase();
+  
+  return { nome, leito };
 }
 
 function RevisarExtracao() {
@@ -126,7 +177,6 @@ function RevisarExtracao() {
   const { userId } = useSupabaseUser();
   const [data, setData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState("identificacao");
 
   useEffect(() => {
     const raw = storage.getExtracaoResultado();
@@ -180,34 +230,164 @@ function RevisarExtracao() {
     }
   }, [nav]);
 
-  // Observer for active section
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    }, { threshold: 0.2, rootMargin: "-100px 0px -60% 0px" });
-
-    const sections = document.querySelectorAll("section[id]");
-    sections.forEach(s => observer.observe(s));
-    return () => sections.forEach(s => observer.unobserve(s));
-  }, [data]);
-
   const updateField = useCallback((path: string, value: any) => {
     setData((prev: any) => {
+      if (!prev) return prev;
       const newData = { ...prev };
       const keys = path.split('.');
       let current = newData;
       for (let i = 0; i < keys.length - 1; i++) {
-        current = { ...current, [keys[i]]: { ...current[keys[i]] } };
+        current[keys[i]] = { ...current[keys[i]] };
         current = current[keys[i]];
       }
       current[keys[keys.length - 1]] = value;
       return newData;
     });
   }, []);
+
+  // Isolated List Components to prevent full page re-renders
+  const ProblemList = memo(({ items, onChange }: any) => (
+    <div className="space-y-4">
+      {items.map((p: any, i: number) => (
+        <div key={p.id} className="flex gap-3 group">
+          <input 
+            value={p.text} 
+            onChange={(e) => {
+              const newList = [...items];
+              newList[i] = { ...p, text: e.target.value.toUpperCase() };
+              onChange(newList);
+            }} 
+            className={inputCls} 
+          />
+          <button onClick={() => onChange(items.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+        <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
+      </button>
+    </div>
+  ));
+
+  const AntibioticList = memo(({ items, onChange }: any) => (
+    <div className="space-y-8">
+      {items.map((a: any, i: number) => (
+        <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-2">
+               <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
+               <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
+            </div>
+            <button onClick={() => onChange(items.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500 transition-all">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="space-y-6">
+            <EditableInput label="NOME DO ANTIBIÓTICO" value={a.nome} onChange={(v: any) => {
+              const list = [...items];
+              list[i] = { ...a, nome: v.toUpperCase() };
+              onChange(list);
+            }} />
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => {
+                 const list = [...items];
+                 list[i] = { ...a, dose: v.toUpperCase() };
+                 onChange(list);
+               }} />
+               <EditableInput label="VIA" value={a.via} onChange={(v: any) => {
+                 const list = [...items];
+                 list[i] = { ...a, via: v.toUpperCase() };
+                 onChange(list);
+               }} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => {
+                 const list = [...items];
+                 list[i] = { ...a, frequencia: v.toUpperCase() };
+                 onChange(list);
+               }} />
+               <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => {
+                 const list = [...items];
+                 list[i] = { ...a, dataInicio: v };
+                 onChange(list);
+               }} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: new Date().toISOString().slice(0, 10) }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+        <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
+      </button>
+    </div>
+  ));
+
+  const MedicationList = memo(({ items, onChange }: any) => (
+    <div className="space-y-4">
+      {items.map((m: any, i: number) => (
+        <div key={m.id} className="flex gap-3">
+          <input value={m.text} onChange={(e) => {
+            const list = [...items];
+            list[i] = { ...m, text: e.target.value.toUpperCase() };
+            onChange(list);
+          }} className={inputCls} />
+          <button onClick={() => onChange(items.filter((item: any) => item.id !== m.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+        <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
+      </button>
+    </div>
+  ));
+
+  const LabList = memo(({ items, onChange }: any) => (
+    <div className="space-y-8">
+      {items.map((l: any, i: number) => (
+        <div key={l.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 space-y-6 shadow-sm">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+            <EditableInput type="date" value={l.data} onChange={(v: any) => {
+              const list = [...items];
+              list[i] = { ...l, data: v };
+              onChange(list);
+            }} />
+            <button onClick={() => onChange(items.filter((item: any) => item.id !== l.id))} className="text-slate-400 hover:text-red-500 transition-all">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <EditableTextarea label="RESULTADOS EXAMES" value={l.valor} onChange={(v: any) => {
+            const list = [...items];
+            list[i] = { ...l, valor: v.toUpperCase() };
+            onChange(list);
+          }} rows={4} placeholder="Ex: Hb 12.5, Leuco 14k, PCR 45..." />
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), data: new Date().toISOString().slice(0, 10), valor: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+        <Plus className="h-4 w-4" /> ADICIONAR DATA DE EXAME
+      </button>
+    </div>
+  ));
+
+  const SimpleList = memo(({ items, onChange, placeholder }: any) => (
+    <div className="space-y-4">
+      {items.map((c: any, i: number) => (
+        <div key={c.id} className="flex gap-3">
+          <input value={c.text} onChange={(e) => {
+            const list = [...items];
+            list[i] = { ...c, text: e.target.value.toUpperCase() };
+            onChange(list);
+          }} className={inputCls} placeholder={placeholder} />
+          <button onClick={() => onChange(items.filter((item: any) => item.id !== c.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+        <Plus className="h-4 w-4" /> ADICIONAR ITEM
+      </button>
+    </div>
+  ));
 
   if (!data) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -254,7 +434,7 @@ function RevisarExtracao() {
           shift_id: shiftId,
           status: 'internado',
           tipo_admissao: 'admissao'
-        });
+        }, userId);
       }
 
       storage.clearExtracaoResultado();
@@ -268,12 +448,12 @@ function RevisarExtracao() {
     }
   };
 
-  const scrollTo = (id: string) => {
+  const scrollTo = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (el) {
       window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
@@ -300,31 +480,7 @@ function RevisarExtracao() {
       </header>
 
       <div className="max-w-[1400px] mx-auto px-6 py-10 flex gap-12">
-        {/* Sidebar - Visible on MD and up */}
-        <aside className="w-72 hidden md:block sticky top-32 self-start space-y-2">
-          <div className="bg-white/50 border border-slate-200 rounded-[2rem] p-3 space-y-1">
-            {SIDEBAR_ITEMS.map(item => {
-              const isActive = activeSection === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => scrollTo(item.id)}
-                  className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-left group ${isActive ? "bg-primary text-white shadow-xl shadow-primary/20 translate-x-1" : "hover:bg-white text-slate-500"}`}
-                >
-                  <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400 group-hover:text-primary"}`} />
-                  <span className="text-[11px] font-black uppercase tracking-widest truncate">{item.label}</span>
-                  {isActive && <ChevronRight className="h-3 w-3 ml-auto animate-in slide-in-from-left-1" />}
-                </button>
-              );
-            })}
-          </div>
-          <div className="p-6 text-center">
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-               Confirme as informações abaixo antes de salvar no prontuário.
-             </p>
-          </div>
-        </aside>
+        <Sidebar onScrollTo={scrollTo} />
 
         {/* Content - Strictly Sequential */}
         <main className="flex-1 max-w-3xl space-y-16 pb-40">
@@ -374,117 +530,31 @@ function RevisarExtracao() {
           </Section>
 
           <Section id="problemas" title="LISTA DE PROBLEMAS" icon={<ClipboardList className="h-5 w-5" />}>
-            <div className="space-y-4">
-              {data.lista_de_problemas.map((p: any, i: number) => (
-                <div key={p.id} className="flex gap-3 group">
-                  <input 
-                    value={p.text} 
-                    onChange={(e) => {
-                      const newList = [...data.lista_de_problemas];
-                      newList[i] = { ...p, text: e.target.value };
-                      updateField('lista_de_problemas', newList);
-                    }} 
-                    className={inputCls} 
-                  />
-                  <button onClick={() => updateField('lista_de_problemas', data.lista_de_problemas.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => updateField('lista_de_problemas', [...data.lista_de_problemas, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
-              </button>
-            </div>
+            <ProblemList 
+              items={data.lista_de_problemas} 
+              onChange={(newList: any) => updateField('lista_de_problemas', newList)} 
+            />
           </Section>
 
           <Section id="antibioticos" title="ANTIBIÓTICOS" icon={<Pill className="h-5 w-5" />}>
-            <div className="space-y-8">
-              {data.antibioticos.map((a: any, i: number) => (
-                <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6 shadow-sm">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-                    <div className="flex items-center gap-2">
-                       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
-                       <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
-                    </div>
-                    <button onClick={() => updateField('antibioticos', data.antibioticos.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500 transition-all">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="space-y-6">
-                    <EditableInput label="NOME DO ANTIBIÓTICO" value={a.nome} onChange={(v: any) => {
-                      const list = [...data.antibioticos];
-                      list[i] = { ...a, nome: v };
-                      updateField('antibioticos', list);
-                    }} />
-                    <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => {
-                      const list = [...data.antibioticos];
-                      list[i] = { ...a, dose: v };
-                      updateField('antibioticos', list);
-                    }} />
-                    <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => {
-                      const list = [...data.antibioticos];
-                      list[i] = { ...a, frequencia: v };
-                      updateField('antibioticos', list);
-                    }} />
-                    <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => {
-                      const list = [...data.antibioticos];
-                      list[i] = { ...a, dataInicio: v };
-                      updateField('antibioticos', list);
-                    }} />
-                  </div>
-                </div>
-              ))}
-              <button onClick={() => updateField('antibioticos', [...data.antibioticos, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: new Date().toISOString().slice(0, 10) }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
-              </button>
-            </div>
+            <AntibioticList 
+              items={data.antibioticos} 
+              onChange={(newList: any) => updateField('antibioticos', newList)} 
+            />
           </Section>
 
           <Section id="medicacoes" title="MEDICAÇÕES" icon={<Activity className="h-5 w-5" />}>
-             <div className="space-y-4">
-              {data.medicacoes.map((m: any, i: number) => (
-                <div key={m.id} className="flex gap-3">
-                  <input value={m.text} onChange={(e) => {
-                    const list = [...data.medicacoes];
-                    list[i] = { ...m, text: e.target.value };
-                    updateField('medicacoes', list);
-                  }} className={inputCls} />
-                  <button onClick={() => updateField('medicacoes', data.medicacoes.filter((item: any) => item.id !== m.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => updateField('medicacoes', [...data.medicacoes, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
-              </button>
-            </div>
+             <MedicationList 
+               items={data.medicacoes} 
+               onChange={(newList: any) => updateField('medicacoes', newList)} 
+             />
           </Section>
 
           <Section id="laboratorios" title="LABORATÓRIOS" icon={<FlaskConical className="h-5 w-5" />}>
-            <div className="space-y-8">
-              {data.laboratorios.map((l: any, i: number) => (
-                <div key={l.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 space-y-6 shadow-sm">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <EditableInput type="date" value={l.data} onChange={(v: any) => {
-                      const list = [...data.laboratorios];
-                      list[i] = { ...l, data: v };
-                      updateField('laboratorios', list);
-                    }} />
-                    <button onClick={() => updateField('laboratorios', data.laboratorios.filter((item: any) => item.id !== l.id))} className="text-slate-400 hover:text-red-500 transition-all">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <EditableTextarea label="RESULTADOS EXAMES" value={l.valor} onChange={(v: any) => {
-                    const list = [...data.laboratorios];
-                    list[i] = { ...l, valor: v };
-                    updateField('laboratorios', list);
-                  }} rows={4} placeholder="Ex: Hb 12.5, Leuco 14k, PCR 45..." />
-                </div>
-              ))}
-              <button onClick={() => updateField('laboratorios', [...data.laboratorios, { id: Math.random().toString(36).substr(2, 9), data: new Date().toISOString().slice(0, 10), valor: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR DATA DE EXAME
-              </button>
-            </div>
+            <LabList 
+              items={data.laboratorios} 
+              onChange={(newList: any) => updateField('laboratorios', newList)} 
+            />
           </Section>
 
           <Section id="exame-fisico" title="EXAME FÍSICO" icon={<Heart className="h-5 w-5" />}>
@@ -509,43 +579,19 @@ function RevisarExtracao() {
           </Section>
 
           <Section id="condutas" title="CONDUTAS" icon={<ClipboardList className="h-5 w-5" />}>
-             <div className="space-y-4">
-              {data.condutas.map((c: any, i: number) => (
-                <div key={c.id} className="flex gap-3">
-                  <input value={c.text} onChange={(e) => {
-                    const list = [...data.condutas];
-                    list[i] = { ...c, text: e.target.value };
-                    updateField('condutas', list);
-                  }} className={inputCls} />
-                  <button onClick={() => updateField('condutas', data.condutas.filter((item: any) => item.id !== c.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => updateField('condutas', [...data.condutas, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR CONDUTA
-              </button>
-            </div>
+             <SimpleList 
+               items={data.condutas} 
+               onChange={(newList: any) => updateField('condutas', newList)} 
+               placeholder="Ex: Iniciar antibioticoterapia conforme protocolo..."
+             />
           </Section>
 
           <Section id="pendencias" title="PENDÊNCIAS" icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}>
-             <div className="space-y-4">
-              {data.pendencias.map((p: any, i: number) => (
-                <div key={p.id} className="flex gap-3">
-                  <input value={p.text} onChange={(e) => {
-                    const list = [...data.pendencias];
-                    list[i] = { ...p, text: e.target.value };
-                    updateField('pendencias', list);
-                  }} className={inputCls} />
-                  <button onClick={() => updateField('pendencias', data.pendencias.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => updateField('pendencias', [...data.pendencias, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
-                <Plus className="h-4 w-4" /> ADICIONAR PENDÊNCIA
-              </button>
-            </div>
+             <SimpleList 
+               items={data.pendencias} 
+               onChange={(newList: any) => updateField('pendencias', newList)} 
+               placeholder="Ex: Aguardar TC de crânio..."
+             />
           </Section>
 
           {data.alertas && data.alertas.length > 0 && (
