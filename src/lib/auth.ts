@@ -13,9 +13,19 @@ export async function signUp(
   crm?: string,
   specialty?: string
 ) {
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name,
+        crm: crm || null,
+        specialty: specialty || null,
+      },
+    },
+  })
   if (error) throw error
-  if (data.user) {
+  if (data.user && data.session) {
     await supabase.from('profiles').insert({
       user_id: data.user.id,
       name,

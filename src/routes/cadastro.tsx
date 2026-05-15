@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, User, Mail, Lock, Stethoscope, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, User, Mail, Lock, Stethoscope, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { signUp } from "@/lib/auth";
 import { hasSupabaseConfig } from "@/lib/supabase";
 
@@ -14,17 +14,16 @@ function CadastroPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    crm: "",
-    specialty: "",
-  });
+  const [hydrated, setHydrated] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirmationPending, setConfirmationPending] = useState(false);
+  const loggedEmailTyping = useRef(false);
 
-  const validate = (): boolean => {
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const validate = (form: Record<string, string>): boolean => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Nome é obrigatório.";
     if (!form.email.trim()) e.email = "E-mail é obrigatório.";
@@ -38,7 +37,16 @@ function CadastroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const form = {
+      name: String(formData.get("name") || ""),
+      email: String(formData.get("email") || ""),
+      password: String(formData.get("password") || ""),
+      confirmPassword: String(formData.get("confirmPassword") || ""),
+      crm: String(formData.get("crm") || ""),
+      specialty: String(formData.get("specialty") || ""),
+    };
+    if (!validate(form)) return;
 
     if (!hasSupabaseConfig) {
       toast.info("Modo offline — Supabase não configurado.");
@@ -48,9 +56,19 @@ function CadastroPage() {
 
     setLoading(true);
     try {
-      await signUp(form.email, form.password, form.name, form.crm, form.specialty);
-      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      navigate({ to: "/login" });
+      const data = await signUp(
+        form.email,
+        form.password,
+        form.name.toUpperCase(),
+        form.crm.toUpperCase(),
+        form.specialty.toUpperCase()
+      );
+      if (data.session) {
+        toast.success("Conta criada!");
+        navigate({ to: "/" });
+        return;
+      }
+      setConfirmationPending(true);
     } catch (error: any) {
       toast.error(error?.message || "Erro ao criar conta.");
     } finally {
@@ -58,18 +76,54 @@ function CadastroPage() {
     }
   };
 
-  const set = (key: string, value: string) => {
-    setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: "" }));
+  const handleFieldFocus = useCallback((key: string) => {
+    if (import.meta.env.DEV && key === "email" && !loggedEmailTyping.current) {
+      console.debug("[AUTH] typing email");
+      loggedEmailTyping.current = true;
+    }
+  }, []);
+
+  const resendEmail = () => {
+    toast.info("Use o link enviado pelo Supabase para confirmar seu e-mail.");
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-navy text-navy-foreground relative overflow-hidden py-12">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-3xl opacity-50" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-ai/20 rounded-full blur-3xl opacity-50" />
+  if (confirmationPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-navy text-navy-foreground px-6 py-10">
+        <div className="w-full max-w-md">
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-8 shadow-xl shadow-black/30 text-center">
+            <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 mx-auto mb-6">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white mb-3 uppercase">Cadastro criado</h1>
+            <p className="text-sm leading-6 text-white/70">Confirme seu e-mail para entrar.</p>
+            <div className="mt-8 space-y-3">
+              <button
+                type="button"
+                onClick={resendEmail}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-colors"
+              >
+                Reenviar e-mail
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/login" })}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/15 bg-white/5 text-white/80 font-black uppercase tracking-[0.18em] text-[10px] hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Ir para login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="w-full max-w-md px-8 relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-10 shadow-2xl shadow-black/50">
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-navy text-navy-foreground px-6 py-10">
+      <div className="w-full max-w-md">
+        <div className="bg-white/10 border border-white/20 rounded-2xl p-8 shadow-xl shadow-black/30">
           <div className="flex flex-col items-center justify-center mb-10">
             <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 mb-6">
               <ShieldCheck className="h-8 w-8 text-white" />
@@ -78,32 +132,40 @@ function CadastroPage() {
             <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/50">DOUTOR AJUDA · CADASTRO MÉDICO</p>
           </div>
 
+          {!hydrated ? (
+            <div className="py-10 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-white/60" />
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field
               label="NOME COMPLETO *"
               icon={<User className="h-4 w-4" />}
-              value={form.name}
-              onChange={(v) => set("name", v.toUpperCase())}
+              name="name"
+              onFocus={() => handleFieldFocus("name")}
               error={errors.name}
               placeholder="DR(A). NOME COMPLETO"
             />
             <Field
               label="E-MAIL *"
               icon={<Mail className="h-4 w-4" />}
-              value={form.email}
-              onChange={(v) => set("email", v)}
+              name="email"
+              onFocus={() => handleFieldFocus("email")}
               error={errors.email}
               type="email"
+              autoComplete="email"
+              inputMode="email"
               placeholder="dr.exemplo@hospital.com"
             />
             <div className="relative">
               <Field
                 label="SENHA * (MÍNIMO 8 CARACTERES)"
                 icon={<Lock className="h-4 w-4" />}
-                value={form.password}
-                onChange={(v) => set("password", v)}
+                name="password"
+                onFocus={() => handleFieldFocus("password")}
                 error={errors.password}
                 type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
                 placeholder="••••••••"
               />
               <button
@@ -117,10 +179,11 @@ function CadastroPage() {
             <Field
               label="CONFIRMAR SENHA *"
               icon={<Lock className="h-4 w-4" />}
-              value={form.confirmPassword}
-              onChange={(v) => set("confirmPassword", v)}
+              name="confirmPassword"
+              onFocus={() => handleFieldFocus("confirmPassword")}
               error={errors.confirmPassword}
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
             />
 
@@ -129,15 +192,15 @@ function CadastroPage() {
             <Field
               label="CRM (OPCIONAL)"
               icon={<Stethoscope className="h-4 w-4" />}
-              value={form.crm}
-              onChange={(v) => set("crm", v.toUpperCase())}
+              name="crm"
+              onFocus={() => handleFieldFocus("crm")}
               placeholder="EX: 123456-SP"
             />
             <Field
               label="ESPECIALIDADE (OPCIONAL)"
               icon={<Stethoscope className="h-4 w-4" />}
-              value={form.specialty}
-              onChange={(v) => set("specialty", v.toUpperCase())}
+              name="specialty"
+              onFocus={() => handleFieldFocus("specialty")}
               placeholder="EX: CLÍNICA MÉDICA"
             />
 
@@ -149,6 +212,7 @@ function CadastroPage() {
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "CRIAR CONTA"}
             </button>
           </form>
+          )}
 
           <div className="mt-8 text-center">
             <Link
@@ -164,12 +228,14 @@ function CadastroPage() {
   );
 }
 
-function Field({
-  label, icon, value, onChange, error, type = "text", placeholder,
+const Field = memo(function Field({
+  label, icon, name, onFocus, error, type = "text", placeholder,
+  autoComplete, inputMode,
 }: {
-  label: string; icon: React.ReactNode; value: string;
-  onChange: (v: string) => void; error?: string;
+  label: string; icon: React.ReactNode; name: string;
+  onFocus: () => void; error?: string;
   type?: string; placeholder?: string;
+  autoComplete?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }) {
   return (
     <div>
@@ -178,8 +244,10 @@ function Field({
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25">{icon}</div>
         <input
           type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          name={name}
+          onFocus={onFocus}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
           className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white text-sm placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
           placeholder={placeholder}
         />
@@ -187,4 +255,4 @@ function Field({
       {error && <p className="text-[10px] font-bold text-red-400 mt-1 ml-1">{error}</p>}
     </div>
   );
-}
+});
