@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getPatient } from "@/lib/store";
+import { getPatientById, createReferral } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
@@ -49,8 +49,18 @@ function EncaminhamentoPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    const p = getPatient(id);
-    if (p) setPaciente(p);
+    async function load() {
+      try {
+        if (id.startsWith("temp_")) throw new Error("Local");
+        const p = await getPatientById(id);
+        setPaciente({ name: p.name, bed: p.bed, ...p });
+      } catch (err) {
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const p = existing.find((x: any) => x.id === id);
+        if (p) setPaciente({ name: p.nome || p.name, bed: p.leito || p.bed, ...p });
+      }
+    }
+    load();
   }, [id]);
 
   const handleGenerate = async () => {
@@ -91,15 +101,31 @@ function EncaminhamentoPage() {
     toast.success("Texto copiado!");
   };
 
-  const handleSave = () => {
-    const enc = {
-      patient_id: id,
-      date: new Date().toISOString(),
-      text: referralText
-    };
-    const existing = JSON.parse(localStorage.getItem("da_encaminhamentos") || "[]");
-    localStorage.setItem("da_encaminhamentos", JSON.stringify([...existing, enc]));
-    toast.success("Encaminhamento salvo!");
+  const handleSave = async () => {
+    try {
+      if (!id.startsWith("temp_")) {
+        await createReferral({
+          patient_id: id,
+          destinations: selectedDestinations,
+          specialty: specialty || undefined,
+          reason: reason,
+          content: referralText
+        });
+        toast.success("Encaminhamento salvo!");
+      } else {
+        throw new Error("Local fallback");
+      }
+    } catch (err) {
+      console.warn("Salvando encaminhamento localmente", err);
+      const enc = {
+        patient_id: id,
+        date: new Date().toISOString(),
+        text: referralText
+      };
+      const existing = JSON.parse(localStorage.getItem("da_encaminhamentos") || "[]");
+      localStorage.setItem("da_encaminhamentos", JSON.stringify([...existing, enc]));
+      toast.success("Encaminhamento salvo localmente!");
+    }
   };
 
   if (!paciente) return null;

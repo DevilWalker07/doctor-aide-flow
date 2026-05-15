@@ -14,6 +14,7 @@ import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as PassagemRouteImport } from './routes/passagem'
 import { Route as PacienteInternadoRouteImport } from './routes/paciente-internado'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
@@ -56,6 +57,11 @@ const RevisarExtracaoRoute = RevisarExtracaoRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PassagemRoute = PassagemRouteImport.update({
+  id: '/passagem',
+  path: '/passagem',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PacienteInternadoRoute = PacienteInternadoRouteImport.update({
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/passagem': typeof PassagemRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/passagem': typeof PassagemRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/passagem': typeof PassagemRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/passagem'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/passagem'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/passagem'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -315,6 +327,7 @@ export interface RootRouteChildren {
   NovaSenhaRoute: typeof NovaSenhaRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
   PacienteInternadoRoute: typeof PacienteInternadoRoute
+  PassagemRoute: typeof PassagemRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/recuperar-senha'
       fullPath: '/recuperar-senha'
       preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passagem': {
+      id: '/passagem'
+      path: '/passagem'
+      fullPath: '/passagem'
+      preLoaderRoute: typeof PassagemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paciente-internado': {
@@ -518,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   NovaSenhaRoute: NovaSenhaRoute,
   NovoPacienteRoute: NovoPacienteRoute,
   PacienteInternadoRoute: PacienteInternadoRoute,
+  PassagemRoute: PassagemRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
