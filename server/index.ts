@@ -47,8 +47,8 @@ app.use("/api/extract", extractRouter);
 const distPath = path.join(__dirname, "../dist");
 app.use(express.static(distPath));
 
-// Handle SPA routing - serve index.html for all non-API routes
-app.get("*", (req, res, next) => {
+// Handle SPA routing - serve index.html for all non-API routes.
+app.use((req, res, next) => {
   // If it's an API route that reached here, it's a 404 for the API
   if (req.path.startsWith("/api") || req.path.startsWith("/health")) {
     return next();

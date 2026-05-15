@@ -1,11 +1,18 @@
+providers = ["node"]
+
+[variables]
+NODE_ENV = "production"
+
 [phases.setup]
-nixPkgs = ["nodejs", "python3"]
+nixPkgs = ["...", "nodejs_20"]
 
 [phases.install]
-cmds = ["npm install"]
+dependsOn = ["setup"]
+cmds = ["npm ci"]
 
 [phases.build]
+dependsOn = ["install"]
 cmds = ["npm run build"]
 
-[phases.start]
+[start]
 cmd = "npm start"
