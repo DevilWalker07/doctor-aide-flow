@@ -4,6 +4,7 @@ import { ChevronLeft, ArrowRight, Calendar, Building2, Stethoscope, Loader2 } fr
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
 import { createShift } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/iniciar-plantao")({
 
 function IniciarPlantaoPage() {
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [hospital, setHospital] = useState("");
   const [saving, setSaving] = useState(false);
@@ -26,6 +28,10 @@ function IniciarPlantaoPage() {
   }, []);
 
   const handleContinue = async () => {
+    if (!userId) {
+      toast.error("Usuário não identificado");
+      return;
+    }
     if (saving) return;
     setSaving(true);
 
@@ -47,7 +53,7 @@ function IniciarPlantaoPage() {
       const shift = await createShift({
         date: data || new Date().toISOString().slice(0, 10),
         hospital: hospitalValue,
-      });
+      }, userId);
 
       // Sync to localStorage
       const localShift = {

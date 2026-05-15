@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { getPatientsByShift, createHandoff } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { format, parseISO, differenceInDays, isValid } from "date-fns";
 import { toast } from "sonner";
 import { ChevronLeft, Save, Download, FileText, Loader2 } from "lucide-react";
@@ -14,12 +15,17 @@ export const Route = createFileRoute("/passagem")({
 
 function PassagemPage() {
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [shiftData, setShiftData] = useState<any>(null);
 
   useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         const shiftId = localStorage.getItem("da_shift_id");
@@ -27,7 +33,7 @@ function PassagemPage() {
         setShiftData(plantaoAtivo);
 
         if (shiftId && !shiftId.startsWith("temp_")) {
-          const dbPatients = await getPatientsByShift(shiftId);
+          const dbPatients = await getPatientsByShift(shiftId, userId!);
           setPacientes(dbPatients);
         } else {
           // fallback
@@ -43,7 +49,7 @@ function PassagemPage() {
       }
     }
     load();
-  }, []);
+  }, [userId]);
 
   const calculateDValue = (startDateStr: string) => {
     const start = parseISO(startDateStr);
@@ -90,13 +96,14 @@ function PassagemPage() {
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     setIsSaving(true);
     const textoPassagem = generateText();
     const shiftId = localStorage.getItem("da_shift_id");
 
     try {
       if (shiftId && !shiftId.startsWith("temp_")) {
-        await createHandoff({ shift_id: shiftId, content: textoPassagem });
+        await createHandoff({ shift_id: shiftId, content: textoPassagem }, userId);
         toast.success("Passagem salva!");
       } else {
         throw new Error("Local fallback");

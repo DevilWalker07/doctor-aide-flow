@@ -8,6 +8,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { getPatientById, createReferral } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
@@ -38,6 +39,7 @@ const REGULACAO_OPTIONS = [
 function EncaminhamentoPage() {
   const { id } = useParams({ from: "/encaminhamento/$id" });
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [step, setStep] = useState(1);
   const [selectedDestinations, setSelectedDestinations] = useState<string[]>([]);
@@ -49,10 +51,11 @@ function EncaminhamentoPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
+    if (!userId) return;
     async function load() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
-        const p = await getPatientById(id);
+        const p = await getPatientById(id, userId!);
         setPaciente({ name: p.name, bed: p.bed, ...p });
       } catch (err) {
         const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
@@ -61,7 +64,7 @@ function EncaminhamentoPage() {
       }
     }
     load();
-  }, [id]);
+  }, [id, userId]);
 
   const handleGenerate = async () => {
     if (!paciente || !reason) {
@@ -102,6 +105,7 @@ function EncaminhamentoPage() {
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     try {
       if (!id.startsWith("temp_")) {
         await createReferral({
@@ -110,7 +114,7 @@ function EncaminhamentoPage() {
           specialty: specialty || undefined,
           reason: reason,
           content: referralText
-        });
+        }, userId);
         toast.success("Encaminhamento salvo!");
       } else {
         throw new Error("Local fallback");

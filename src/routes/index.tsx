@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useClerk } from "@clerk/clerk-react";
 import { 
   Stethoscope, ArrowRight, Play, Settings2, 
   Activity, ShieldCheck, Clock, Users, AlertTriangle,
@@ -8,9 +9,11 @@ import { useState, useEffect } from "react";
 import { getActiveShift, getClosedShifts, type Shift, updateShift, getHandoffsByShift, closeShift } from "@/lib/db";
 import { getProfile } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
-import { signOut } from "@/lib/auth";
 import { toast } from "sonner";
 import { X, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -18,7 +21,8 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const [nomeMedico, setNomeMedico] = useState("Médico");
+  const { userId } = useSupabaseUser();
+  const [nomeMedico, setNomeMedico] = useState(() => storage.getNomeMedico());
   const [plantaoAtivo, setPlantaoAtivo] = useState<any>(null);
   const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
@@ -26,22 +30,21 @@ function HomePage() {
   const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const nav = useNavigate();
+  const { signOut } = useClerk();
 
   useEffect(() => {
+    if (!userId) return;
+
     async function load() {
       // 1. Load doctor name
       try {
-        const profile = await getProfile();
+        const profile = await getProfile(userId!);
         if (profile?.name) {
           setNomeMedico(profile.name);
-          localStorage.setItem("da_nome_medico", profile.name);
-        } else {
-          const local = localStorage.getItem("da_nome_medico");
-          if (local) setNomeMedico(local);
+          storage.setNomeMedico(profile.name);
         }
       } catch {
-        const local = localStorage.getItem("da_nome_medico");
-        if (local) setNomeMedico(local);
+        // Fallback already handled by useState initial value
       }
 
       // 2. Load active shift
@@ -49,15 +52,19 @@ function HomePage() {
 
       // 3. Load closed shifts
       try {
-        const closed = await getClosedShifts(5);
+        const closed = await getClosedShifts(userId!, 5);
         setClosedShifts(closed);
       } catch { /* ignore */ }
 
       // 4. Stats from Supabase if active
-      const activeId = localStorage.getItem("da_shift_id");
+      const activeId = storage.getShiftId();
       if (activeId && !activeId.startsWith("temp_")) {
         try {
-          const { data: pats } = await supabase.from('patients').select('id, pending_issues').eq('shift_id', activeId);
+          const { data: pats } = await supabase
+            .from('patients')
+            .select('id, pending_issues')
+            .eq('shift_id', activeId)
+            .eq('user_id', userId!);
           if (pats) {
             let pends = 0;
             pats.forEach(p => pends += (p.pending_issues?.length || 0));
@@ -69,7 +76,7 @@ function HomePage() {
 
     async function refreshActiveShift() {
       try {
-        const shift = await getActiveShift();
+        const shift = await getActiveShift(userId!);
         if (shift) {
           const ctx = {
             id: shift.id,
@@ -82,10 +89,10 @@ function HomePage() {
           };
           setPlantaoAtivo(ctx);
           localStorage.setItem("da_plantao_ativo", JSON.stringify(ctx));
-          localStorage.setItem("da_shift_id", shift.id);
+          storage.setShiftId(shift.id);
         } else {
           setPlantaoAtivo(null);
-          localStorage.removeItem("da_shift_id");
+          storage.clearShiftId();
           localStorage.removeItem("da_plantao_ativo");
         }
       } catch {
@@ -95,11 +102,11 @@ function HomePage() {
     }
 
     load();
-  }, []);
+  }, [userId]);
 
   const handleViewHandoff = async (shiftId: string) => {
     try {
-      const handoffs = await getHandoffsByShift(shiftId);
+      const handoffs = await getHandoffsByShift(shiftId, userId!);
       if (handoffs && handoffs.length > 0) {
         setSelectedHandoff(handoffs[0].content);
       } else {
@@ -111,14 +118,15 @@ function HomePage() {
   };
 
   const handleReopen = async (shift: Shift) => {
+    if (!userId) return;
     setIsProcessing(true);
     try {
       if (plantaoAtivo) {
-        await closeShift(plantaoAtivo.id);
+        await closeShift(plantaoAtivo.id, userId);
       }
-      await updateShift(shift.id, { status: 'active' });
+      await updateShift(shift.id, { status: 'active' }, userId);
       
-      localStorage.setItem("da_shift_id", shift.id);
+      storage.setShiftId(shift.id);
       const ctx = {
         id: shift.id,
         data: shift.date,
@@ -148,8 +156,10 @@ function HomePage() {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      storage.clearSession();
+      await signOut({ redirectUrl: "/login" });
       toast.success("Sessão encerrada.");
+      nav({ to: "/login" });
     } catch { /* ignore */ }
   };
 

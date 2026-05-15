@@ -9,6 +9,7 @@ import {
 import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { getPatientById, updatePatient, getLastEvolution } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -18,16 +19,21 @@ export const Route = createFileRoute("/paciente/$id")({
 function PacienteDetailPage() {
   const { id } = useParams({ from: "/paciente/$id" });
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [evolutions, setEvolutions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalEvolucao, setModalEvolucao] = useState<any>(null);
 
   useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     async function loadData() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
-        const p = await getPatientById(id);
+        const p = await getPatientById(id, userId!);
         
         // Map to component expected format
         const mapped = {
@@ -54,7 +60,7 @@ function PacienteDetailPage() {
         };
         setPaciente(mapped);
         
-        const lastEv = await getLastEvolution(id);
+        const lastEv = await getLastEvolution(id, userId!);
         setEvolutions(lastEv ? [lastEv] : []);
       } catch (err) {
         // Local fallback
@@ -90,7 +96,7 @@ function PacienteDetailPage() {
       }
     }
     loadData();
-  }, [id]);
+  }, [id, userId]);
 
   const dihInfo = useMemo(() => {
     if (!paciente?.admissionDate && !paciente?.admission) return null;
@@ -107,13 +113,13 @@ function PacienteDetailPage() {
   }, [paciente]);
 
   const handleStatusUpdate = async (status: string) => {
-    if (!paciente) return;
+    if (!paciente || !userId) return;
     const updated = { ...paciente, status };
     setPaciente(updated);
     toast.success(status === "alta_provavel" ? "Alta provável marcada!" : "Status atualizado");
     
     if (!id.startsWith("temp_")) {
-      await updatePatient(id, { status });
+      await updatePatient(id, { status }, userId);
     } else {
       const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
       const idx = existing.findIndex((x: any) => x.id === id);
@@ -125,14 +131,14 @@ function PacienteDetailPage() {
   };
 
   const resolvePendencia = async (pendText: string) => {
-    if (!paciente) return;
+    if (!paciente || !userId) return;
     const updatedPendencias = (paciente.pendingIssues || []).filter((p: string) => p !== pendText);
     const updated = { ...paciente, pendingIssues: updatedPendencias };
     setPaciente(updated);
     toast.success("Pendência resolvida!");
     
     if (!id.startsWith("temp_")) {
-      await updatePatient(id, { pending_issues: updatedPendencias });
+      await updatePatient(id, { pending_issues: updatedPendencias }, userId);
     } else {
       const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
       const idx = existing.findIndex((x: any) => x.id === id);

@@ -1,27 +1,135 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { 
   User, Stethoscope, ClipboardList, FlaskConical, AlertCircle, 
   Trash2, Plus, Save, RefreshCw, X, AlertTriangle, Pill, Calendar,
-  Activity, ArrowRight, CheckCircle2
+  Activity, ArrowRight, CheckCircle2, LayoutList, ChevronRight,
+  Clock, Heart, Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, parseISO, isValid } from "date-fns";
 import { createPatient, mergePatientData, type Patient } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/revisar-extracao")({
   component: RevisarExtracao,
   head: () => ({ meta: [{ title: "Revisar Extração — DOUTOR AJUDA" }] }),
 });
 
+// ─── Components ──────────────────────────────────────────────────────────────
+
+// Optimized Input with local state to prevent global freezing
+const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }: any) => {
+  const [local, setLocal] = useState(value);
+  
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleBlur = () => {
+    if (local !== value) {
+      onChange(local);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <textarea 
+        value={local} 
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={handleBlur}
+        rows={rows} 
+        className={textareaCls} 
+        placeholder={placeholder}
+      />
+    </div>
+  );
+});
+
+const EditableInput = memo(({ value, onChange, label, type = "text", placeholder, uppercase = false }: any) => {
+  const [local, setLocal] = useState(value);
+  
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleBlur = () => {
+    let v = local;
+    if (uppercase && typeof v === 'string') v = v.toUpperCase();
+    if (v !== value) {
+      onChange(v);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <input 
+        type={type}
+        value={local} 
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={handleBlur}
+        className={inputCls} 
+        placeholder={placeholder}
+      />
+    </div>
+  );
+});
+
+const Section = memo(({ id, title, icon, children }: { id: string, title: string, icon: any, children: any }) => {
+  return (
+    <section id={id} className="scroll-mt-32">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
+          {icon}
+        </div>
+        <h2 className="text-xs font-black tracking-[0.2em] uppercase text-slate-900">{title}</h2>
+      </div>
+      <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-10 shadow-sm space-y-8">
+        {children}
+      </div>
+    </section>
+  );
+});
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+// Sidebar Items
+const SIDEBAR_ITEMS = [
+  { id: "identificacao", label: "Identificação", icon: User },
+  { id: "hda", label: "HDA / Motivo", icon: Stethoscope },
+  { id: "problemas", label: "Problemas", icon: ClipboardList },
+  { id: "antibioticos", label: "Antibióticos", icon: Pill },
+  { id: "medicacoes", label: "Medicações", icon: Activity },
+  { id: "laboratorios", label: "Laboratórios", icon: FlaskConical },
+  { id: "exame-fisico", label: "Exame Físico", icon: Activity },
+  { id: "condutas", label: "Condutas", icon: ClipboardList },
+  { id: "pendencias", label: "Pendências", icon: AlertTriangle },
+  { id: "alertas", label: "Alertas", icon: AlertCircle },
+];
+
+function inferFromFilename(filename: string) {
+  if (!filename || filename === 'documento' || filename === 'Documento') return { nome: "", leito: "" };
+  const nameOnly = filename.replace(/\.[^/.]+$/, "");
+  const parts = nameOnly.split(/\s*[-_]\s*/);
+  if (parts.length >= 2) {
+    return { nome: parts[0].trim(), leito: parts[1].trim() };
+  }
+  return { nome: nameOnly.trim(), leito: "" };
+}
+
 function RevisarExtracao() {
   const { patient_id } = Route.useSearch() as any;
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [data, setData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState("identificacao");
 
   useEffect(() => {
-    const raw = localStorage.getItem("doutor_ajuda_extracao");
+    const raw = storage.getExtracaoResultado();
     if (!raw) {
       toast.error("Nenhum dado de extração encontrado.");
       nav({ to: "/dashboard" });
@@ -29,38 +137,39 @@ function RevisarExtracao() {
     }
     try {
       const parsed = JSON.parse(raw);
+      const filename = storage.getJobArquivo();
+      const inferred = inferFromFilename(filename);
       
-      // Normalize and prepare data for editable state
       const preparedData = {
         ...parsed,
-        nome: parsed.nome || "",
+        nome: parsed.nome || inferred.nome || "",
         idade: parsed.idade || "",
         sexo: parsed.sexo || "F",
-        leito: parsed.leito || "",
+        leito: parsed.leito || inferred.leito || "",
         setor: parsed.setor || "",
         data_admissao: parsed.data_admissao || new Date().toISOString().slice(0, 10),
         hda: parsed.hda || "",
         motivo_admissao: parsed.motivo_admissao || "",
         lista_de_problemas: (parsed.lista_de_problemas || []).map((p: string) => ({ id: Math.random().toString(36).substr(2, 9), text: p })),
-        antibioticos: (parsed.antibioticos || []).map((a: string) => ({
+        antibioticos: (parsed.antibioticos || []).map((a: any) => ({
           id: Math.random().toString(36).substr(2, 9),
-          nome: a,
-          dose: "",
-          via: "",
-          frequencia: "",
-          dataInicio: new Date().toISOString().slice(0, 10)
+          nome: typeof a === 'string' ? a : (a.nome || ""),
+          dose: a.dose || "",
+          via: a.via || "",
+          frequencia: a.frequencia || "",
+          dataInicio: a.dataInicio || a.data_inicio || new Date().toISOString().slice(0, 10)
         })),
         medicacoes: (parsed.medicacoes || []).map((m: string) => ({ id: Math.random().toString(36).substr(2, 9), text: m })),
-        laboratorios: (parsed.laboratorios || []).map((l: string) => ({ 
+        laboratorios: (parsed.laboratorios || []).map((l: any) => ({ 
           id: Math.random().toString(36).substr(2, 9), 
-          data: new Date().toISOString().slice(0, 10),
-          valor: l 
+          data: l.data || new Date().toISOString().slice(0, 10),
+          valor: typeof l === 'string' ? l : (l.valor || l.texto_compacto || "") 
         })),
         exame_fisico_detalhado: parsed.exame_fisico_detalhado || {
           geral: "", acv: "", ar: "", abdome: "", neuro: "", extremidades: "", pele: ""
         },
         condutas: (parsed.condutas || []).map((c: string) => ({ id: Math.random().toString(36).substr(2, 9), text: c })),
-        pendencias: (parsed.pendencias || []).map((p: string) => ({ id: Math.random().toString(36).substr(2, 9), text: p })),
+        pendencias: (parsed.pendencias || []).map((p: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof p === 'string' ? p : (p.text || "") })),
         alertas: parsed.alertas || []
       };
       
@@ -71,463 +180,401 @@ function RevisarExtracao() {
     }
   }, [nav]);
 
-  if (!data) return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
-
-  const handleSave = async () => {
-    if (saving) return;
-    setSaving(true);
-    
-    try {
-      const shiftId = localStorage.getItem("da_shift_id");
-      
-      // If we have a real shift ID, try saving to Supabase
-      if (shiftId && !shiftId.startsWith("temp_")) {
-        let savedPatient;
-        
-        if (patient_id) {
-          // Merge with existing patient
-          savedPatient = await mergePatientData(patient_id, {
-            name: data.nome,
-            age: data.idade,
-            sex: data.sexo,
-            bed: data.leito,
-            sector: data.setor,
-            admission_date: data.data_admissao,
-            reason_for_admission: data.motivo_admissao,
-            hda: data.hda,
-            problem_list: data.lista_de_problemas.map((p: any) => p.text),
-            antibiotics: data.antibioticos.map((a: any) => ({
-              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
-            })),
-            medications: data.medicacoes.map((m: any) => m.text),
-            labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
-            physical_exam: data.exame_fisico_detalhado,
-            conducts: data.condutas.map((c: any) => c.text),
-            pending_issues: data.pendencias.map((p: any) => p.text)
-          });
-        } else {
-          // Create new patient
-          savedPatient = await createPatient({
-            shift_id: shiftId,
-            name: data.nome,
-            age: data.idade,
-            sex: data.sexo,
-            bed: data.leito,
-            sector: data.setor,
-            admission_date: data.data_admissao,
-            reason_for_admission: data.motivo_admissao,
-            hda: data.hda,
-            problem_list: data.lista_de_problemas.map((p: any) => p.text),
-            antibiotics: data.antibioticos.map((a: any) => ({
-              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
-            })),
-            medications: data.medicacoes.map((m: any) => m.text),
-            labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
-            physical_exam: data.exame_fisico_detalhado,
-            conducts: data.condutas.map((c: any) => c.text),
-            pending_issues: data.pendencias.map((p: any) => p.text),
-            status: 'internado',
-            tipo_admissao: 'admissao'
-          });
+  // Observer for active section
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
         }
+      });
+    }, { threshold: 0.2, rootMargin: "-100px 0px -60% 0px" });
 
-        localStorage.setItem("da_paciente_atual_id", savedPatient.id);
-        localStorage.removeItem("doutor_ajuda_extracao");
-        toast.success("Dados salvos no Supabase com sucesso!");
-        nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
-        return;
-      }
-      
-      throw new Error("Offline ou ID temporário");
-    } catch (err) {
-      console.warn("Falha ao salvar no Supabase, usando fallback", err);
-      toast.warning("Erro ao salvar. Dados mantidos localmente.");
-      
-      // Fallback
-      const fallbackId = patient_id || "temp_" + Date.now();
-      const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
-      const idx = existing.findIndex((p: any) => p.id === fallbackId);
-      
-      const newPatientData = { id: fallbackId, ...data };
-      if (idx >= 0) {
-        existing[idx] = newPatientData;
-      } else {
-        existing.push(newPatientData);
-      }
-      
-      localStorage.setItem("da_pacientes", JSON.stringify(existing));
-      localStorage.setItem("da_paciente_atual", fallbackId);
-      localStorage.setItem("doutor_ajuda_paciente_atual", JSON.stringify(data)); // legacy support
-      
-      nav({ to: "/paciente/temp" });
-    } finally {
-      setSaving(false);
-    }
-  };
+    const sections = document.querySelectorAll("section[id]");
+    sections.forEach(s => observer.observe(s));
+    return () => sections.forEach(s => observer.unobserve(s));
+  }, [data]);
 
-  const handleDiscard = () => {
-    if (confirm("Descartar todos os dados extraídos?")) {
-      localStorage.removeItem("doutor_ajuda_extracao");
-      nav({ to: "/dashboard" });
-    }
-  };
-
-  const handleReprocess = () => {
-    nav({ to: "/paciente-internado" });
-  };
-
-  const updateField = (path: string, value: any) => {
+  const updateField = useCallback((path: string, value: any) => {
     setData((prev: any) => {
       const newData = { ...prev };
       const keys = path.split('.');
       let current = newData;
       for (let i = 0; i < keys.length - 1; i++) {
+        current = { ...current, [keys[i]]: { ...current[keys[i]] } };
         current = current[keys[i]];
       }
       current[keys[keys.length - 1]] = value;
       return newData;
     });
+  }, []);
+
+  if (!data) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+
+  const handleSave = async () => {
+    if (saving || !userId) return;
+    setSaving(true);
+    
+    try {
+      const shiftId = storage.getShiftId();
+      if (!shiftId || shiftId.startsWith("temp_")) {
+        throw new Error("Seção expirada ou offline");
+      }
+
+      let savedPatient;
+      const patientPayload = {
+        name: data.nome,
+        age: data.idade,
+        sex: data.sexo,
+        bed: data.leito,
+        sector: data.setor,
+        admission_date: data.data_admissao,
+        reason_for_admission: data.motivo_admissao,
+        hda: data.hda,
+        problem_list: data.lista_de_problemas.map((p: any) => p.text),
+        antibiotics: data.antibioticos.map((a: any) => ({
+          nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
+        })),
+        medications: data.medicacoes.map((m: any) => m.text),
+        labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
+        physical_exam: data.exame_fisico_detalhado,
+        conducts: data.condutas.map((c: any) => c.text),
+        pending_issues: data.pendencias.map((p: any) => p.text)
+      };
+      
+      if (patient_id) {
+        savedPatient = await mergePatientData(patient_id, patientPayload, userId);
+      } else {
+        savedPatient = await createPatient({
+          ...patientPayload,
+          shift_id: shiftId,
+          status: 'internado',
+          tipo_admissao: 'admissao'
+        });
+      }
+
+      storage.clearExtracaoResultado();
+      storage.clearUploadPatientId();
+      toast.success("Dados salvos com sucesso!");
+      nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
+    } catch (err: any) {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const addItem = (listKey: string, defaultValue: any) => {
-    updateField(listKey, [...data[listKey], { id: Math.random().toString(36).substr(2, 9), ...defaultValue }]);
-  };
-
-  const removeItem = (listKey: string, id: string) => {
-    updateField(listKey, data[listKey].filter((item: any) => item.id !== id));
-  };
-
-  const updateItemField = (listKey: string, id: string, field: string, value: any) => {
-    updateField(listKey, data[listKey].map((item: any) => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  const calculateDValue = (startDateStr: string) => {
-    const start = parseISO(startDateStr);
-    if (!isValid(start)) return "D?";
-    const diff = differenceInDays(new Date(), start);
-    return `D${diff >= 0 ? diff + 1 : 0}`;
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background pb-40">
+    <div className="min-h-screen bg-[#F1F5F9]">
       {/* Header */}
-      <header className="bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-30 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-ai/10 text-ai flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/dashboard" className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all">
+              <X className="h-5 w-5" />
+            </Link>
             <div>
-              <h1 className="text-sm font-extrabold tracking-tight">REVISAR EXTRAÇÃO</h1>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Confirme e edite os dados extraídos</p>
+              <h1 className="text-sm font-black tracking-tight text-slate-900 uppercase">REVISAR EXTRAÇÃO</h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                 <Clock className="h-3 w-3" /> IA PROCESSOU {storage.getJobArquivo()}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleReprocess} className="p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground group" title="Reprocessar">
-              <RefreshCw className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500" />
-            </button>
-            <button onClick={handleDiscard} className="p-2.5 hover:bg-destructive/10 hover:text-destructive rounded-xl transition-all text-muted-foreground" title="Descartar">
-              <X className="h-5 w-5" />
-            </button>
+          <div className="flex items-center gap-3">
+             <button onClick={handleSave} disabled={saving} className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> SALVAR DADOS</>}
+             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
-        
-        {/* 1. IDENTIFICAÇÃO */}
-        <Section title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">NOME COMPLETO</label>
-              <input value={data.nome} onChange={(e) => updateField('nome', e.target.value)} className={inputCls} placeholder="Ex: Maria José da Silva" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">IDADE</label>
-                <input type="number" value={data.idade} onChange={(e) => updateField('idade', e.target.value)} className={inputCls} />
+      <div className="max-w-[1400px] mx-auto px-6 py-10 flex gap-12">
+        {/* Sidebar - Visible on MD and up */}
+        <aside className="w-72 hidden md:block sticky top-32 self-start space-y-2">
+          <div className="bg-white/50 border border-slate-200 rounded-[2rem] p-3 space-y-1">
+            {SIDEBAR_ITEMS.map(item => {
+              const isActive = activeSection === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => scrollTo(item.id)}
+                  className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all text-left group ${isActive ? "bg-primary text-white shadow-xl shadow-primary/20 translate-x-1" : "hover:bg-white text-slate-500"}`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400 group-hover:text-primary"}`} />
+                  <span className="text-[11px] font-black uppercase tracking-widest truncate">{item.label}</span>
+                  {isActive && <ChevronRight className="h-3 w-3 ml-auto animate-in slide-in-from-left-1" />}
+                </button>
+              );
+            })}
+          </div>
+          <div className="p-6 text-center">
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+               Confirme as informações abaixo antes de salvar no prontuário.
+             </p>
+          </div>
+        </aside>
+
+        {/* Content - Strictly Sequential */}
+        <main className="flex-1 max-w-3xl space-y-16 pb-40">
+          
+          {patient_id && (
+            <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex items-center gap-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="h-14 w-14 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+                 <Plus className="h-8 w-8" />
               </div>
+              <div>
+                 <h3 className="text-sm font-black text-primary uppercase tracking-[0.2em] mb-1">MODO: ADICIONAR AO PACIENTE</h3>
+                 <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                   Os dados extraídos deste documento serão mesclados ao prontuário do paciente já cadastrado. 
+                   Campos vazios não sobrescreverão dados existentes.
+                 </p>
+              </div>
+            </div>
+          )}
+
+          <Section id="identificacao" title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
+            <div className="space-y-8">
+              <EditableInput label="NOME COMPLETO" value={data.nome} onChange={(v: any) => updateField('nome', v)} placeholder="Nome do paciente" />
+              <EditableInput label="IDADE" type="number" value={data.idade} onChange={(v: any) => updateField('idade', v)} />
+              
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">SEXO</label>
-                <div className="flex bg-secondary/50 rounded-xl p-1 h-[50px]">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SEXO</label>
+                <div className="flex bg-slate-100 rounded-2xl p-1.5 gap-1.5">
                   {["F", "M"].map(s => (
-                    <button 
-                      key={s} 
-                      onClick={() => updateField('sexo', s)}
-                      className={`flex-1 rounded-lg text-xs font-bold transition-all ${data.sexo === s ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                    >
+                    <button key={s} onClick={() => updateField('sexo', s)} className={`flex-1 py-4 rounded-xl text-xs font-black transition-all ${data.sexo === s ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}>
                       {s === "F" ? "FEMININO" : "MASCULINO"}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">LEITO</label>
-              <input value={data.leito} onChange={(e) => updateField('leito', e.target.value.toUpperCase())} className={inputCls} placeholder="Ex: L12" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">SETOR</label>
-              <input value={data.setor} onChange={(e) => updateField('setor', e.target.value)} className={inputCls} placeholder="Ex: UTI Adulto" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">DATA ADMISSÃO</label>
-              <input type="date" value={data.data_admissao} onChange={(e) => updateField('data_admissao', e.target.value)} className={inputCls} />
-            </div>
-          </div>
-        </Section>
 
-        {/* 2. HISTÓRIA CLÍNICA */}
-        <Section title="HISTÓRIA CLÍNICA" icon={<Stethoscope className="h-5 w-5" />}>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">MOTIVO DA ADMISSÃO</label>
-              <textarea value={data.motivo_admissao} onChange={(e) => updateField('motivo_admissao', e.target.value)} rows={2} className={textareaCls} placeholder="Ex: Insuficiência respiratória aguda..." />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">HDA</label>
-              <textarea value={data.hda} onChange={(e) => updateField('hda', e.target.value)} rows={6} className={textareaCls} placeholder="Descreva o curso clínico e anamnese..." />
-            </div>
-          </div>
-        </Section>
-
-        {/* 3. LISTA DE PROBLEMAS */}
-        <Section title="LISTA DE PROBLEMAS" icon={<ClipboardList className="h-5 w-5" />}>
-          <div className="space-y-3">
-            {data.lista_de_problemas.map((p: any) => (
-              <div key={p.id} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                <input value={p.text} onChange={(e) => updateItemField('lista_de_problemas', p.id, 'text', e.target.value)} className={inputCls} placeholder="Descreva o problema..." />
-                <button onClick={() => removeItem('lista_de_problemas', p.id)} className="p-3.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addItem('lista_de_problemas', { text: "" })} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 mt-2">
-              <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
-            </button>
-          </div>
-        </Section>
-
-        {/* 4. ANTIBIÓTICOS */}
-        <Section title="ANTIBIÓTICOS" icon={<FlaskConical className="h-5 w-5" />}>
-          <div className="space-y-6">
-            {data.antibioticos.map((a: any) => (
-              <div key={a.id} className="bg-secondary/20 border border-border rounded-3xl p-6 space-y-6 relative group animate-in zoom-in-95 duration-300">
-                <div className="flex items-center justify-between border-b border-border/50 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                      <Pill className="h-4 w-4" />
-                    </div>
-                    <span className="font-extrabold text-sm uppercase tracking-tight">
-                      {a.nome || "Novo ATB"} — <span className="text-primary">{calculateDValue(a.dataInicio)}</span>
-                    </span>
-                  </div>
-                  <button onClick={() => removeItem('antibioticos', a.id)} className="text-muted-foreground hover:text-destructive p-2 rounded-lg hover:bg-destructive/10 transition-all">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">NOME DO ANTIBIÓTICO</label>
-                    <input value={a.nome} onChange={(e) => updateItemField('antibioticos', a.id, 'nome', e.target.value)} className={inputSmallCls} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">DOSE</label>
-                    <input value={a.dose} onChange={(e) => updateItemField('antibioticos', a.id, 'dose', e.target.value)} className={inputSmallCls} placeholder="Ex: 1g" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">VIA</label>
-                    <input value={a.via} onChange={(e) => updateItemField('antibioticos', a.id, 'via', e.target.value)} className={inputSmallCls} placeholder="Ex: EV" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">FREQUÊNCIA</label>
-                    <input value={a.frequencia} onChange={(e) => updateItemField('antibioticos', a.id, 'frequencia', e.target.value)} className={inputSmallCls} placeholder="Ex: 12/12h" />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">DATA DE INÍCIO</label>
-                    <input type="date" value={a.dataInicio} onChange={(e) => updateItemField('antibioticos', a.id, 'dataInicio', e.target.value)} className={inputSmallCls} />
-                  </div>
-                </div>
-              </div>
-            ))}
-            <button onClick={() => addItem('antibioticos', { nome: "", dose: "", via: "", frequencia: "", dataInicio: new Date().toISOString().slice(0, 10) })} className="w-full py-5 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2">
-              <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
-            </button>
-          </div>
-        </Section>
-
-        {/* 5. MEDICAÇÕES */}
-        <Section title="MEDICAÇÕES" icon={<Pill className="h-5 w-5" />}>
-           <div className="space-y-3">
-            {data.medicacoes.map((m: any) => (
-              <div key={m.id} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                <input value={m.text} onChange={(e) => updateItemField('medicacoes', m.id, 'text', e.target.value)} className={inputCls} placeholder="Nome, dose e posologia..." />
-                <button onClick={() => removeItem('medicacoes', m.id)} className="p-3.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addItem('medicacoes', { text: "" })} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 mt-2">
-              <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
-            </button>
-          </div>
-        </Section>
-
-        {/* 6. LABORATÓRIOS */}
-        <Section title="LABORATÓRIOS" icon={<FlaskConical className="h-5 w-5" />}>
-          <div className="space-y-4">
-            {data.laboratorios.map((l: any) => (
-              <div key={l.id} className="flex flex-col md:flex-row gap-4 p-5 bg-secondary/20 rounded-3xl border border-border animate-in zoom-in-95 duration-300">
-                <div className="md:w-48">
-                  <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1 block mb-1">DATA</label>
-                  <input type="date" value={l.data} onChange={(e) => updateItemField('laboratorios', l.id, 'data', e.target.value)} className={inputSmallCls} />
-                </div>
-                <div className="flex-1">
-                  <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1 block mb-1">RESULTADOS (TEXTO COMPACTO)</label>
-                  <input value={l.valor} onChange={(e) => updateItemField('laboratorios', l.id, 'valor', e.target.value)} className={inputSmallCls} placeholder="Ex: Hb 12.5, Leuco 14k, PCR 45..." />
-                </div>
-                <button onClick={() => removeItem('laboratorios', l.id)} className="self-end p-2.5 text-muted-foreground hover:text-destructive transition-all">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addItem('laboratorios', { data: new Date().toISOString().slice(0, 10), valor: "" })} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 mt-2">
-              <Calendar className="h-4 w-4" /> ADICIONAR DATA
-            </button>
-          </div>
-        </Section>
-
-        {/* 7. EXAME FÍSICO */}
-        <Section title="EXAME FÍSICO" icon={<Activity className="h-5 w-5" />}>
-          <div className="grid md:grid-cols-2 gap-8">
-            {[
-              { key: "geral", label: "GERAL" },
-              { key: "acv", label: "CARDIOVASCULAR" },
-              { key: "ar", label: "RESPIRATÓRIO" },
-              { key: "abdome", label: "ABDOME" },
-              { key: "neuro", label: "NEUROLÓGICO" },
-              { key: "extremidades", label: "EXTREMIDADES" },
-              { key: "pele", label: "PELE / FÂNEROS" }
-            ].map((field) => (
-              <div key={field.key} className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">{field.label}</label>
-                <input 
-                  value={data.exame_fisico_detalhado[field.key]} 
-                  onChange={(e) => updateField(`exame_fisico_detalhado.${field.key}`, e.target.value)} 
-                  className={inputCls} 
-                  placeholder={`Descrição ${field.label.toLowerCase()}...`}
-                />
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* 8. CONDUTAS */}
-        <Section title="CONDUTAS" icon={<ClipboardList className="h-5 w-5" />}>
-           <div className="space-y-3">
-            {data.condutas.map((c: any) => (
-              <div key={c.id} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-                <input value={c.text} onChange={(e) => updateItemField('condutas', c.id, 'text', e.target.value)} className={inputCls} placeholder="Descreva a conduta..." />
-                <button onClick={() => removeItem('condutas', c.id)} className="p-3.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addItem('condutas', { text: "" })} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 mt-2">
-              <Plus className="h-4 w-4" /> ADICIONAR CONDUTA
-            </button>
-          </div>
-        </Section>
-
-        {/* 9. PENDÊNCIAS */}
-        <Section title="PENDÊNCIAS" icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}>
-           <div className="space-y-3">
-            {data.pendencias.map((p: any) => (
-              <div key={p.id} className="flex gap-3 group animate-in slide-in-from-left-2 duration-300">
-                <div className="h-12 w-12 shrink-0 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <input value={p.text} onChange={(e) => updateItemField('pendencias', p.id, 'text', e.target.value)} className={inputCls} placeholder="Ex: Aguardar resultado de biópsia..." />
-                <button onClick={() => removeItem('pendencias', p.id)} className="p-3.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addItem('pendencias', { text: "" })} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-xs font-bold text-muted-foreground hover:border-amber-500/50 hover:text-amber-600 transition-all flex items-center justify-center gap-2 mt-2">
-              <Plus className="h-4 w-4" /> ADICIONAR PENDÊNCIA
-            </button>
-          </div>
-        </Section>
-
-        {/* 10. ALERTAS DA IA */}
-        {data.alertas && data.alertas.length > 0 && (
-          <Section title="ALERTAS DA IA" icon={<AlertCircle className="h-5 w-5 text-destructive" />}>
-            <div className="space-y-4">
-              {data.alertas.map((alerta: string, i: number) => {
-                const isCritical = alerta.includes("ilegível") || alerta.includes("🔴");
-                return (
-                  <div key={i} className={`p-5 rounded-2xl flex gap-4 items-center border transition-all ${isCritical ? "bg-red-50 text-red-700 border-red-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>
-                     <span className="text-xl shrink-0">{isCritical ? "🔴" : "🟡"}</span>
-                     <p className="text-xs font-bold uppercase tracking-wide leading-relaxed">{alerta}</p>
-                  </div>
-                );
-              })}
+              <EditableInput label="LEITO" value={data.leito} onChange={(v: any) => updateField('leito', v)} placeholder="Ex: L12" uppercase />
+              <EditableInput label="SETOR" value={data.setor} onChange={(v: any) => updateField('setor', v)} placeholder="Ex: UTI" />
+              <EditableInput label="DATA ADMISSÃO" type="date" value={data.data_admissao} onChange={(v: any) => updateField('data_admissao', v)} />
             </div>
           </Section>
-        )}
 
-      </main>
+          <Section id="hda" title="HDA / MOTIVO" icon={<Stethoscope className="h-5 w-5" />}>
+            <div className="space-y-8">
+              <EditableTextarea label="MOTIVO ADMISSÃO" value={data.motivo_admissao} onChange={(v: any) => updateField('motivo_admissao', v)} rows={3} />
+              <EditableTextarea label="HDA (HISTÓRIA DA DOENÇA ATUAL)" value={data.hda} onChange={(v: any) => updateField('hda', v)} rows={10} />
+            </div>
+          </Section>
 
-      {/* Footer Actions */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border p-6 z-40 shadow-2xl">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row gap-4">
-          <button 
-            onClick={handleReprocess}
-            className="flex-1 py-4.5 px-6 rounded-2xl border border-border font-bold uppercase tracking-widest text-[10px] text-muted-foreground hover:bg-secondary transition-all flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" /> REPROCESSAR
-          </button>
-          <button 
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-[2.5] py-4.5 px-8 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-[0.15em] text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>SALVAR E ABRIR PACIENTE <ArrowRight className="h-4 w-4" /></>}
-          </button>
-        </div>
-      </footer>
+          <Section id="problemas" title="LISTA DE PROBLEMAS" icon={<ClipboardList className="h-5 w-5" />}>
+            <div className="space-y-4">
+              {data.lista_de_problemas.map((p: any, i: number) => (
+                <div key={p.id} className="flex gap-3 group">
+                  <input 
+                    value={p.text} 
+                    onChange={(e) => {
+                      const newList = [...data.lista_de_problemas];
+                      newList[i] = { ...p, text: e.target.value };
+                      updateField('lista_de_problemas', newList);
+                    }} 
+                    className={inputCls} 
+                  />
+                  <button onClick={() => updateField('lista_de_problemas', data.lista_de_problemas.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => updateField('lista_de_problemas', [...data.lista_de_problemas, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
+              </button>
+            </div>
+          </Section>
+
+          <Section id="antibioticos" title="ANTIBIÓTICOS" icon={<Pill className="h-5 w-5" />}>
+            <div className="space-y-8">
+              {data.antibioticos.map((a: any, i: number) => (
+                <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div className="flex items-center gap-2">
+                       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
+                       <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
+                    </div>
+                    <button onClick={() => updateField('antibioticos', data.antibioticos.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500 transition-all">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-6">
+                    <EditableInput label="NOME DO ANTIBIÓTICO" value={a.nome} onChange={(v: any) => {
+                      const list = [...data.antibioticos];
+                      list[i] = { ...a, nome: v };
+                      updateField('antibioticos', list);
+                    }} />
+                    <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => {
+                      const list = [...data.antibioticos];
+                      list[i] = { ...a, dose: v };
+                      updateField('antibioticos', list);
+                    }} />
+                    <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => {
+                      const list = [...data.antibioticos];
+                      list[i] = { ...a, frequencia: v };
+                      updateField('antibioticos', list);
+                    }} />
+                    <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => {
+                      const list = [...data.antibioticos];
+                      list[i] = { ...a, dataInicio: v };
+                      updateField('antibioticos', list);
+                    }} />
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => updateField('antibioticos', [...data.antibioticos, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: new Date().toISOString().slice(0, 10) }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
+              </button>
+            </div>
+          </Section>
+
+          <Section id="medicacoes" title="MEDICAÇÕES" icon={<Activity className="h-5 w-5" />}>
+             <div className="space-y-4">
+              {data.medicacoes.map((m: any, i: number) => (
+                <div key={m.id} className="flex gap-3">
+                  <input value={m.text} onChange={(e) => {
+                    const list = [...data.medicacoes];
+                    list[i] = { ...m, text: e.target.value };
+                    updateField('medicacoes', list);
+                  }} className={inputCls} />
+                  <button onClick={() => updateField('medicacoes', data.medicacoes.filter((item: any) => item.id !== m.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => updateField('medicacoes', [...data.medicacoes, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
+              </button>
+            </div>
+          </Section>
+
+          <Section id="laboratorios" title="LABORATÓRIOS" icon={<FlaskConical className="h-5 w-5" />}>
+            <div className="space-y-8">
+              {data.laboratorios.map((l: any, i: number) => (
+                <div key={l.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 space-y-6 shadow-sm">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <EditableInput type="date" value={l.data} onChange={(v: any) => {
+                      const list = [...data.laboratorios];
+                      list[i] = { ...l, data: v };
+                      updateField('laboratorios', list);
+                    }} />
+                    <button onClick={() => updateField('laboratorios', data.laboratorios.filter((item: any) => item.id !== l.id))} className="text-slate-400 hover:text-red-500 transition-all">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <EditableTextarea label="RESULTADOS EXAMES" value={l.valor} onChange={(v: any) => {
+                    const list = [...data.laboratorios];
+                    list[i] = { ...l, valor: v };
+                    updateField('laboratorios', list);
+                  }} rows={4} placeholder="Ex: Hb 12.5, Leuco 14k, PCR 45..." />
+                </div>
+              ))}
+              <button onClick={() => updateField('laboratorios', [...data.laboratorios, { id: Math.random().toString(36).substr(2, 9), data: new Date().toISOString().slice(0, 10), valor: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR DATA DE EXAME
+              </button>
+            </div>
+          </Section>
+
+          <Section id="exame-fisico" title="EXAME FÍSICO" icon={<Heart className="h-5 w-5" />}>
+            <div className="space-y-8">
+              {[
+                { key: "geral", label: "GERAL" },
+                { key: "acv", label: "CARDIOVASCULAR" },
+                { key: "ar", label: "RESPIRATÓRIO" },
+                { key: "abdome", label: "ABDOME" },
+                { key: "neuro", label: "NEUROLÓGICO" },
+                { key: "extremidades", label: "EXTREMIDADES" },
+                { key: "pele", label: "PELE / FÂNEROS" }
+              ].map((field) => (
+                <EditableInput 
+                  key={field.key}
+                  label={field.label}
+                  value={data.exame_fisico_detalhado[field.key]} 
+                  onChange={(v: any) => updateField(`exame_fisico_detalhado.${field.key}`, v)} 
+                />
+              ))}
+            </div>
+          </Section>
+
+          <Section id="condutas" title="CONDUTAS" icon={<ClipboardList className="h-5 w-5" />}>
+             <div className="space-y-4">
+              {data.condutas.map((c: any, i: number) => (
+                <div key={c.id} className="flex gap-3">
+                  <input value={c.text} onChange={(e) => {
+                    const list = [...data.condutas];
+                    list[i] = { ...c, text: e.target.value };
+                    updateField('condutas', list);
+                  }} className={inputCls} />
+                  <button onClick={() => updateField('condutas', data.condutas.filter((item: any) => item.id !== c.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => updateField('condutas', [...data.condutas, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR CONDUTA
+              </button>
+            </div>
+          </Section>
+
+          <Section id="pendencias" title="PENDÊNCIAS" icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}>
+             <div className="space-y-4">
+              {data.pendencias.map((p: any, i: number) => (
+                <div key={p.id} className="flex gap-3">
+                  <input value={p.text} onChange={(e) => {
+                    const list = [...data.pendencias];
+                    list[i] = { ...p, text: e.target.value };
+                    updateField('pendencias', list);
+                  }} className={inputCls} />
+                  <button onClick={() => updateField('pendencias', data.pendencias.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl transition-all">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => updateField('pendencias', [...data.pendencias, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-3">
+                <Plus className="h-4 w-4" /> ADICIONAR PENDÊNCIA
+              </button>
+            </div>
+          </Section>
+
+          {data.alertas && data.alertas.length > 0 && (
+            <Section id="alertas" title="ALERTAS DA IA" icon={<AlertCircle className="h-5 w-5 text-red-500" />}>
+              <div className="space-y-4">
+                {data.alertas.map((alerta: string, i: number) => (
+                  <div key={i} className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 text-amber-900">
+                    <Info className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-xs font-bold uppercase tracking-wide leading-relaxed">{alerta}</p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+        </main>
+      </div>
+
+      {/* Floating Save Bar for Mobile */}
+      <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
+        <button onClick={handleSave} disabled={saving} className="w-full bg-primary text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-2xl flex items-center justify-center gap-4">
+          {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> SALVAR DADOS</>}
+        </button>
+      </div>
     </div>
   );
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
-function Section({ title, icon, children }: { title: string, icon: any, children: any }) {
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <div className="flex items-center gap-3 mb-6 ml-2">
-        <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
-          {icon}
-        </div>
-        <h2 className="text-xs font-extrabold tracking-[0.25em] uppercase text-foreground">{title}</h2>
-      </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm space-y-10">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-const Loader2 = ({ className }: { className?: string }) => (
-  <RefreshCw className={`animate-spin ${className}`} />
-);
-
-const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all placeholder:text-muted-foreground/50";
-const inputSmallCls = "w-full bg-secondary/40 border border-border rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all";
-const textareaCls = "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 leading-relaxed transition-all placeholder:text-muted-foreground/50";
+const inputCls = "w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all placeholder:text-slate-300 shadow-sm";
+const textareaCls = "w-full bg-white border border-slate-200 rounded-2xl px-5 py-5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all leading-relaxed placeholder:text-slate-300 shadow-sm";

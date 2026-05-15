@@ -1,28 +1,42 @@
-import { Navigate } from '@tanstack/react-router'
-import { useAuth } from '../hooks/useAuth'
-import { Loader2 } from 'lucide-react'
+import { useAuth } from "@clerk/clerk-react";
+import { Navigate } from "@tanstack/react-router";
+import { useEnsureProfile } from "@/hooks/useEnsureProfile";
 
 interface AuthGuardProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { user, loading } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth();
+  useEnsureProfile();
 
-  if (loading) {
+  if (!isLoaded) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
-          VERIFICANDO SESSÃO...
-        </p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            border: "3px solid #e2e8f0",
+            borderTop: "3px solid #2563eb",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
       </div>
-    )
+    );
   }
 
-  if (!user) {
-    return <Navigate to="/login" />
+  if (!isSignedIn) {
+    return <Navigate to="/login" />;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

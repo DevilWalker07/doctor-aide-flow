@@ -55,6 +55,8 @@ export interface ExtractionSession {
   createdAt: string;
 }
 
+import { storage } from "./storage";
+
 const EXTRACTION_RESULT_KEY = "extracao_resultado";
 const EXTRACTION_SESSION_KEY = "extracao_session";
 
@@ -82,6 +84,11 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
 
   const data = await response.json();
   if (!data.job_id) throw new Error("Backend não retornou job_id.");
+  
+  // Persist for page refresh / Safari
+  storage.setJobAtivo(data.job_id);
+  storage.setJobArquivo(file.name);
+  
   return data.job_id as string;
 }
 
@@ -125,11 +132,13 @@ export async function extractClinicalDocument(
         onProgress?.(job.stage, job.status);
 
         if (job.status === "done" && job.result) {
+          storage.clearJobAtivo();
           resolve(job.result);
           return;
         }
 
         if (job.status === "error") {
+          storage.clearJobAtivo();
           reject(new Error(job.error || "Erro desconhecido no processamento."));
           return;
         }
@@ -156,13 +165,15 @@ export function saveExtractionResult(result: ClinicalExtractionResult, fileName:
     createdAt: new Date().toISOString(),
   };
 
-  localStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(session));
-  localStorage.setItem(EXTRACTION_SESSION_KEY, JSON.stringify(session));
+  const str = JSON.stringify(session);
+  storage.setExtracaoResultado(str);
+  localStorage.setItem("doutor_ajuda_extracao", str); // keep legacy for some components
+  localStorage.setItem(EXTRACTION_SESSION_KEY, str);
 
   // Also write sessionStorage for tabs that might check it
   try {
-    sessionStorage.setItem(EXTRACTION_SESSION_KEY, JSON.stringify(session));
-    sessionStorage.setItem(EXTRACTION_RESULT_KEY, JSON.stringify(session));
+    sessionStorage.setItem(EXTRACTION_SESSION_KEY, str);
+    sessionStorage.setItem(EXTRACTION_RESULT_KEY, str);
   } catch {
     // sessionStorage might be restricted in some Safari modes
   }
@@ -173,6 +184,7 @@ export function loadPendingExtraction(): ExtractionSession | null {
   try {
     const raw =
       sessionStorage.getItem(EXTRACTION_SESSION_KEY) ||
+      storage.getExtracaoResultado() ||
       localStorage.getItem(EXTRACTION_SESSION_KEY);
     return raw ? (JSON.parse(raw) as ExtractionSession) : null;
   } catch {
@@ -182,8 +194,10 @@ export function loadPendingExtraction(): ExtractionSession | null {
 
 /** Clears extraction session data */
 export function clearExtractionSession() {
-  localStorage.removeItem(EXTRACTION_RESULT_KEY);
+  storage.clearExtracaoResultado();
+  storage.clearJobAtivo();
   localStorage.removeItem(EXTRACTION_SESSION_KEY);
+  localStorage.removeItem("doutor_ajuda_extracao");
   try {
     sessionStorage.removeItem(EXTRACTION_RESULT_KEY);
     sessionStorage.removeItem(EXTRACTION_SESSION_KEY);

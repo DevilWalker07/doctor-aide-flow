@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Upload, FileUp, X, ChevronLeft, ArrowRight, Loader2, Camera, FileText } from "lucide-react";
 import { startClinicalExtractionJob } from "@/lib/documentExtractor";
 import { toast } from "sonner";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/upload-ia")({
   component: UploadIAPage,
@@ -38,11 +39,12 @@ function UploadIAPage() {
     setIsUploading(true);
     try {
       const jobId = await startClinicalExtractionJob(file);
-      localStorage.setItem("doutor_ajuda_job_ativo", jobId);
-      localStorage.setItem("doutor_ajuda_job_arquivo", file.name);
-      localStorage.setItem("doutor_ajuda_tipo_upload", tipo);
+      
+      // Additional metadata for the flow
+      storage.setTipo(tipo);
+      storage.setJobArquivo(file.name);
       if (patient_id) {
-        localStorage.setItem("doutor_ajuda_job_patient_id", patient_id);
+        storage.setUploadPatientId(patient_id);
       }
       
       toast.success("Arquivo enviado! Iniciando leitura com IA...");

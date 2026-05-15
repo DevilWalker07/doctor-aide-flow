@@ -8,6 +8,8 @@ import {
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { getPatientById, createPrescription } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
@@ -39,11 +41,12 @@ const PROPHYLAXIS_CHIPS = [
 function PrescricaoPage() {
   const { id } = useParams({ from: "/prescricao/$id" });
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [tipoUnidade, setTipoUnidade] = useState<string>("enfermaria_clinica");
   const [isSaving, setIsSaving] = useState(false);
 
-  // State for all sections
+  // ... (state setters)
   const [dieta, setDieta] = useState("");
   const [dietaComplemento, setDietaComplemento] = useState("");
   const [cuidados, setCuidados] = useState<string[]>([]);
@@ -62,16 +65,17 @@ function PrescricaoPage() {
   const [sedacao, setSedacao] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!userId) return;
     async function load() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
-        const p = await getPatientById(id);
+        const p = await getPatientById(id, userId!);
         setPaciente(p);
         setMedicacoes((p.medications || []).map((m: string) => ({ id: Math.random().toString(), text: m })));
         setAntibioticos(p.antibiotics || []);
         setPendencias(p.pending_issues || []);
       } catch (err) {
-        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const existing = storage.getLocalPacientes();
         const p = existing.find((x: any) => x.id === id);
         if (p) {
           setPaciente(p);
@@ -84,9 +88,9 @@ function PrescricaoPage() {
       }
     }
     load();
-    const savedTipo = localStorage.getItem("da_tipo_evolucao") || localStorage.getItem("da_tipo_unidade");
+    const savedTipo = storage.getTipo();
     if (savedTipo) setTipoUnidade(savedTipo);
-  }, [id]);
+  }, [id, userId]);
 
   const handleCopy = () => {
     const dataPlantao = format(new Date(), "dd/MM/yyyy");
@@ -113,7 +117,7 @@ function PrescricaoPage() {
   };
 
   const handleSave = async () => {
-    if (isSaving) return;
+    if (isSaving || !userId) return;
     setIsSaving(true);
     
     const prescricaoContent = {
@@ -134,13 +138,13 @@ function PrescricaoPage() {
     };
 
     try {
-      const shiftId = localStorage.getItem("da_shift_id");
+      const shiftId = storage.getShiftId();
       if (shiftId && !shiftId.startsWith("temp_") && !id.startsWith("temp_")) {
         await createPrescription({
           patient_id: id,
           shift_id: shiftId,
           content: prescricaoContent
-        });
+        }, userId);
         toast.success("Prescrição salva!");
       } else {
         throw new Error("Local fallback");
@@ -149,7 +153,7 @@ function PrescricaoPage() {
       console.warn("Salvando prescrição localmente", error);
       const prescricao = {
         patient_id: id,
-        shift_id: localStorage.getItem("da_shift_id") || "unknown",
+        shift_id: storage.getShiftId() || "unknown",
         data: new Date().toISOString(),
         content: prescricaoContent
       };

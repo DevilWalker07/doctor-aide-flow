@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getActiveShift as dbGetActiveShift, updateShift as dbUpdateShift, type Shift } from '../lib/db'
+import { getActiveShift as dbGetActiveShift, type Shift } from '../lib/db'
+import { storage } from '../lib/storage'
+import { useSupabaseUser } from './useSupabaseUser'
 
 export interface ShiftContext {
   id: string
@@ -17,13 +19,19 @@ export interface ShiftContext {
 }
 
 export function useShift() {
+  const { userId } = useSupabaseUser()
   const [shift, setShift] = useState<ShiftContext | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!userId) {
+      setLoading(false)
+      return
+    }
+
     async function load() {
       try {
-        const s = await dbGetActiveShift()
+        const s = await dbGetActiveShift(userId!)
         if (s) {
           const ctx = supabaseToContext(s)
           setShift(ctx)
@@ -40,11 +48,12 @@ export function useShift() {
       }
     }
     load()
-  }, [])
+  }, [userId])
 
   const refreshShift = useCallback(() => {
+    if (!userId) return
     setLoading(true)
-    dbGetActiveShift()
+    dbGetActiveShift(userId)
       .then(s => {
         if (s) {
           const ctx = supabaseToContext(s)
@@ -54,7 +63,7 @@ export function useShift() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [userId])
 
   // Legacy getShift for backward compat with cadastro-manual etc.
   const getShift = useCallback((): ShiftContext | null => {
@@ -64,14 +73,14 @@ export function useShift() {
 
   const getTipo = useCallback((): string | null => {
     if (shift?.tipo) return shift.tipo
-    return localStorage.getItem('da_tipo_evolucao')
+    return storage.getTipo()
   }, [shift])
 
   const clearShift = useCallback(() => {
     setShift(null)
-    localStorage.removeItem('da_plantao_ativo')
+    storage.clearShiftId()
+    localStorage.removeItem('da_plantao_ativo') // Keep legacy cleanup for now
     localStorage.removeItem('da_tipo_evolucao')
-    localStorage.removeItem('da_shift_id')
   }, [])
 
   // Legacy updateShift for local-only updates (used by tipo.tsx old path)
@@ -80,6 +89,7 @@ export function useShift() {
       if (!prev) return prev
       const updated = { ...prev, ...updates }
       localStorage.setItem('da_plantao_ativo', JSON.stringify(updated))
+      if (updates.tipo) storage.setTipo(updates.tipo)
       return updated
     })
   }, [])
@@ -122,9 +132,9 @@ function supabaseToContext(s: Shift): ShiftContext {
 }
 
 function syncToLocal(s: Shift) {
-  localStorage.setItem('da_shift_id', s.id)
+  storage.setShiftId(s.id)
   localStorage.setItem('da_plantao_ativo', JSON.stringify(supabaseToContext(s)))
-  localStorage.setItem('da_tipo_evolucao', s.type ?? '')
+  if (s.type) storage.setTipo(s.type)
 }
 
 function formatDate(dateStr: string): string {

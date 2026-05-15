@@ -102,20 +102,21 @@ export async function createShift(data: {
   hospital: string
   sector?: string
   type?: string
-}): Promise<Shift> {
+}, userId: string): Promise<Shift> {
   const { data: shift, error } = await supabase
     .from('shifts')
-    .insert({ ...data, status: 'active' })
+    .insert({ ...data, user_id: userId, status: 'active' })
     .select()
     .single()
   if (error) throw error
   return shift
 }
 
-export async function getActiveShift(): Promise<Shift | null> {
+export async function getActiveShift(userId: string): Promise<Shift | null> {
   const { data, error } = await supabase
     .from('shifts')
     .select('*')
+    .eq('user_id', userId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)
@@ -123,29 +124,32 @@ export async function getActiveShift(): Promise<Shift | null> {
   return data?.[0] ?? null
 }
 
-export async function updateShift(id: string, data: Partial<Shift>): Promise<Shift> {
+export async function updateShift(id: string, data: Partial<Shift>, userId: string): Promise<Shift> {
   const { data: shift, error } = await supabase
     .from('shifts')
     .update(data)
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single()
   if (error) throw error
   return shift
 }
 
-export async function closeShift(id: string): Promise<void> {
+export async function closeShift(id: string, userId: string): Promise<void> {
   const { error } = await supabase
     .from('shifts')
     .update({ status: 'closed' })
     .eq('id', id)
+    .eq('user_id', userId)
   if (error) throw error
 }
 
-export async function getClosedShifts(limit = 5): Promise<Shift[]> {
+export async function getClosedShifts(userId: string, limit = 5): Promise<Shift[]> {
   const { data, error } = await supabase
     .from('shifts')
     .select('*')
+    .eq('user_id', userId)
     .eq('status', 'closed')
     .order('date', { ascending: false })
     .limit(limit)
@@ -157,41 +161,44 @@ export async function getClosedShifts(limit = 5): Promise<Shift[]> {
 // PATIENTS
 // ═══════════════════════════════════
 
-export async function createPatient(data: Partial<Patient>): Promise<Patient> {
+export async function createPatient(data: Partial<Patient>, userId: string): Promise<Patient> {
   const { data: patient, error } = await supabase
     .from('patients')
-    .insert(data)
+    .insert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
   return patient
 }
 
-export async function getPatientsByShift(shiftId: string): Promise<Patient[]> {
+export async function getPatientsByShift(shiftId: string, userId: string): Promise<Patient[]> {
   const { data, error } = await supabase
     .from('patients')
     .select('*')
     .eq('shift_id', shiftId)
+    .eq('user_id', userId)
     .order('bed', { ascending: true })
   if (error) throw error
   return data ?? []
 }
 
-export async function getPatientById(id: string): Promise<Patient> {
+export async function getPatientById(id: string, userId: string): Promise<Patient> {
   const { data, error } = await supabase
     .from('patients')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
   if (error) throw error
   return data
 }
 
-export async function updatePatient(id: string, data: Partial<Patient>): Promise<Patient> {
+export async function updatePatient(id: string, data: Partial<Patient>, userId: string): Promise<Patient> {
   const { data: patient, error } = await supabase
     .from('patients')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('user_id', userId)
     .select()
     .single()
   if (error) throw error
@@ -200,42 +207,75 @@ export async function updatePatient(id: string, data: Partial<Patient>): Promise
 
 export async function mergePatientData(
   id: string,
-  newData: Partial<Patient>
+  newData: Partial<Patient>,
+  userId: string
 ): Promise<Patient> {
-  const existing = await getPatientById(id)
+  const existing = await getPatientById(id, userId)
 
+  // Start with existing data
   const merged: Partial<Patient> = { ...existing }
 
+  // Overwrite identification if provided and non-empty
+  if (newData.name) merged.name = newData.name
+  if (newData.age) merged.age = newData.age
+  if (newData.sex) merged.sex = newData.sex
+  if (newData.bed) merged.bed = newData.bed
+  if (newData.sector) merged.sector = newData.sector
+  if (newData.admission_date) merged.admission_date = newData.admission_date
+  if (newData.reason_for_admission) merged.reason_for_admission = newData.reason_for_admission
+  if (newData.hda) merged.hda = newData.hda
+
+  // Merge lists (append new unique items)
   if (newData.problem_list?.length) {
-    const existingTexts = (existing.problem_list ?? []).map(p =>
-      typeof p === 'string' ? p.toLowerCase() : ''
-    )
+    const existingTexts = new Set((existing.problem_list ?? []).map(p =>
+      typeof p === 'string' ? p.trim().toLowerCase() : ''
+    ))
     const newProblems = newData.problem_list.filter(
-      p => !existingTexts.includes((typeof p === 'string' ? p : '').toLowerCase())
+      p => p && !existingTexts.has(p.trim().toLowerCase())
     )
     merged.problem_list = [...(existing.problem_list ?? []), ...newProblems]
   }
 
   if (newData.antibiotics?.length) {
-    const existingNames = (existing.antibiotics ?? []).map(a => a.nome?.toLowerCase())
+    const existingNames = new Set((existing.antibiotics ?? []).map(a => a.nome?.trim().toLowerCase()))
     const newAtbs = newData.antibiotics.filter(
-      a => !existingNames.includes(a.nome?.toLowerCase())
+      a => a.nome && !existingNames.has(a.nome.trim().toLowerCase())
     )
     merged.antibiotics = [...(existing.antibiotics ?? []), ...newAtbs]
   }
 
   if (newData.labs?.length) {
-    const existingDates = (existing.labs ?? []).map(l => l.data)
-    const newLabs = newData.labs.filter(l => !existingDates.includes(l.data))
+    const existingDates = new Set((existing.labs ?? []).map(l => l.data))
+    const newLabs = newData.labs.filter(l => l.data && !existingDates.has(l.data))
     merged.labs = [...(existing.labs ?? []), ...newLabs]
   }
 
-  if (newData.pending_issues?.length) {
-    const existingTexts = (existing.pending_issues ?? []).map(p =>
-      typeof p === 'string' ? p.toLowerCase() : ''
+  if (newData.medications?.length) {
+    const existingTexts = new Set((existing.medications ?? []).map(m =>
+      typeof m === 'string' ? m.trim().toLowerCase() : ''
+    ))
+    const newMeds = newData.medications.filter(
+      m => m && !existingTexts.has(m.trim().toLowerCase())
     )
+    merged.medications = [...(existing.medications ?? []), ...newMeds]
+  }
+
+  if (newData.conducts?.length) {
+    const existingTexts = new Set((existing.conducts ?? []).map(c =>
+      typeof c === 'string' ? c.trim().toLowerCase() : ''
+    ))
+    const newConducts = newData.conducts.filter(
+      c => c && !existingTexts.has(c.trim().toLowerCase())
+    )
+    merged.conducts = [...(existing.conducts ?? []), ...newConducts]
+  }
+
+  if (newData.pending_issues?.length) {
+    const existingTexts = new Set((existing.pending_issues ?? []).map(p =>
+      typeof p === 'string' ? p.trim().toLowerCase() : ''
+    ))
     const newPending = newData.pending_issues.filter(
-      p => !existingTexts.includes((typeof p === 'string' ? p : '').toLowerCase())
+      p => p && !existingTexts.has(p.trim().toLowerCase())
     )
     merged.pending_issues = [...(existing.pending_issues ?? []), ...newPending]
   }
@@ -249,7 +289,7 @@ export async function mergePatientData(
     }
   }
 
-  return updatePatient(id, merged)
+  return updatePatient(id, merged, userId)
 }
 
 // ═══════════════════════════════════
@@ -260,31 +300,33 @@ export async function createEvolution(data: {
   patient_id: string
   shift_id: string
   content: string
-}): Promise<Evolution> {
+}, userId: string): Promise<Evolution> {
   const { data: evolution, error } = await supabase
     .from('evolutions')
-    .insert(data)
+    .insert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
   return evolution
 }
 
-export async function getEvolutionsByPatient(patientId: string): Promise<Evolution[]> {
+export async function getEvolutionsByPatient(patientId: string, userId: string): Promise<Evolution[]> {
   const { data, error } = await supabase
     .from('evolutions')
     .select('*')
     .eq('patient_id', patientId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
-export async function getLastEvolution(patientId: string): Promise<Evolution | null> {
+export async function getLastEvolution(patientId: string, userId: string): Promise<Evolution | null> {
   const { data, error } = await supabase
     .from('evolutions')
     .select('*')
     .eq('patient_id', patientId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
   if (error) throw error
@@ -299,21 +341,22 @@ export async function createPrescription(data: {
   patient_id: string
   shift_id: string
   content: Record<string, unknown>
-}) {
+}, userId: string) {
   const { data: prescription, error } = await supabase
     .from('prescriptions')
-    .insert(data)
+    .insert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
   return prescription
 }
 
-export async function getLastPrescription(patientId: string) {
+export async function getLastPrescription(patientId: string, userId: string) {
   const { data, error } = await supabase
     .from('prescriptions')
     .select('*')
     .eq('patient_id', patientId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
   if (error) throw error
@@ -327,21 +370,22 @@ export async function getLastPrescription(patientId: string) {
 export async function createHandoff(data: {
   shift_id: string
   content: string
-}) {
+}, userId: string) {
   const { data: handoff, error } = await supabase
     .from('handoffs')
-    .insert(data)
+    .insert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
   return handoff
 }
 
-export async function getHandoffsByShift(shiftId: string) {
+export async function getHandoffsByShift(shiftId: string, userId: string) {
   const { data, error } = await supabase
     .from('handoffs')
     .select('*')
     .eq('shift_id', shiftId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
@@ -357,10 +401,10 @@ export async function createReferral(data: {
   specialty?: string
   reason: string
   content: string
-}) {
+}, userId: string) {
   const { data: referral, error } = await supabase
     .from('referrals')
-    .insert(data)
+    .insert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
@@ -371,21 +415,20 @@ export async function createReferral(data: {
 // PROFILES
 // ═══════════════════════════════════
 
-export async function getProfile(): Promise<Profile | null> {
+export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .single()
-  if (error && error.code !== 'PGRST116') throw error
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
   return data ?? null
 }
 
-export async function upsertProfile(data: Partial<Profile>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Usuário não autenticado')
+export async function upsertProfile(data: Partial<Profile>, userId: string) {
   const { data: profile, error } = await supabase
     .from('profiles')
-    .upsert({ ...data, user_id: user.id })
+    .upsert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error
@@ -396,21 +439,20 @@ export async function upsertProfile(data: Partial<Profile>) {
 // USER SETTINGS
 // ═══════════════════════════════════
 
-export async function getSettings(): Promise<UserSettings | null> {
+export async function getSettings(userId: string): Promise<UserSettings | null> {
   const { data, error } = await supabase
     .from('user_settings')
     .select('*')
-    .single()
-  if (error && error.code !== 'PGRST116') throw error
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
   return data ?? null
 }
 
-export async function upsertSettings(data: Partial<UserSettings>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Usuário não autenticado')
+export async function upsertSettings(data: Partial<UserSettings>, userId: string) {
   const { data: settings, error } = await supabase
     .from('user_settings')
-    .upsert({ ...data, user_id: user.id })
+    .upsert({ ...data, user_id: userId })
     .select()
     .single()
   if (error) throw error

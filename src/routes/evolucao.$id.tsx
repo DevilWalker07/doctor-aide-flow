@@ -9,6 +9,7 @@ import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fn
 import { toast } from "sonner";
 import { getPatientById, createEvolution } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -172,6 +173,7 @@ QUEIXA PRINCIPAL: [queixa]
 function EvolucaoPage() {
   const { id } = useParams({ from: "/evolucao/$id" });
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [tipoUnidade, setTipoUnidade] = useState<string>("enfermaria_clinica");
   const [evolutionText, setEvolutionText] = useState("");
@@ -179,10 +181,11 @@ function EvolucaoPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (!userId) return;
     async function load() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
-        const p = await getPatientById(id);
+        const p = await getPatientById(id, userId!);
         const mapped = {
           name: p.name,
           bed: p.bed,
@@ -200,7 +203,7 @@ function EvolucaoPage() {
         };
         setPaciente(mapped);
       } catch (err) {
-        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const existing = storage.getLocalPacientes();
         const p = existing.find((x: any) => x.id === id);
         if (p) {
           setPaciente({
@@ -222,9 +225,9 @@ function EvolucaoPage() {
     }
     load();
     
-    const savedTipo = localStorage.getItem("da_tipo_evolucao") || localStorage.getItem("da_tipo_unidade");
+    const savedTipo = storage.getTipo();
     if (savedTipo) setTipoUnidade(savedTipo);
-  }, [id]);
+  }, [id, userId]);
 
   const dih = useMemo(() => {
     if (!paciente?.admissionDate && !paciente?.admission) return 0;
@@ -237,9 +240,8 @@ function EvolucaoPage() {
     if (!paciente) return;
     setIsGenerating(true);
     try {
-      const plantaoAtivoRaw = localStorage.getItem("da_plantao_ativo");
-      const plantaoAtivo = plantaoAtivoRaw ? JSON.parse(plantaoAtivoRaw) : null;
-      const dataPlantao = plantaoAtivo?.data || format(new Date(), "yyyy-MM-dd");
+      const plantaoAtivo = storage.getPlantaoAtivo();
+      const dataPlantao = plantaoAtivo?.date || format(new Date(), "yyyy-MM-dd");
 
       const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/generate-evolution`, {
         method: "POST",
@@ -252,7 +254,7 @@ function EvolucaoPage() {
           preferences: {
             uppercase: true,
             lab_format: "compact_inline",
-            atb_day_rule: "D0"
+            atb_day_rule: storage.getAtbDayRule()
           }
         }),
       });
@@ -276,23 +278,23 @@ function EvolucaoPage() {
   };
 
   const handleSave = async () => {
-    if (!evolutionText) return;
+    if (!evolutionText || !userId) return;
     setIsSaving(true);
     try {
-      const shiftId = localStorage.getItem("da_shift_id");
+      const shiftId = storage.getShiftId();
       if (shiftId && !shiftId.startsWith("temp_") && !id.startsWith("temp_")) {
         await createEvolution({
           patient_id: id,
           shift_id: shiftId,
           content: evolutionText
-        });
+        }, userId);
         toast.success("Evolução salva!");
       } else {
         throw new Error("Local fallback");
       }
     } catch (error) {
       console.warn("Salvando evolução localmente", error);
-      const shiftId = localStorage.getItem("da_shift_id") || "unknown";
+      const shiftId = storage.getShiftId() || "unknown";
       const existing = JSON.parse(localStorage.getItem("da_evolucoes") || "[]");
       existing.push({
         patient_id: id,

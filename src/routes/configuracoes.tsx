@@ -6,11 +6,13 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useClerk } from "@clerk/clerk-react";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
-import { signOut } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/configuracoes")({
   component: SettingsPage,
@@ -18,26 +20,29 @@ export const Route = createFileRoute("/configuracoes")({
 });
 
 function SettingsPage() {
+  const { userId } = useSupabaseUser();
   // Medical Profile
-  const [nomeMedico, setNomeMedico] = useState(() => localStorage.getItem("da_nome_medico") || "");
-  const [crm, setCrm] = useState(() => localStorage.getItem("da_crm") || "");
-  const [especialidade, setEspecialidade] = useState(() => localStorage.getItem("da_especialidade") || "");
-  const [hospitalPadrao, setHospitalPadrao] = useState(() => localStorage.getItem("da_hospital_padrao") || "");
+  const [nomeMedico, setNomeMedico] = useState(() => storage.getNomeMedico());
+  const [crm, setCrm] = useState(() => storage.getCRM());
+  const [especialidade, setEspecialidade] = useState(() => storage.getEspecialidade());
+  const [hospitalPadrao, setHospitalPadrao] = useState(() => storage.getHospitalPadrao());
 
   // ATB Rules
-  const [atbDayRule, setAtbDayRule] = useState(() => localStorage.getItem("da_atb_day_rule") || "D0");
-  const [atbAlertDays, setAtbAlertDays] = useState(() => localStorage.getItem("da_atb_alert_days") || "7");
+  const [atbDayRule, setAtbDayRule] = useState(() => storage.getAtbDayRule());
+  const [atbAlertDays, setAtbAlertDays] = useState(() => String(storage.getAtbAlertDays()));
 
   // AI Status
   const [aiStatus, setAiStatus] = useState<"loading" | "connected" | "disconnected">("loading");
   const nav = useNavigate();
+  const { signOut } = useClerk();
 
   useEffect(() => {
+    if (!userId) return;
     async function loadData() {
       try {
         const [profileRes, settingsRes] = await Promise.allSettled([
-          getProfile(),
-          getSettings()
+          getProfile(userId!),
+          getSettings(userId!)
         ]);
         
         let loadedProfile = false;
@@ -46,13 +51,23 @@ function SettingsPage() {
           setCrm(profileRes.value.crm || "");
           setEspecialidade(profileRes.value.specialty || "");
           setHospitalPadrao(profileRes.value.hospital || "");
+          
+          // Sync to local
+          storage.setNomeMedico(profileRes.value.name || "");
+          storage.setCRM(profileRes.value.crm || "");
+          storage.setEspecialidade(profileRes.value.specialty || "");
+          storage.setHospitalPadrao(profileRes.value.hospital || "");
           loadedProfile = true;
         }
 
         let loadedSettings = false;
         if (settingsRes.status === "fulfilled" && settingsRes.value) {
           setAtbDayRule(settingsRes.value.atb_day_rule || "D0");
-          setAtbAlertDays(settingsRes.value.atb_alert_days || "7");
+          setAtbAlertDays(String(settingsRes.value.atb_alert_days || "7"));
+          
+          // Sync to local
+          storage.setAtbDayRule(settingsRes.value.atb_day_rule || "D0");
+          storage.setAtbAlertDays(settingsRes.value.atb_alert_days || 7);
           loadedSettings = true;
         }
         
@@ -65,7 +80,7 @@ function SettingsPage() {
     }
     loadData();
     checkHealth();
-  }, []);
+  }, [userId]);
 
   const checkHealth = async () => {
     setAiStatus("loading");
@@ -79,36 +94,37 @@ function SettingsPage() {
   };
 
   const saveProfile = async () => {
+    if (!userId) return;
     try {
-      await upsertProfile({ name: nomeMedico, crm, specialty: especialidade, hospital: hospitalPadrao });
+      await upsertProfile({ name: nomeMedico, crm, specialty: especialidade, hospital: hospitalPadrao }, userId);
       toast.success("Perfil salvo!");
     } catch (error) {
       console.warn(error);
       toast.success("Salvo localmente");
     }
-    localStorage.setItem("da_nome_medico", nomeMedico);
-    localStorage.setItem("da_crm", crm);
-    localStorage.setItem("da_especialidade", especialidade);
-    localStorage.setItem("da_hospital_padrao", hospitalPadrao);
+    storage.setNomeMedico(nomeMedico);
+    storage.setCRM(crm);
+    storage.setEspecialidade(especialidade);
+    storage.setHospitalPadrao(hospitalPadrao);
   };
 
   const saveRules = async () => {
+    if (!userId) return;
+    const days = parseInt(atbAlertDays) || 7;
     try {
-      await upsertSettings({ atb_day_rule: atbDayRule, atb_alert_days: parseInt(atbAlertDays) || 7 });
+      await upsertSettings({ atb_day_rule: atbDayRule, atb_alert_days: days }, userId);
       toast.success("Regras salvas!");
     } catch (error) {
       console.warn(error);
       toast.success("Salvo localmente");
     }
-    localStorage.setItem("da_atb_day_rule", atbDayRule);
-    localStorage.setItem("da_atb_alert_days", atbAlertDays);
+    storage.setAtbDayRule(atbDayRule);
+    storage.setAtbAlertDays(days);
   };
 
   const handleExportData = async () => {
+    if (!userId) return;
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("Não logado");
-      
       const [
         { data: shifts },
         { data: patients },
@@ -117,12 +133,12 @@ function SettingsPage() {
         { data: handoffs },
         { data: referrals }
       ] = await Promise.all([
-        supabase.from('shifts').select('*'),
-        supabase.from('patients').select('*'),
-        supabase.from('evolutions').select('*'),
-        supabase.from('prescriptions').select('*'),
-        supabase.from('handoffs').select('*'),
-        supabase.from('referrals').select('*'),
+        supabase.from('shifts').select('*').eq('user_id', userId),
+        supabase.from('patients').select('*').eq('user_id', userId),
+        supabase.from('evolutions').select('*').eq('user_id', userId),
+        supabase.from('prescriptions').select('*').eq('user_id', userId),
+        supabase.from('handoffs').select('*').eq('user_id', userId),
+        supabase.from('referrals').select('*').eq('user_id', userId),
       ]);
 
       const backup = {
@@ -154,21 +170,8 @@ function SettingsPage() {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    
-    // Manter preferências
-    const nome = localStorage.getItem("da_nome_medico");
-    const hosp = localStorage.getItem("da_hospital_padrao");
-    const rule = localStorage.getItem("da_atb_day_rule");
-    const days = localStorage.getItem("da_atb_alert_days");
-    
-    localStorage.clear();
-    
-    if (nome) localStorage.setItem("da_nome_medico", nome);
-    if (hosp) localStorage.setItem("da_hospital_padrao", hosp);
-    if (rule) localStorage.setItem("da_atb_day_rule", rule);
-    if (days) localStorage.setItem("da_atb_alert_days", days);
-    
+    storage.clearSession();
+    await signOut({ redirectUrl: "/login" });
     nav({ to: "/login" });
   };
 

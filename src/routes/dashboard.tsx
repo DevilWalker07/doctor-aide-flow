@@ -8,9 +8,12 @@ import {
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
 import { getPatientsByShift, closeShift, createHandoff } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
 import { X, Copy, Archive } from "lucide-react";
+
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -35,6 +38,7 @@ interface Patient {
 
 function DashboardPage() {
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const { getShift, clearShift } = useShift();
   const [pacientes, setPacientes] = useState<Patient[]>([]);
   const [filter, setFilter] = useState<"todos" | "atb" | "pendencias" | "alta">("todos");
@@ -42,6 +46,7 @@ function DashboardPage() {
   const shift = getShift();
 
   useEffect(() => {
+    if (!userId) return;
     if (!shift) {
       nav({ to: "/iniciar-plantao" });
       return;
@@ -49,9 +54,9 @@ function DashboardPage() {
     
     async function loadPatients() {
       try {
-        const shiftId = localStorage.getItem("da_shift_id");
+        const shiftId = storage.getShiftId();
         if (shiftId && !shiftId.startsWith("temp_")) {
-          const dbPatients = await getPatientsByShift(shiftId);
+          const dbPatients = await getPatientsByShift(shiftId, userId!);
           
           // Map DB models to component state structure
           const mapped = dbPatients.map(p => ({
@@ -81,19 +86,13 @@ function DashboardPage() {
         throw new Error("Offline or temp ID");
       } catch (err) {
         console.warn("Failed to load from Supabase, using local", err);
-        const rawPacientes = localStorage.getItem("da_pacientes");
-        if (rawPacientes) {
-          try {
-            setPacientes(JSON.parse(rawPacientes));
-          } catch (e) {
-            setPacientes([]);
-          }
-        }
+        const localPacientes = storage.getLocalPacientes();
+        setPacientes(localPacientes);
       }
     }
     
     loadPatients();
-  }, [nav, shift]);
+  }, [nav, shift, userId]);
 
   const stats = useMemo(() => {
     return {
@@ -135,7 +134,8 @@ function DashboardPage() {
   const [isEnding, setIsEnding] = useState(false);
 
   const handleEndShift = async () => {
-    const shiftId = localStorage.getItem("da_shift_id");
+    if (!userId) return;
+    const shiftId = storage.getShiftId();
     if (!shiftId || shiftId.startsWith("temp_")) {
       clearShift();
       nav({ to: "/" });
@@ -147,7 +147,7 @@ function DashboardPage() {
       // 1. Gerar texto da passagem
       let text = `PASSAGEM DE PLANTÃO - ${shift.setor}\n`;
       text += `DATA: ${shift.data_formatada}\n`;
-      text += `PROFISSIONAL: ${localStorage.getItem("da_nome_medico") || "Médico"}\n\n`;
+      text += `PROFISSIONAL: ${storage.getNomeMedico()}\n\n`;
       
       pacientes.forEach(p => {
         text += `${p.leito} - ${p.nome} (${p.idade}A, ${p.sexo})\n`;
@@ -162,15 +162,13 @@ function DashboardPage() {
       });
 
       // 2. Salvar handoff
-      await createHandoff({ shift_id: shiftId, content: text });
+      await createHandoff({ shift_id: shiftId, content: text }, userId);
 
       // 3. Encerrar no Supabase
-      await closeShift(shiftId);
+      await closeShift(shiftId, userId);
 
       // 4. Limpar e navegar
-      localStorage.removeItem("da_shift_id");
-      localStorage.removeItem("da_plantao_ativo");
-      localStorage.removeItem("da_tipo_evolucao");
+      storage.clearSession();
       
       toast.success("Plantão encerrado. Dados arquivados.");
       nav({ to: "/" });
@@ -344,9 +342,9 @@ function DashboardPage() {
                      <button onClick={() => nav({ to: "/prescricao", params: { id: p.id } as any })} className="flex-1 lg:flex-none px-4 py-3 rounded-xl border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-secondary">
                         PRESCRIÇÃO
                      </button>
-                     <button onClick={() => nav({ to: "/paciente/temp", search: { id: p.id } as any })} className="p-3 rounded-xl border border-border text-muted-foreground hover:bg-secondary transition-all">
-                        <User className="h-4 w-4" />
-                     </button>
+                      <button onClick={() => nav({ to: "/paciente/$id", params: { id: p.id } })} className="p-3 rounded-xl border border-border text-muted-foreground hover:bg-secondary transition-all">
+                         <User className="h-4 w-4" />
+                      </button>
                   </div>
                </div>
              ))

@@ -232,13 +232,22 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
                 "content": f"{prompt}\n\nDocumento:\n{extracted_text}"
             })
 
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0,
-            max_tokens=2500,
-            response_format={ "type": "json_object" }
-        )
+        response = None
+        for tentativa in range(3):
+            try:
+                response = await client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=messages,
+                    temperature=0,
+                    max_tokens=2500,
+                    response_format={ "type": "json_object" }
+                )
+                break
+            except Exception as e:
+                if tentativa == 2:
+                    raise e
+                print(f"Erro na OpenAI (tentativa {tentativa+1}/3): {e}")
+                await asyncio.sleep(2)
 
         result_content = response.choices[0].message.content
         

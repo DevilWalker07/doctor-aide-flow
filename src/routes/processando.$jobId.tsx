@@ -21,13 +21,13 @@ function ProcessandoRoute() {
   const params = Route.useParams();
   const nav = useNavigate();
   
-  // Safari resistance: use localStorage job_id if it exists and differs from URL
+  // Safari resistance: use storage job_id if it exists and differs from URL
   const [jobId] = useState(() => {
-    const activeJob = localStorage.getItem("doutor_ajuda_job_ativo");
+    const activeJob = storage.getJobAtivo();
     return activeJob && activeJob !== params.jobId ? activeJob : params.jobId;
   });
 
-  const [fileName] = useState(() => localStorage.getItem("doutor_ajuda_job_arquivo") || "Documento");
+  const [fileName] = useState(() => storage.getJobArquivo() || "Documento");
   const [status, setStatus] = useState<"queued" | "processing" | "done" | "error">("queued");
   const [currentStage, setCurrentStage] = useState<string>("Arquivo recebido");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -36,6 +36,7 @@ function ProcessandoRoute() {
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     const deadline = Date.now() + 300_000; // 5 minutes timeout
+    pollingRef.current = true;
 
     const poll = async () => {
       if (!pollingRef.current) return;
@@ -48,16 +49,22 @@ function ProcessandoRoute() {
 
       try {
         const job = await getClinicalExtractionJob(jobId);
-        setStatus(job.status);
-        setCurrentStage(job.stage);
+        
+        // If status changed or job finished, update state
+        if (job.status !== status) {
+          setStatus(job.status);
+        }
+        if (job.stage !== currentStage) {
+          setCurrentStage(job.stage);
+        }
 
         if (job.status === "done" && job.result) {
-          localStorage.setItem("doutor_ajuda_extracao", JSON.stringify(job.result));
-          localStorage.removeItem("doutor_ajuda_job_ativo");
+          storage.setExtracaoResultado(JSON.stringify(job.result));
+          storage.clearJobAtivo();
           
-          const storedPatientId = localStorage.getItem("doutor_ajuda_job_patient_id");
+          const storedPatientId = storage.getUploadPatientId();
           if (storedPatientId) {
-             localStorage.removeItem("doutor_ajuda_job_patient_id");
+             storage.clearUploadPatientId();
              nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
           } else {
              nav({ to: "/revisar-extracao" });
@@ -73,10 +80,15 @@ function ProcessandoRoute() {
           return;
         }
 
-        timeoutId = setTimeout(poll, 3000);
+        // Only schedule next poll if we're still processing
+        if (pollingRef.current && job.status !== "done" && job.status !== "error") {
+          timeoutId = setTimeout(poll, 3000);
+        }
       } catch (err: any) {
         console.error("Polling error:", err);
-        timeoutId = setTimeout(poll, 5000);
+        if (pollingRef.current) {
+          timeoutId = setTimeout(poll, 5000);
+        }
       }
     };
 
@@ -94,10 +106,10 @@ function ProcessandoRoute() {
 
     return () => {
       pollingRef.current = false;
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [jobId, nav, status]);
+  }, [jobId, nav]); // Removed status from dependencies to avoid re-triggering poll loop on every status change
 
   // Map stage to step index
   const getCurrentStepIndex = () => {

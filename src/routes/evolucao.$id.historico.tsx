@@ -4,6 +4,7 @@ import { ChevronLeft, FileText, Copy, X, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { getEvolutionsByPatient, getPatientById } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/evolucao/$id/historico")({
   component: HistoricoEvolucoesPage,
@@ -12,19 +13,21 @@ export const Route = createFileRoute("/evolucao/$id/historico")({
 
 function HistoricoEvolucoesPage() {
   const { id } = useParams({ from: "/evolucao/$id/historico" });
+  const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [evolucoes, setEvolucoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalEvolucao, setModalEvolucao] = useState<any>(null);
 
   useEffect(() => {
+    if (!userId) return;
     async function load() {
       try {
         if (!id.startsWith("temp_")) {
-          const p = await getPatientById(id);
+          const p = await getPatientById(id, userId!);
           setPaciente(p);
           
-          const evols = await getEvolutionsByPatient(id);
+          const evols = await getEvolutionsByPatient(id, userId!);
           setEvolucoes(evols);
         } else {
           throw new Error("Local fallback");
@@ -42,7 +45,7 @@ function HistoricoEvolucoesPage() {
       }
     }
     load();
-  }, [id]);
+  }, [id, userId]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

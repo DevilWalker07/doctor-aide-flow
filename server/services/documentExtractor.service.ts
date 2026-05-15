@@ -127,11 +127,11 @@ function normalizeToLegacySchema(simple: Partial<ClinicalExtractionResult>): Cli
   };
 }
 
-async function callOpenAIVision(imageBase64: string, mimeType: string, fileName: string): Promise<ClinicalExtractionResult> {
+async function callOpenAIVisionInternal(imageBase64: string, mimeType: string) {
   const client = getOpenAIClient();
   if (!client) throw new Error("OPENAI_API_KEY não configurada no servidor.");
 
-  const response = await client.chat.completions.create({
+  return await client.chat.completions.create({
     model: DEFAULT_MODEL,
     temperature: 0.1,
     response_format: { type: "json_object" },
@@ -152,16 +152,22 @@ async function callOpenAIVision(imageBase64: string, mimeType: string, fileName:
       },
     ],
   });
+}
 
+async function callOpenAIVision(imageBase64: string, mimeType: string, fileName: string, jobId: string): Promise<ClinicalExtractionResult> {
+  updateJob(jobId, { stage: "Enviando imagem para o cérebro da IA..." });
+  const response = await callOpenAIVisionInternal(imageBase64, mimeType);
+  
+  updateJob(jobId, { stage: "Analisando padrões clínicos..." });
   const raw = JSON.parse(response.choices[0]?.message?.content || "{}");
   return normalizeToLegacySchema({ ...raw, engine: "openai-vision", fileName });
 }
 
-async function callOpenAIText(text: string, fileName: string): Promise<ClinicalExtractionResult> {
+async function callOpenAITextInternal(text: string) {
   const client = getOpenAIClient();
   if (!client) throw new Error("OPENAI_API_KEY não configurada no servidor.");
 
-  const response = await client.chat.completions.create({
+  return await client.chat.completions.create({
     model: DEFAULT_MODEL,
     temperature: 0.1,
     response_format: { type: "json_object" },
@@ -173,7 +179,13 @@ async function callOpenAIText(text: string, fileName: string): Promise<ClinicalE
       },
     ],
   });
+}
 
+async function callOpenAIText(text: string, fileName: string, jobId: string): Promise<ClinicalExtractionResult> {
+  updateJob(jobId, { stage: "Interpretando dados clínicos..." });
+  const response = await callOpenAITextInternal(text);
+  
+  updateJob(jobId, { stage: "Estruturando prontuário..." });
   const raw = JSON.parse(response.choices[0]?.message?.content || "{}");
   return normalizeToLegacySchema({ ...raw, engine: "openai-direct", fileName, markdown: text });
 }
@@ -202,7 +214,7 @@ async function processImage(filePath: string, ext: string, fileName: string, job
   const mimeType = mimeMap[ext] || "image/jpeg";
 
   updateJob(jobId, { stage: "Lendo com IA (OpenAI Vision)..." });
-  return callOpenAIVision(imageBase64, mimeType, fileName);
+  return callOpenAIVision(imageBase64, mimeType, fileName, jobId);
 }
 
 async function processText(filePath: string, fileName: string, jobId: string): Promise<ClinicalExtractionResult> {
@@ -210,7 +222,7 @@ async function processText(filePath: string, fileName: string, jobId: string): P
   const text = fs.readFileSync(filePath, "utf-8");
   if (!text.trim()) throw new Error("Arquivo de texto está vazio.");
   updateJob(jobId, { stage: "Lendo com IA..." });
-  return callOpenAIText(text, fileName);
+  return callOpenAIText(text, fileName, jobId);
 }
 
 async function processDocx(filePath: string, fileName: string, jobId: string): Promise<ClinicalExtractionResult> {
@@ -221,7 +233,7 @@ async function processDocx(filePath: string, fileName: string, jobId: string): P
   const text = result.value;
   if (!text.trim()) throw new Error("Documento DOCX não contém texto legível.");
   updateJob(jobId, { stage: "Lendo com IA..." });
-  return callOpenAIText(text, fileName);
+  return callOpenAIText(text, fileName, jobId);
 }
 
 async function processPdf(filePath: string, fileName: string, jobId: string): Promise<ClinicalExtractionResult> {
@@ -244,7 +256,7 @@ async function processPdf(filePath: string, fileName: string, jobId: string): Pr
 
   if (extractedText.trim().length >= 100) {
     updateJob(jobId, { stage: "Lendo com IA..." });
-    return callOpenAIText(extractedText.trim(), fileName);
+    return callOpenAIText(extractedText.trim(), fileName, jobId);
   }
 
   // PDF seems scanned — return a clear alert in the result
@@ -287,6 +299,9 @@ export async function processFileInBackground(jobId: string, filePath: string, o
     } else {
       throw new Error(`Tipo de arquivo não suportado: .${ext}`);
     }
+
+    updateJob(jobId, { stage: "Finalizando organização..." });
+    await new Promise(r => setTimeout(r, 800));
 
     updateJob(jobId, {
       status: "done",

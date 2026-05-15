@@ -7,8 +7,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 import { getPatientById, createPatient, updatePatient } from "@/lib/db";
+
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/cadastro-manual")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -26,6 +29,7 @@ const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo
 function CadastroManualPage() {
   const { tipo, id } = Route.useSearch() as any;
   const nav = useNavigate();
+  const { userId } = useSupabaseUser();
   const { getShift, getTipo } = useShift();
   const shift = getShift();
   const tipoEvolucao = getTipo(); // uti | enfermaria_pediatrica | etc
@@ -63,12 +67,15 @@ function CadastroManualPage() {
 
   // Load existing patient if id is provided
   useEffect(() => {
-    if (!id) return;
+    if (!id || !userId) {
+      if (id) setLoading(false);
+      return;
+    }
     
     async function load() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
-        const p = await getPatientById(id);
+        const p = await getPatientById(id, userId!);
         if (p) populateForm(p);
       } catch {
         // Fallback local
@@ -80,7 +87,7 @@ function CadastroManualPage() {
       }
     }
     load();
-  }, [id]);
+  }, [id, userId]);
 
   const populateForm = (p: any) => {
     setForm(f => ({
@@ -131,11 +138,16 @@ function CadastroManualPage() {
       return;
     }
 
+    if (!userId) {
+      toast.error("Usuário não identificado.");
+      return;
+    }
+
     if (saving) return;
     setSaving(true);
 
     try {
-      const shiftId = localStorage.getItem("da_shift_id");
+      const shiftId = storage.getShiftId();
       
       if (shiftId && !shiftId.startsWith("temp_")) {
         const payload = {
@@ -171,9 +183,9 @@ function CadastroManualPage() {
 
         let savedPatient;
         if (id && !id.startsWith("temp_")) {
-          savedPatient = await updatePatient(id, payload);
+          savedPatient = await updatePatient(id, payload, userId);
         } else {
-          savedPatient = await createPatient({ ...payload, shift_id: shiftId });
+          savedPatient = await createPatient({ ...payload, shift_id: shiftId }, userId);
         }
 
         toast.success(id ? "Paciente atualizado!" : "Paciente cadastrado com sucesso!");
@@ -201,7 +213,6 @@ function CadastroManualPage() {
       else existing.push(newPatient);
 
       localStorage.setItem("da_pacientes", JSON.stringify(existing));
-      localStorage.setItem("da_paciente_atual", newPatient.id);
 
       toast.success(id ? "Paciente atualizado localmente!" : "Paciente cadastrado localmente!");
       nav({ to: generateEvolution ? "/evolucao/$id" : "/dashboard", params: { id: newPatient.id } as any });
