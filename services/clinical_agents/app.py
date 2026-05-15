@@ -24,22 +24,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory job storage
-# In production with multiple workers, use Redis.
-jobs_store: Dict[str, Dict[str, Any]] = {}
-
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Add heif/heic support
 pillow_heif.register_heif_opener()
 
+# In production with multiple workers, use Redis or Supabase.
+from supabase import create_client, Client
+from datetime import datetime, timedelta
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+supabase_client: Client | None = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+jobs_memory = {}  # fallback se Supabase não estiver configurado
+
+def save_job(job_id: str, data: dict):
+    if supabase_client:
+        try:
+            existing = supabase_client.table("extraction_jobs") \
+                .select("id").eq("job_id", job_id).execute()
+            if existing.data:
+                supabase_client.table("extraction_jobs") \
+                    .update(data).eq("job_id", job_id).execute()
+            else:
+                supabase_client.table("extraction_jobs") \
+                    .insert({"job_id": job_id, **data}).execute()
+            return
+        except Exception as e:
+            print(f"Supabase save_job error: {e}")
+    
+    # Fallback to memory
+    if job_id not in jobs_memory:
+        jobs_memory[job_id] = {}
+    jobs_memory[job_id].update(data)
+
+def get_job(job_id: str) -> dict | None:
+    if supabase_client:
+        try:
+            result = supabase_client.table("extraction_jobs") \
+                .select("*").eq("job_id", job_id).execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print(f"Supabase get_job error: {e}")
+    return jobs_memory.get(job_id)
+
 def update_job(job_id: str, status: str, stage: str, result: dict = None, error: str = None):
-    jobs_store[job_id]["status"] = status
-    jobs_store[job_id]["stage"] = stage
+    data = {"status": status, "stage": stage}
     if result is not None:
-        jobs_store[job_id]["result"] = result
+        data["result"] = result
     if error is not None:
-        jobs_store[job_id]["error"] = error
+        data["error"] = error
+    save_job(job_id, data)
 
 async def process_document_background(job_id: str, file_bytes: bytes, filename: str, content_type: str):
     ext = os.path.splitext(filename)[1].lower()
@@ -222,14 +262,11 @@ async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = Fi
     job_id = str(uuid.uuid4())
     file_bytes = await file.read()
     
-    jobs_store[job_id] = {
-        "job_id": job_id,
+    save_job(job_id, {
         "status": "queued",
         "stage": "Arquivo recebido",
-        "file_name": file.filename,
-        "result": None,
-        "error": None
-    }
+        "file_name": file.filename
+    })
     
     background_tasks.add_task(process_document_background, job_id, file_bytes, file.filename, file.content_type)
     
@@ -242,9 +279,10 @@ async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = Fi
 @app.get("/job/{job_id}")
 @app.get("/api/extract/job/{job_id}")
 async def get_job_status(job_id: str):
-    if job_id not in jobs_store:
+    job = get_job(job_id)
+    if job is None:
         raise HTTPException(status_code=404, detail="Job não encontrado")
-    return jobs_store[job_id]
+    return job
 
 @app.get("/health")
 @app.get("/api/health")
@@ -254,6 +292,22 @@ async def health_check():
         "service": "clinical-agents",
         "version": "async-extract-v2"
     }
+
+@app.delete("/cleanup-jobs")
+@app.delete("/api/extract/cleanup-jobs")
+async def cleanup_jobs():
+    if supabase_client:
+        try:
+            supabase_client.table("extraction_jobs") \
+                .delete() \
+                .lt("created_at", (datetime.now() - timedelta(hours=24)).isoformat()) \
+                .execute()
+            return {"message": "Jobs antigos removidos"}
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+            return {"message": "Erro ao remover jobs", "error": str(e)}
+    jobs_memory.clear()
+    return {"message": "Memória limpa"}
 
 if __name__ == "__main__":
     import uvicorn

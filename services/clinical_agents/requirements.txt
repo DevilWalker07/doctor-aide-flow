@@ -7,3 +7,4 @@ docling
 mammoth
 openai
 pypdfium2
+supabase==2.10.0 
