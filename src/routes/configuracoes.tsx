@@ -7,6 +7,10 @@ import {
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
+import { signOut } from "@/lib/auth";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/configuracoes")({
   component: SettingsPage,
@@ -26,8 +30,40 @@ function SettingsPage() {
 
   // AI Status
   const [aiStatus, setAiStatus] = useState<"loading" | "connected" | "disconnected">("loading");
+  const nav = useNavigate();
 
   useEffect(() => {
+    async function loadData() {
+      try {
+        const [profileRes, settingsRes] = await Promise.allSettled([
+          getProfile(),
+          getSettings()
+        ]);
+        
+        let loadedProfile = false;
+        if (profileRes.status === "fulfilled" && profileRes.value) {
+          setNomeMedico(profileRes.value.name || "");
+          setCrm(profileRes.value.crm || "");
+          setEspecialidade(profileRes.value.specialty || "");
+          setHospitalPadrao(profileRes.value.hospital || "");
+          loadedProfile = true;
+        }
+
+        let loadedSettings = false;
+        if (settingsRes.status === "fulfilled" && settingsRes.value) {
+          setAtbDayRule(settingsRes.value.atb_day_rule || "D0");
+          setAtbAlertDays(settingsRes.value.atb_alert_days || "7");
+          loadedSettings = true;
+        }
+        
+        if (!loadedProfile || !loadedSettings) {
+          throw new Error("Partial load");
+        }
+      } catch (err) {
+        console.warn("Using localStorage fallback for settings");
+      }
+    }
+    loadData();
     checkHealth();
   }, []);
 
@@ -42,18 +78,98 @@ function SettingsPage() {
     }
   };
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
+    try {
+      await upsertProfile({ name: nomeMedico, crm, specialty: especialidade, hospital: hospitalPadrao });
+      toast.success("Perfil salvo!");
+    } catch (error) {
+      console.warn(error);
+      toast.success("Salvo localmente");
+    }
     localStorage.setItem("da_nome_medico", nomeMedico);
     localStorage.setItem("da_crm", crm);
     localStorage.setItem("da_especialidade", especialidade);
     localStorage.setItem("da_hospital_padrao", hospitalPadrao);
-    toast.success("Perfil médico atualizado!");
   };
 
-  const saveRules = () => {
+  const saveRules = async () => {
+    try {
+      await upsertSettings({ atb_day_rule: atbDayRule, atb_alert_days: parseInt(atbAlertDays) || 7 });
+      toast.success("Regras salvas!");
+    } catch (error) {
+      console.warn(error);
+      toast.success("Salvo localmente");
+    }
     localStorage.setItem("da_atb_day_rule", atbDayRule);
     localStorage.setItem("da_atb_alert_days", atbAlertDays);
-    toast.success("Regras clínicas salvas!");
+  };
+
+  const handleExportData = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("Não logado");
+      
+      const [
+        { data: shifts },
+        { data: patients },
+        { data: evolutions },
+        { data: prescriptions },
+        { data: handoffs },
+        { data: referrals }
+      ] = await Promise.all([
+        supabase.from('shifts').select('*'),
+        supabase.from('patients').select('*'),
+        supabase.from('evolutions').select('*'),
+        supabase.from('prescriptions').select('*'),
+        supabase.from('handoffs').select('*'),
+        supabase.from('referrals').select('*'),
+      ]);
+
+      const backup = {
+        exportado_em: new Date().toISOString(),
+        medico: { nome: nomeMedico, crm, especialidade },
+        plantoes: shifts || [],
+        pacientes: patients || [],
+        evolucoes: evolutions || [],
+        prescricoes: prescriptions || [],
+        passagens: handoffs || [],
+        encaminhamentos: referrals || []
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `doutor_ajuda_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Download iniciado!");
+    } catch (err) {
+      toast.error("Erro ao exportar dados.");
+      console.error(err);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    
+    // Manter preferências
+    const nome = localStorage.getItem("da_nome_medico");
+    const hosp = localStorage.getItem("da_hospital_padrao");
+    const rule = localStorage.getItem("da_atb_day_rule");
+    const days = localStorage.getItem("da_atb_alert_days");
+    
+    localStorage.clear();
+    
+    if (nome) localStorage.setItem("da_nome_medico", nome);
+    if (hosp) localStorage.setItem("da_hospital_padrao", hosp);
+    if (rule) localStorage.setItem("da_atb_day_rule", rule);
+    if (days) localStorage.setItem("da_atb_alert_days", days);
+    
+    nav({ to: "/login" });
   };
 
   return (
@@ -166,6 +282,26 @@ function SettingsPage() {
                <button onClick={checkHealth} className="px-6 py-2.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest bg-white hover:bg-secondary transition-all">
                   TESTAR CONEXÃO
                </button>
+            </div>
+         </Section>
+
+         {/* 4. DADOS E PRIVACIDADE */}
+         <Section title="DADOS E PRIVACIDADE" icon={<Shield className="h-5 w-5" />}>
+            <div className="space-y-4">
+               <div className="p-6 bg-secondary/30 rounded-[2rem] border border-border">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground mb-2">EXPORTAÇÃO DE DADOS</h3>
+                  <p className="text-xs text-muted-foreground font-bold mb-4">Baixe uma cópia completa de todos os seus plantões, pacientes, evoluções e prescrições em formato JSON.</p>
+                  <button onClick={handleExportData} className="px-6 py-3 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all">
+                     EXPORTAR MEUS DADOS
+                  </button>
+               </div>
+               <div className="p-6 bg-destructive/5 rounded-[2rem] border border-destructive/20">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive mb-2">ENCERRAR SESSÃO</h3>
+                  <p className="text-xs text-destructive/70 font-bold mb-4">Isto irá deslogar do sistema e limpar os dados temporários locais deste dispositivo.</p>
+                  <button onClick={handleLogout} className="px-6 py-3 rounded-xl bg-destructive text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:-translate-y-0.5 transition-all">
+                     SAIR DA CONTA
+                  </button>
+               </div>
             </div>
          </Section>
 
