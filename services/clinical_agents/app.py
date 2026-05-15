@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import asyncio
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ from PIL import Image
 import pillow_heif
 from openai import AsyncOpenAI
 import mammoth
+from supabase import create_client, Client
 
 app = FastAPI(title="Doutor Ajuda - Async Clinical Agents")
 
@@ -24,27 +26,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Add heif/heic support
-pillow_heif.register_heif_opener()
-
-# In production with multiple workers, use Redis or Supabase.
-from supabase import create_client, Client
-from datetime import datetime, timedelta
-
+# Supabase Job Storage
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 supabase_client: Client | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    except Exception as e:
+        print(f"Failed to initialize Supabase: {e}")
 
 jobs_memory = {}  # fallback se Supabase não estiver configurado
+
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Add heif/heic support
+pillow_heif.register_heif_opener()
 
 def save_job(job_id: str, data: dict):
     if supabase_client:
         try:
+            # Check if exists
             existing = supabase_client.table("extraction_jobs") \
                 .select("id").eq("job_id", job_id).execute()
             if existing.data:
@@ -56,11 +59,7 @@ def save_job(job_id: str, data: dict):
             return
         except Exception as e:
             print(f"Supabase save_job error: {e}")
-    
-    # Fallback to memory
-    if job_id not in jobs_memory:
-        jobs_memory[job_id] = {}
-    jobs_memory[job_id].update(data)
+    jobs_memory[job_id] = data
 
 def get_job(job_id: str) -> dict | None:
     if supabase_client:
@@ -73,7 +72,8 @@ def get_job(job_id: str) -> dict | None:
             print(f"Supabase get_job error: {e}")
     return jobs_memory.get(job_id)
 
-def update_job(job_id: str, status: str, stage: str, result: dict = None, error: str = None):
+def update_job(job_id: str, status: str, stage: str,
+               result: dict = None, error: str = None):
     data = {"status": status, "stage": stage}
     if result is not None:
         data["result"] = result
@@ -265,7 +265,9 @@ async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = Fi
     save_job(job_id, {
         "status": "queued",
         "stage": "Arquivo recebido",
-        "file_name": file.filename
+        "file_name": file.filename,
+        "result": None,
+        "error": None
     })
     
     background_tasks.add_task(process_document_background, job_id, file_bytes, file.filename, file.content_type)
@@ -280,9 +282,27 @@ async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = Fi
 @app.get("/api/extract/job/{job_id}")
 async def get_job_status(job_id: str):
     job = get_job(job_id)
-    if job is None:
+    if not job:
         raise HTTPException(status_code=404, detail="Job não encontrado")
     return job
+
+@app.delete("/cleanup-jobs")
+@app.delete("/api/extract/cleanup-jobs")
+async def cleanup_jobs():
+    if supabase_client:
+        try:
+            # Delete jobs older than 24h
+            threshold = (datetime.now() - timedelta(hours=24)).isoformat()
+            supabase_client.table("extraction_jobs") \
+                .delete() \
+                .lt("created_at", threshold) \
+                .execute()
+            return {"message": "Jobs antigos removidos do Supabase"}
+        except Exception as e:
+            return {"message": f"Erro na limpeza do Supabase: {e}"}
+    
+    jobs_memory.clear()
+    return {"message": "Memória local limpa"}
 
 @app.get("/health")
 @app.get("/api/health")
@@ -292,22 +312,6 @@ async def health_check():
         "service": "clinical-agents",
         "version": "async-extract-v2"
     }
-
-@app.delete("/cleanup-jobs")
-@app.delete("/api/extract/cleanup-jobs")
-async def cleanup_jobs():
-    if supabase_client:
-        try:
-            supabase_client.table("extraction_jobs") \
-                .delete() \
-                .lt("created_at", (datetime.now() - timedelta(hours=24)).isoformat()) \
-                .execute()
-            return {"message": "Jobs antigos removidos"}
-        except Exception as e:
-            print(f"Cleanup error: {e}")
-            return {"message": "Erro ao remover jobs", "error": str(e)}
-    jobs_memory.clear()
-    return {"message": "Memória limpa"}
 
 if __name__ == "__main__":
     import uvicorn
