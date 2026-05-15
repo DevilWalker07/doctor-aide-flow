@@ -7,9 +7,10 @@ import {
   ClipboardList, Search, LogOut
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
-import { getPatientsByShift } from "@/lib/db";
-import { differenceInDays, parseISO, isValid } from "date-fns";
+import { getPatientsByShift, closeShift, createHandoff } from "@/lib/db";
+import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
+import { X, Copy, Archive } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -130,10 +131,55 @@ function DashboardPage() {
     return `D${diff >= 0 ? diff : 0}`; // Regra: D0 no dia de início
   };
 
-  const handleLogout = () => {
-    if (confirm("Encerrar plantão atual?")) {
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+
+  const handleEndShift = async () => {
+    const shiftId = localStorage.getItem("da_shift_id");
+    if (!shiftId || shiftId.startsWith("temp_")) {
       clearShift();
       nav({ to: "/" });
+      return;
+    }
+
+    setIsEnding(true);
+    try {
+      // 1. Gerar texto da passagem
+      let text = `PASSAGEM DE PLANTÃO - ${shift.setor}\n`;
+      text += `DATA: ${shift.data_formatada}\n`;
+      text += `PROFISSIONAL: ${localStorage.getItem("da_nome_medico") || "Médico"}\n\n`;
+      
+      pacientes.forEach(p => {
+        text += `${p.leito} - ${p.nome} (${p.idade}A, ${p.sexo})\n`;
+        text += `DX: ${p.motivo_admissao || "N/A"}\n`;
+        if (p.antibioticos.length > 0) {
+          text += `ATB: ${p.antibioticos.map(a => `${a.nome} (${calculateDValue(a.dataInicio)})`).join(", ")}\n`;
+        }
+        if (p.pendencias.length > 0) {
+          text += `PENDÊNCIAS: ${p.pendencias.map(pend => pend.text).join(" · ")}\n`;
+        }
+        text += `-------------------\n`;
+      });
+
+      // 2. Salvar handoff
+      await createHandoff({ shift_id: shiftId, content: text });
+
+      // 3. Encerrar no Supabase
+      await closeShift(shiftId);
+
+      // 4. Limpar e navegar
+      localStorage.removeItem("da_shift_id");
+      localStorage.removeItem("da_plantao_ativo");
+      localStorage.removeItem("da_tipo_evolucao");
+      
+      toast.success("Plantão encerrado. Dados arquivados.");
+      nav({ to: "/" });
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao encerrar plantão.");
+    } finally {
+      setIsEnding(false);
+      setShowEndModal(false);
     }
   };
 
@@ -163,9 +209,9 @@ function DashboardPage() {
              >
                 <Plus className="h-4 w-4" /> ADICIONAR PACIENTE
              </button>
-             <button onClick={handleLogout} className="p-2.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-xl transition-all" title="Encerrar Plantão">
-                <LogOut className="h-5 w-5" />
-             </button>
+              <button onClick={() => setShowEndModal(true)} className="p-2.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-xl transition-all" title="Encerrar Plantão">
+                 <Archive className="h-5 w-5" />
+              </button>
           </div>
         </div>
       </header>
@@ -323,6 +369,57 @@ function DashboardPage() {
            )}
         </div>
       </main>
+
+      {/* Modal de Encerramento */}
+      {showEndModal && (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div className="bg-white rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+              <div className="p-8 pb-0 flex justify-between items-start">
+                 <div className="h-12 w-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center">
+                    <Archive className="h-6 w-6" />
+                 </div>
+                 <button onClick={() => !isEnding && setShowEndModal(false)} className="p-2 hover:bg-secondary rounded-full transition-all">
+                    <X className="h-5 w-5 text-muted-foreground" />
+                 </button>
+              </div>
+              
+              <div className="p-8 pt-6 space-y-6">
+                 <div>
+                    <h2 className="text-2xl font-black text-foreground uppercase tracking-tight mb-2">ENCERRAR PLANTÃO</h2>
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">
+                       {shift.setor} — {shift.data_formatada}
+                    </p>
+                    <div className="mt-4 px-4 py-3 rounded-2xl bg-secondary/50 border border-border flex items-center gap-3">
+                       <Users className="h-4 w-4 text-primary" />
+                       <span className="text-xs font-black text-foreground uppercase tracking-widest">{pacientes.length} PACIENTES ATIVOS</span>
+                    </div>
+                 </div>
+
+                 <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                    Ao encerrar, todos os dados serão arquivados e uma passagem de plantão será gerada automaticamente. 
+                    Esta ação <span className="text-destructive font-bold uppercase">não pode ser desfeita</span>.
+                 </p>
+
+                 <div className="flex flex-col gap-3 pt-2">
+                    <button 
+                       disabled={isEnding}
+                       onClick={handleEndShift}
+                       className="w-full py-4 rounded-2xl bg-destructive text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-destructive/20 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:translate-y-0"
+                    >
+                       {isEnding ? "ARQUIVANDO..." : "ENCERRAR E ARQUIVAR"}
+                    </button>
+                    <button 
+                       disabled={isEnding}
+                       onClick={() => setShowEndModal(false)}
+                       className="w-full py-4 rounded-2xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all"
+                    >
+                       CANCELAR
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import {
   History, LogOut
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getActiveShift, getClosedShifts, type Shift } from "@/lib/db";
+import { getActiveShift, getClosedShifts, type Shift, updateShift, getHandoffsByShift, closeShift } from "@/lib/db";
 import { getProfile } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { signOut } from "@/lib/auth";
 import { toast } from "sonner";
+import { X, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -20,6 +22,9 @@ function HomePage() {
   const [plantaoAtivo, setPlantaoAtivo] = useState<any>(null);
   const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
+  const [selectedHandoff, setSelectedHandoff] = useState<string | null>(null);
+  const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -39,7 +44,30 @@ function HomePage() {
         if (local) setNomeMedico(local);
       }
 
-      // 2. Load active shift from Supabase, fallback to localStorage
+      // 2. Load active shift
+      await refreshActiveShift();
+
+      // 3. Load closed shifts
+      try {
+        const closed = await getClosedShifts(5);
+        setClosedShifts(closed);
+      } catch { /* ignore */ }
+
+      // 4. Stats from Supabase if active
+      const activeId = localStorage.getItem("da_shift_id");
+      if (activeId && !activeId.startsWith("temp_")) {
+        try {
+          const { data: pats } = await supabase.from('patients').select('id, pending_issues').eq('shift_id', activeId);
+          if (pats) {
+            let pends = 0;
+            pats.forEach(p => pends += (p.pending_issues?.length || 0));
+            setStats({ pacientes: pats.length, pendencias: pends });
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    async function refreshActiveShift() {
       try {
         const shift = await getActiveShift();
         if (shift) {
@@ -56,39 +84,67 @@ function HomePage() {
           localStorage.setItem("da_plantao_ativo", JSON.stringify(ctx));
           localStorage.setItem("da_shift_id", shift.id);
         } else {
-          loadLocalFallback();
+          setPlantaoAtivo(null);
+          localStorage.removeItem("da_shift_id");
+          localStorage.removeItem("da_plantao_ativo");
         }
       } catch {
-        loadLocalFallback();
-      }
-
-      // 3. Load closed shifts
-      try {
-        const closed = await getClosedShifts(5);
-        setClosedShifts(closed);
-      } catch { /* ignore */ }
-
-      // 4. Stats from localStorage (patients not migrated yet)
-      try {
-        const pacientes = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
-        let pendCount = 0;
-        pacientes.forEach((p: any) => {
-          pendCount += (p.pendingIssues?.length || 0) + (p.pendencias?.length || 0);
-        });
-        setStats({ pacientes: pacientes.length, pendencias: pendCount });
-      } catch { /* ignore */ }
-    }
-
-    function loadLocalFallback() {
-      const raw = localStorage.getItem("da_plantao_ativo");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.status === "active") setPlantaoAtivo(parsed);
+        const raw = localStorage.getItem("da_plantao_ativo");
+        if (raw) setPlantaoAtivo(JSON.parse(raw));
       }
     }
 
     load();
   }, []);
+
+  const handleViewHandoff = async (shiftId: string) => {
+    try {
+      const handoffs = await getHandoffsByShift(shiftId);
+      if (handoffs && handoffs.length > 0) {
+        setSelectedHandoff(handoffs[0].content);
+      } else {
+        toast.error("Nenhuma passagem encontrada para este plantão.");
+      }
+    } catch {
+      toast.error("Erro ao carregar passagem.");
+    }
+  };
+
+  const handleReopen = async (shift: Shift) => {
+    setIsProcessing(true);
+    try {
+      if (plantaoAtivo) {
+        await closeShift(plantaoAtivo.id);
+      }
+      await updateShift(shift.id, { status: 'active' });
+      
+      localStorage.setItem("da_shift_id", shift.id);
+      const ctx = {
+        id: shift.id,
+        data: shift.date,
+        data_formatada: formatDate(shift.date),
+        hospital: shift.hospital,
+        setor: shift.sector,
+        status: 'active'
+      };
+      localStorage.setItem("da_plantao_ativo", JSON.stringify(ctx));
+      
+      toast.success("Plantão reaberto!");
+      nav({ to: "/dashboard" });
+    } catch (err) {
+      toast.error("Erro ao reabrir plantão.");
+    } finally {
+      setIsProcessing(false);
+      setShowReopenModal(null);
+    }
+  };
+
+  const handleCopy = () => {
+    if (selectedHandoff) {
+      navigator.clipboard.writeText(selectedHandoff);
+      toast.success("Copiado!");
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -188,17 +244,30 @@ function HomePage() {
                    <History className="h-4 w-4 text-muted-foreground" />
                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">PLANTÕES ANTERIORES</span>
                 </div>
-                <div className="space-y-2">
-                   {closedShifts.map(s => (
-                     <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <div>
-                           <p className="text-xs font-black text-foreground uppercase">{s.sector || "Setor"}</p>
-                           <p className="text-[10px] text-muted-foreground font-bold">{formatDate(s.date)} · {s.hospital}</p>
-                        </div>
-                        <span className="text-[9px] font-black text-muted-foreground uppercase px-3 py-1 bg-secondary rounded-full">ENCERRADO</span>
-                     </div>
-                   ))}
-                </div>
+                 <div className="space-y-3">
+                    {closedShifts.map(s => (
+                      <div key={s.id} className="p-4 rounded-2xl bg-secondary/30 border border-border flex flex-col gap-3 text-left">
+                         <div>
+                            <p className="text-xs font-black text-foreground uppercase tracking-tight">{s.sector || "Setor"}</p>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase">{formatDate(s.date)} · {s.hospital}</p>
+                         </div>
+                         <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleViewHandoff(s.id)}
+                              className="flex-1 py-2 rounded-lg bg-white border border-border text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-secondary transition-all"
+                            >
+                               <ExternalLink className="h-3 w-3" /> VER PASSAGEM
+                            </button>
+                            <button 
+                              onClick={() => setShowReopenModal(s)}
+                              className="flex-1 py-2 rounded-lg bg-primary/5 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-primary/10 transition-all"
+                            >
+                               <RefreshCw className="h-3 w-3" /> REABRIR
+                            </button>
+                         </div>
+                      </div>
+                    ))}
+                 </div>
              </div>
            )}
 
@@ -230,6 +299,73 @@ function HomePage() {
       <footer className="py-12 text-center relative z-10">
          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em]">SISTEMA DESENVOLVIDO PARA DOUTORES · FASE 3.0</p>
       </footer>
+
+      {/* Modal Visualizar Passagem */}
+      {selectedHandoff && (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/20">
+                 <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">ARQUIVO DE PASSAGEM</h2>
+                 <button onClick={() => setSelectedHandoff(null)} className="p-2 hover:bg-white rounded-full transition-all">
+                    <X className="h-4 w-4" />
+                 </button>
+              </div>
+              <div className="p-6">
+                 <pre className="w-full bg-secondary/30 p-6 rounded-2xl text-[10px] font-bold text-foreground overflow-y-auto max-h-[40vh] whitespace-pre-wrap font-mono leading-relaxed">
+                    {selectedHandoff}
+                 </pre>
+                 <div className="flex gap-3 mt-6">
+                    <button onClick={handleCopy} className="flex-1 py-4 rounded-2xl bg-navy text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                       <Copy className="h-4 w-4" /> COPIAR TEXTO
+                    </button>
+                    <button onClick={() => setSelectedHandoff(null)} className="flex-1 py-4 rounded-2xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest">
+                       FECHAR
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Modal Reabrir */}
+      {showReopenModal && (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="p-8 text-center space-y-6">
+                 <div className="h-16 w-16 rounded-[2rem] bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                    <RefreshCw className={`h-8 w-8 ${isProcessing ? 'animate-spin' : ''}`} />
+                 </div>
+                 <div>
+                    <h2 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">REABRIR PLANTÃO?</h2>
+                    <p className="text-xs text-muted-foreground font-bold leading-relaxed uppercase">
+                       {showReopenModal.sector} · {formatDate(showReopenModal.date)}
+                    </p>
+                    {plantaoAtivo && (
+                      <p className="mt-4 text-[10px] text-destructive font-black uppercase tracking-widest bg-destructive/5 p-3 rounded-xl">
+                        O plantão atual será encerrado.
+                      </p>
+                    )}
+                 </div>
+                 <div className="flex flex-col gap-3">
+                    <button 
+                       disabled={isProcessing}
+                       onClick={() => handleReopen(showReopenModal)}
+                       className="w-full py-4 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                    >
+                       {isProcessing ? "PROCESSANDO..." : "SIM, REABRIR"}
+                    </button>
+                    <button 
+                       disabled={isProcessing}
+                       onClick={() => setShowReopenModal(null)}
+                       className="w-full py-4 rounded-2xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest"
+                    >
+                       CANCELAR
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
