@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import { getEvolutionsByPatient, savePatient, getPatient } from "@/lib/store";
+import { getPatientById, updatePatient, getLastEvolution } from "@/lib/db";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -24,13 +24,69 @@ function PacienteDetailPage() {
 
   useEffect(() => {
     async function loadData() {
-      const p = getPatient(id);
-      if (p) {
-        setPaciente(p);
-        const evols = await getEvolutionsByPatient(id);
-        setEvolutions(evols);
+      try {
+        if (id.startsWith("temp_")) throw new Error("Local");
+        const p = await getPatientById(id);
+        
+        // Map to component expected format
+        const mapped = {
+          id: p.id,
+          name: p.name,
+          bed: p.bed,
+          age: p.age,
+          sex: p.sex,
+          sector: p.sector,
+          admissionDate: p.admission_date,
+          status: p.status,
+          diagnoses: p.problem_list || [],
+          comorbidities: p.comorbidities || [],
+          pendingIssues: p.pending_issues || [],
+          data: {
+            abx: (p.antibiotics || []).map(a => ({
+              name: a.nome, dose: a.dose, via: a.via, freq: a.frequencia, d0: a.data_inicio
+            })),
+            lab: (p.labs?.length > 0) ? { 
+              date: p.labs[0].data, 
+              formatted: p.labs[0].texto_compacto 
+            } : null
+          }
+        };
+        setPaciente(mapped);
+        
+        const lastEv = await getLastEvolution(id);
+        setEvolutions(lastEv ? [lastEv] : []);
+      } catch (err) {
+        // Local fallback
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const p = existing.find((x: any) => x.id === id);
+        if (p) {
+          const mapped = {
+            id: p.id,
+            name: p.nome || p.name,
+            bed: p.leito || p.bed,
+            age: p.idade || p.age,
+            sex: p.sexo || p.sex,
+            sector: p.setor || p.sector,
+            admissionDate: p.data_admissao || p.admissionDate,
+            status: p.status,
+            diagnoses: (p.lista_de_problemas || []).map((t: any) => t.text || t),
+            comorbidities: p.comorbidades || p.comorbidities || [],
+            pendingIssues: (p.pendencias || []).map((t: any) => t.text || t),
+            data: {
+              abx: (p.antibioticos || []).map((a: any) => ({
+                name: a.nome, dose: a.dose, via: a.via, freq: a.frequencia, d0: a.dataInicio || a.data_inicio
+              })),
+              lab: (p.laboratorios?.length > 0) ? {
+                date: p.laboratorios[0].data,
+                formatted: p.laboratorios[0].valor || p.laboratorios[0].texto_compacto
+              } : null
+            }
+          };
+          setPaciente(mapped);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadData();
   }, [id]);
@@ -52,18 +108,38 @@ function PacienteDetailPage() {
   const handleStatusUpdate = async (status: string) => {
     if (!paciente) return;
     const updated = { ...paciente, status };
-    await savePatient(updated);
     setPaciente(updated);
     toast.success(status === "alta_provavel" ? "Alta provável marcada!" : "Status atualizado");
+    
+    if (!id.startsWith("temp_")) {
+      await updatePatient(id, { status });
+    } else {
+      const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+      const idx = existing.findIndex((x: any) => x.id === id);
+      if (idx >= 0) {
+        existing[idx].status = status;
+        localStorage.setItem("da_pacientes", JSON.stringify(existing));
+      }
+    }
   };
 
   const resolvePendencia = async (pendText: string) => {
     if (!paciente) return;
     const updatedPendencias = (paciente.pendingIssues || []).filter((p: string) => p !== pendText);
     const updated = { ...paciente, pendingIssues: updatedPendencias };
-    await savePatient(updated);
     setPaciente(updated);
     toast.success("Pendência resolvida!");
+    
+    if (!id.startsWith("temp_")) {
+      await updatePatient(id, { pending_issues: updatedPendencias });
+    } else {
+      const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+      const idx = existing.findIndex((x: any) => x.id === id);
+      if (idx >= 0) {
+        existing[idx].pendencias = existing[idx].pendencias.filter((p: any) => (p.text || p) !== pendText);
+        localStorage.setItem("da_pacientes", JSON.stringify(existing));
+      }
+    }
   };
 
   if (loading) return null;
@@ -289,9 +365,9 @@ function PacienteDetailPage() {
               <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm">
                  {lastEvolution ? (
                    <>
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">DATA: {format(parseISO(lastEvolution.createdAt), "dd/MM/yyyy HH:mm")}</p>
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">DATA: {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy HH:mm")}</p>
                       <p className="text-xs text-muted-foreground leading-relaxed italic mb-6 line-clamp-3">
-                         {lastEvolution.text}
+                         {lastEvolution.content}
                       </p>
                       <button onClick={() => nav({ to: "/evolucao/$id", params: { id } })} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
                          VER EVOLUÇÃO COMPLETA

@@ -7,6 +7,7 @@ import {
   ClipboardList, Search, LogOut
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
+import { getPatientsByShift } from "@/lib/db";
 import { differenceInDays, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
 
@@ -44,14 +45,53 @@ function DashboardPage() {
       nav({ to: "/iniciar-plantao" });
       return;
     }
-    const rawPacientes = localStorage.getItem("da_pacientes");
-    if (rawPacientes) {
+    
+    async function loadPatients() {
       try {
-        setPacientes(JSON.parse(rawPacientes));
-      } catch (e) {
-        setPacientes([]);
+        const shiftId = localStorage.getItem("da_shift_id");
+        if (shiftId && !shiftId.startsWith("temp_")) {
+          const dbPatients = await getPatientsByShift(shiftId);
+          
+          // Map DB models to component state structure
+          const mapped = dbPatients.map(p => ({
+            id: p.id,
+            leito: p.bed || "",
+            nome: p.name || "",
+            idade: p.age || "",
+            sexo: p.sex || "F",
+            motivo_admissao: p.reason_for_admission || "",
+            hda: p.hda || "",
+            lista_de_problemas: (p.problem_list || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
+            antibioticos: (p.antibiotics || []).map((a: any) => ({
+              id: Math.random().toString(),
+              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, dataInicio: a.data_inicio || a.dataInicio
+            })),
+            medicacoes: (p.medications || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
+            laboratorios: (p.labs || []).map((l: any) => ({
+              id: Math.random().toString(), data: l.data, valor: l.texto_compacto || l.valor
+            })),
+            pendencias: (p.pending_issues || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
+            status: (p.status as any) || "internado"
+          }));
+          
+          setPacientes(mapped);
+          return;
+        }
+        throw new Error("Offline or temp ID");
+      } catch (err) {
+        console.warn("Failed to load from Supabase, using local", err);
+        const rawPacientes = localStorage.getItem("da_pacientes");
+        if (rawPacientes) {
+          try {
+            setPacientes(JSON.parse(rawPacientes));
+          } catch (e) {
+            setPacientes([]);
+          }
+        }
       }
     }
+    
+    loadPatients();
   }, [nav, shift]);
 
   const stats = useMemo(() => {

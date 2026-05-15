@@ -7,7 +7,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Doutor Ajuda: variáveis VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não configuradas.')
 }
 
-export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '')
+export const supabase = createClient(
+  supabaseUrl || 'https://dummy.supabase.co', 
+  supabaseAnonKey || 'dummy_key'
+)
 
 // hasSupabaseConfig is kept for backward compatibility with store.ts fallback logic
 export const hasSupabaseConfig = !!supabaseUrl && !!supabaseAnonKey

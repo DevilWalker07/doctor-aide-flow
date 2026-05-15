@@ -8,10 +8,13 @@ import {
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
 
+import { getPatientById, createPatient, updatePatient } from "@/lib/db";
+
 export const Route = createFileRoute("/cadastro-manual")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       tipo: (search.tipo as "admissao" | "internado") || "internado",
+      id: (search.id as string) | undefined,
     };
   },
   component: CadastroManualPage,
@@ -21,11 +24,13 @@ export const Route = createFileRoute("/cadastro-manual")({
 const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo", "Etilismo", "Neoplasia", "Obesidade"];
 
 function CadastroManualPage() {
-  const { tipo } = Route.useSearch();
+  const { tipo, id } = Route.useSearch() as any;
   const nav = useNavigate();
   const { getShift, getTipo } = useShift();
   const shift = getShift();
   const tipoEvolucao = getTipo(); // uti | enfermaria_pediatrica | etc
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!!id);
 
   const [form, setForm] = useState({
     nome: "", idade: "", sexo: "F" as "F" | "M", leito: "", setor: shift?.setor || "", 
@@ -56,30 +61,152 @@ function CadastroManualPage() {
     }
   }, [form.idade, tipoEvolucao]);
 
-  const handleSave = (generateEvolution = false) => {
+  // Load existing patient if id is provided
+  useEffect(() => {
+    if (!id) return;
+    
+    async function load() {
+      try {
+        if (id.startsWith("temp_")) throw new Error("Local");
+        const p = await getPatientById(id);
+        if (p) populateForm(p);
+      } catch {
+        // Fallback local
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const p = existing.find((x: any) => x.id === id);
+        if (p) populateFormFromLocal(p);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [id]);
+
+  const populateForm = (p: any) => {
+    setForm(f => ({
+      ...f,
+      nome: p.name || "",
+      idade: p.age || "",
+      sexo: (p.sex as any) || "F",
+      leito: p.bed || "",
+      setor: p.sector || "",
+      data_admissao: p.admission_date || new Date().toISOString().slice(0, 10),
+      procedencia: p.procedencia || "",
+      motivo_admissao: p.reason_for_admission || "",
+      hda: p.hda || "",
+      comorbidades: p.comorbidities || [],
+      lista_de_problemas: (p.problem_list || []).map((text: string) => ({ id: Math.random().toString(), text })),
+      antibioticos: (p.antibiotics || []).map((a: any) => ({
+        id: Math.random().toString(),
+        nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, dataInicio: a.data_inicio || a.dataInicio
+      })),
+      medicacoes: (p.medications || []).map((text: string) => ({ id: Math.random().toString(), text })),
+      laboratorios: (p.labs || []).map((l: any) => ({
+        id: Math.random().toString(), data: l.data, valor: l.texto_compacto || l.valor
+      })),
+      exame_fisico: {
+        estado_geral: p.physical_exam?.geral || "",
+        acv: p.physical_exam?.acv || "",
+        ar: p.physical_exam?.ar || "",
+        abdome: p.physical_exam?.abdome || "",
+        neuro: p.physical_exam?.neuro || "",
+        extremidades: p.physical_exam?.extremidades || "",
+        pele: p.physical_exam?.pele || "",
+      },
+      condutas: (p.conducts || []).join("\n"),
+      pendencias: (p.pending_issues || []).map((text: string) => ({ id: Math.random().toString(), text })),
+    }));
+  };
+
+  const populateFormFromLocal = (p: any) => {
+    setForm(f => ({
+      ...f,
+      ...p
+    }));
+  };
+
+  const handleSave = async (generateEvolution = false) => {
     if (!form.nome || !form.leito) {
       toast.error("Nome e Leito são obrigatórios.");
       return;
     }
 
-    const newPatient = {
-      id: "paciente_" + Date.now(),
-      ...form,
-      status: "internado",
-      tipo_admissao: tipo,
-      criado_em: Date.now()
-    };
+    if (saving) return;
+    setSaving(true);
 
-    const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
-    localStorage.setItem("da_pacientes", JSON.stringify([...existing, newPatient]));
-    localStorage.setItem("da_paciente_atual", newPatient.id);
+    try {
+      const shiftId = localStorage.getItem("da_shift_id");
+      
+      if (shiftId && !shiftId.startsWith("temp_")) {
+        const payload = {
+          name: form.nome,
+          age: form.idade,
+          sex: form.sexo,
+          bed: form.leito,
+          sector: form.setor,
+          admission_date: form.data_admissao,
+          reason_for_admission: form.motivo_admissao,
+          hda: form.hda,
+          comorbidities: form.comorbidades,
+          problem_list: form.lista_de_problemas.map(p => p.text),
+          antibiotics: form.antibioticos.map(a => ({
+            nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
+          })),
+          medications: form.medicacoes.map(m => m.text),
+          labs: form.laboratorios.map(l => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
+          physical_exam: {
+            geral: form.exame_fisico.estado_geral,
+            acv: form.exame_fisico.acv,
+            ar: form.exame_fisico.ar,
+            abdome: form.exame_fisico.abdome,
+            neuro: form.exame_fisico.neuro,
+            extremidades: form.exame_fisico.extremidades,
+            pele: form.exame_fisico.pele,
+          },
+          conducts: form.condutas ? form.condutas.split("\n").filter(Boolean) : [],
+          pending_issues: form.pendencias.map(p => p.text),
+          status: "internado",
+          tipo_admissao: tipo
+        };
 
-    toast.success("Paciente cadastrado com sucesso!");
-    
-    if (generateEvolution) {
-      nav({ to: "/evolucao/$id", params: { id: newPatient.id } });
-    } else {
-      nav({ to: "/dashboard" });
+        let savedPatient;
+        if (id && !id.startsWith("temp_")) {
+          savedPatient = await updatePatient(id, payload);
+        } else {
+          savedPatient = await createPatient({ ...payload, shift_id: shiftId });
+        }
+
+        toast.success(id ? "Paciente atualizado!" : "Paciente cadastrado com sucesso!");
+        nav({ to: generateEvolution ? "/evolucao/$id" : "/dashboard", params: { id: savedPatient.id } });
+        return;
+      }
+      
+      throw new Error("Offline ou ID temporário");
+    } catch (err) {
+      console.warn("Salvando offline", err);
+      
+      // Fallback
+      const newPatient = {
+        id: id || "temp_" + Date.now(),
+        ...form,
+        status: "internado",
+        tipo_admissao: tipo,
+        criado_em: Date.now()
+      };
+
+      const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+      const idx = existing.findIndex((p: any) => p.id === newPatient.id);
+      
+      if (idx >= 0) existing[idx] = newPatient;
+      else existing.push(newPatient);
+
+      localStorage.setItem("da_pacientes", JSON.stringify(existing));
+      localStorage.setItem("da_paciente_atual", newPatient.id);
+
+      toast.success(id ? "Paciente atualizado localmente!" : "Paciente cadastrado localmente!");
+      nav({ to: generateEvolution ? "/evolucao/$id" : "/dashboard", params: { id: newPatient.id } as any });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -126,6 +253,11 @@ function CadastroManualPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+           <div className="animate-spin text-primary"><Activity className="h-8 w-8" /></div>
+        </div>
+      )}
       <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
         <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
           <ChevronLeft className="h-4 w-4" /> VOLTAR
@@ -526,11 +658,11 @@ function CadastroManualPage() {
         {/* BOTÕES FINAIS */}
         <footer className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border p-6 z-40">
            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4">
-              <button onClick={() => handleSave(false)} className="flex-1 py-5 rounded-2xl border border-border font-extrabold uppercase tracking-widest text-[10px] text-muted-foreground hover:bg-secondary transition-all">
-                SALVAR PACIENTE
+              <button disabled={saving} onClick={() => handleSave(false)} className="flex-1 py-5 rounded-2xl border border-border font-extrabold uppercase tracking-widest text-[10px] text-muted-foreground hover:bg-secondary transition-all disabled:opacity-50">
+                {saving ? "SALVANDO..." : (id ? "ATUALIZAR PACIENTE" : "SALVAR PACIENTE")}
               </button>
-              <button onClick={() => handleSave(true)} className="flex-[2] py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
-                <Save className="h-4 w-4" /> SALVAR E GERAR EVOLUÇÃO
+              <button disabled={saving} onClick={() => handleSave(true)} className="flex-[2] py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                <Save className="h-4 w-4" /> {id ? "ATUALIZAR E GERAR EVOLUÇÃO" : "SALVAR E GERAR EVOLUÇÃO"}
               </button>
            </div>
         </footer>

@@ -13,19 +13,24 @@ import { Route as UploadIaRouteImport } from './routes/upload-ia'
 import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as PacienteInternadoRouteImport } from './routes/paciente-internado'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
+import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IniciarPlantaoRouteImport } from './routes/iniciar-plantao'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CadastroManualRouteImport } from './routes/cadastro-manual'
+import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
+import { Route as PrescricaoIdRouteImport } from './routes/prescricao.$id'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
+import { Route as EncaminhamentoIdRouteImport } from './routes/encaminhamento.$id'
 
 const UploadIaRoute = UploadIaRouteImport.update({
   id: '/upload-ia',
@@ -47,6 +52,11 @@ const RevisarExtracaoRoute = RevisarExtracaoRouteImport.update({
   path: '/revisar-extracao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PacienteInternadoRoute = PacienteInternadoRouteImport.update({
   id: '/paciente-internado',
   path: '/paciente-internado',
@@ -55,6 +65,11 @@ const PacienteInternadoRoute = PacienteInternadoRouteImport.update({
 const NovoPacienteRoute = NovoPacienteRouteImport.update({
   id: '/novo-paciente',
   path: '/novo-paciente',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovaSenhaRoute = NovaSenhaRouteImport.update({
+  id: '/nova-senha',
+  path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -82,6 +97,11 @@ const CadastroManualRoute = CadastroManualRouteImport.update({
   path: '/cadastro-manual',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdmissaoNovaRoute = AdmissaoNovaRouteImport.update({
   id: '/admissao-nova',
   path: '/admissao-nova',
@@ -95,6 +115,11 @@ const IndexRoute = IndexRouteImport.update({
 const ProcessandoJobIdRoute = ProcessandoJobIdRouteImport.update({
   id: '/processando/$jobId',
   path: '/processando/$jobId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrescricaoIdRoute = PrescricaoIdRouteImport.update({
+  id: '/prescricao/$id',
+  path: '/prescricao/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PacienteTempRoute = PacienteTempRouteImport.update({
@@ -112,63 +137,83 @@ const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   path: '/evolucao/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EncaminhamentoIdRoute = EncaminhamentoIdRouteImport.update({
+  id: '/encaminhamento/$id',
+  path: '/encaminhamento/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
+  '/encaminhamento/$id': typeof EncaminhamentoIdRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
+  '/encaminhamento/$id': typeof EncaminhamentoIdRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
+  '/encaminhamento/$id': typeof EncaminhamentoIdRoute
   '/evolucao/$id': typeof EvolucaoIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
 }
 export interface FileRouteTypes {
@@ -176,78 +221,98 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admissao-nova'
+    | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/iniciar-plantao'
     | '/login'
+    | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/upload-ia'
+    | '/encaminhamento/$id'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/prescricao/$id'
     | '/processando/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admissao-nova'
+    | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/iniciar-plantao'
     | '/login'
+    | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/upload-ia'
+    | '/encaminhamento/$id'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/prescricao/$id'
     | '/processando/$jobId'
   id:
     | '__root__'
     | '/'
     | '/admissao-nova'
+    | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/dashboard'
     | '/iniciar-plantao'
     | '/login'
+    | '/nova-senha'
     | '/novo-paciente'
     | '/paciente-internado'
+    | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
     | '/tipo'
     | '/upload-ia'
+    | '/encaminhamento/$id'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/prescricao/$id'
     | '/processando/$jobId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdmissaoNovaRoute: typeof AdmissaoNovaRoute
+  CadastroRoute: typeof CadastroRoute
   CadastroManualRoute: typeof CadastroManualRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   IniciarPlantaoRoute: typeof IniciarPlantaoRoute
   LoginRoute: typeof LoginRoute
+  NovaSenhaRoute: typeof NovaSenhaRoute
   NovoPacienteRoute: typeof NovoPacienteRoute
   PacienteInternadoRoute: typeof PacienteInternadoRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
+  EncaminhamentoIdRoute: typeof EncaminhamentoIdRoute
   EvolucaoIdRoute: typeof EvolucaoIdRoute
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
+  PrescricaoIdRoute: typeof PrescricaoIdRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
 }
 
@@ -281,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisarExtracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/paciente-internado': {
       id: '/paciente-internado'
       path: '/paciente-internado'
@@ -293,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/novo-paciente'
       fullPath: '/novo-paciente'
       preLoaderRoute: typeof NovoPacienteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nova-senha': {
+      id: '/nova-senha'
+      path: '/nova-senha'
+      fullPath: '/nova-senha'
+      preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -330,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CadastroManualRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admissao-nova': {
       id: '/admissao-nova'
       path: '/admissao-nova'
@@ -349,6 +435,13 @@ declare module '@tanstack/react-router' {
       path: '/processando/$jobId'
       fullPath: '/processando/$jobId'
       preLoaderRoute: typeof ProcessandoJobIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prescricao/$id': {
+      id: '/prescricao/$id'
+      path: '/prescricao/$id'
+      fullPath: '/prescricao/$id'
+      preLoaderRoute: typeof PrescricaoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paciente/temp': {
@@ -372,26 +465,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EvolucaoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/encaminhamento/$id': {
+      id: '/encaminhamento/$id'
+      path: '/encaminhamento/$id'
+      fullPath: '/encaminhamento/$id'
+      preLoaderRoute: typeof EncaminhamentoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdmissaoNovaRoute: AdmissaoNovaRoute,
+  CadastroRoute: CadastroRoute,
   CadastroManualRoute: CadastroManualRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   IniciarPlantaoRoute: IniciarPlantaoRoute,
   LoginRoute: LoginRoute,
+  NovaSenhaRoute: NovaSenhaRoute,
   NovoPacienteRoute: NovoPacienteRoute,
   PacienteInternadoRoute: PacienteInternadoRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
+  EncaminhamentoIdRoute: EncaminhamentoIdRoute,
   EvolucaoIdRoute: EvolucaoIdRoute,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
+  PrescricaoIdRoute: PrescricaoIdRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
 }
 export const routeTree = rootRouteImport

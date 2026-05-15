@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, parseISO, isValid } from "date-fns";
+import { createPatient, mergePatientData, type Patient } from "@/lib/db";
 
 export const Route = createFileRoute("/revisar-extracao")({
   component: RevisarExtracao,
@@ -14,8 +15,10 @@ export const Route = createFileRoute("/revisar-extracao")({
 });
 
 function RevisarExtracao() {
+  const { patient_id } = Route.useSearch() as any;
   const nav = useNavigate();
   const [data, setData] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("doutor_ajuda_extracao");
@@ -74,10 +77,96 @@ function RevisarExtracao() {
     </div>
   );
 
-  const handleSave = () => {
-    localStorage.setItem("doutor_ajuda_paciente_atual", JSON.stringify(data));
-    toast.success("Paciente salvo temporariamente!");
-    nav({ to: "/paciente/temp" });
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    
+    try {
+      const shiftId = localStorage.getItem("da_shift_id");
+      
+      // If we have a real shift ID, try saving to Supabase
+      if (shiftId && !shiftId.startsWith("temp_")) {
+        let savedPatient;
+        
+        if (patient_id) {
+          // Merge with existing patient
+          savedPatient = await mergePatientData(patient_id, {
+            name: data.nome,
+            age: data.idade,
+            sex: data.sexo,
+            bed: data.leito,
+            sector: data.setor,
+            admission_date: data.data_admissao,
+            reason_for_admission: data.motivo_admissao,
+            hda: data.hda,
+            problem_list: data.lista_de_problemas.map((p: any) => p.text),
+            antibiotics: data.antibioticos.map((a: any) => ({
+              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
+            })),
+            medications: data.medicacoes.map((m: any) => m.text),
+            labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
+            physical_exam: data.exame_fisico_detalhado,
+            conducts: data.condutas.map((c: any) => c.text),
+            pending_issues: data.pendencias.map((p: any) => p.text)
+          });
+        } else {
+          // Create new patient
+          savedPatient = await createPatient({
+            shift_id: shiftId,
+            name: data.nome,
+            age: data.idade,
+            sex: data.sexo,
+            bed: data.leito,
+            sector: data.setor,
+            admission_date: data.data_admissao,
+            reason_for_admission: data.motivo_admissao,
+            hda: data.hda,
+            problem_list: data.lista_de_problemas.map((p: any) => p.text),
+            antibiotics: data.antibioticos.map((a: any) => ({
+              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio
+            })),
+            medications: data.medicacoes.map((m: any) => m.text),
+            labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor, valores: {} })),
+            physical_exam: data.exame_fisico_detalhado,
+            conducts: data.condutas.map((c: any) => c.text),
+            pending_issues: data.pendencias.map((p: any) => p.text),
+            status: 'internado',
+            tipo_admissao: 'admissao'
+          });
+        }
+
+        localStorage.setItem("da_paciente_atual_id", savedPatient.id);
+        localStorage.removeItem("doutor_ajuda_extracao");
+        toast.success("Dados salvos no Supabase com sucesso!");
+        nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
+        return;
+      }
+      
+      throw new Error("Offline ou ID temporário");
+    } catch (err) {
+      console.warn("Falha ao salvar no Supabase, usando fallback", err);
+      toast.warning("Erro ao salvar. Dados mantidos localmente.");
+      
+      // Fallback
+      const fallbackId = patient_id || "temp_" + Date.now();
+      const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+      const idx = existing.findIndex((p: any) => p.id === fallbackId);
+      
+      const newPatientData = { id: fallbackId, ...data };
+      if (idx >= 0) {
+        existing[idx] = newPatientData;
+      } else {
+        existing.push(newPatientData);
+      }
+      
+      localStorage.setItem("da_pacientes", JSON.stringify(existing));
+      localStorage.setItem("da_paciente_atual", fallbackId);
+      localStorage.setItem("doutor_ajuda_paciente_atual", JSON.stringify(data)); // legacy support
+      
+      nav({ to: "/paciente/temp" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDiscard = () => {
@@ -406,9 +495,10 @@ function RevisarExtracao() {
           </button>
           <button 
             onClick={handleSave}
-            className="flex-[2.5] py-4.5 px-8 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-[0.15em] text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3"
+            disabled={saving}
+            className="flex-[2.5] py-4.5 px-8 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-[0.15em] text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            SALVAR E ABRIR PACIENTE <ArrowRight className="h-4 w-4" />
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>SALVAR E ABRIR PACIENTE <ArrowRight className="h-4 w-4" /></>}
           </button>
         </div>
       </footer>

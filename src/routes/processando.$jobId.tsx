@@ -54,8 +54,16 @@ function ProcessandoRoute() {
         if (job.status === "done" && job.result) {
           localStorage.setItem("doutor_ajuda_extracao", JSON.stringify(job.result));
           localStorage.removeItem("doutor_ajuda_job_ativo");
+          
+          const storedPatientId = localStorage.getItem("doutor_ajuda_job_patient_id");
+          if (storedPatientId) {
+             localStorage.removeItem("doutor_ajuda_job_patient_id");
+             nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
+          } else {
+             nav({ to: "/revisar-extracao" });
+          }
+          
           toast.success("Processamento concluído!");
-          nav({ to: "/revisar-extracao" });
           return;
         }
 
