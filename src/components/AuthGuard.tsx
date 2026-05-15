@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/clerk-react";
 import { Navigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useEnsureProfile } from "@/hooks/useEnsureProfile";
 
 interface AuthGuardProps {
@@ -8,9 +9,28 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { isLoaded, isSignedIn } = useAuth();
+  const [authLoadTimedOut, setAuthLoadTimedOut] = useState(false);
   useEnsureProfile();
 
-  // If clerk is not loaded, show a minimal clean spinner to avoid flickering
+  useEffect(() => {
+    if (isLoaded) {
+      setAuthLoadTimedOut(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAuthLoadTimedOut(true);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoaded]);
+
+  // If Clerk hangs while loading, route unauthenticated users back to the public login page.
+  if (!isLoaded && authLoadTimedOut) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If clerk is not loaded, show a minimal clean spinner to avoid flickering.
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
