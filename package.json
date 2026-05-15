@@ -15,6 +15,9 @@
     "format": "prettier --write .",
     "start": "tsx server/index.ts"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.6",
     "@cloudflare/vite-plugin": "^1.25.5",
