@@ -184,6 +184,28 @@ function RevisarExtracao() {
   const [data, setData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
+  const scrollTo = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
+    }
+  }, []);
+
+  const updateField = useCallback((path: string, value: any) => {
+    setData((prev: any) => {
+      if (!prev) return prev;
+      const newData = { ...prev };
+      const keys = path.split('.');
+      let current = newData;
+      for (let i = 0; i < keys.length - 1; i++) {
+        current[keys[i]] = { ...current[keys[i]] };
+        current = current[keys[i]];
+      }
+      current[keys[keys.length - 1]] = value;
+      return newData;
+    });
+  }, []);
+
   useEffect(() => {
     const raw = storage.getExtracaoResultado();
     if (!raw) {
@@ -258,21 +280,6 @@ function RevisarExtracao() {
       nav({ to: "/dashboard" });
     }
   }, [nav, patient_id]);
-
-  const updateField = useCallback((path: string, value: any) => {
-    setData((prev: any) => {
-      if (!prev) return prev;
-      const newData = { ...prev };
-      const keys = path.split('.');
-      let current = newData;
-      for (let i = 0; i < keys.length - 1; i++) {
-        current[keys[i]] = { ...current[keys[i]] };
-        current = current[keys[i]];
-      }
-      current[keys[keys.length - 1]] = value;
-      return newData;
-    });
-  }, []);
 
   // Isolated List Components to prevent full page re-renders
   const ProblemList = memo(({ items, onChange }: any) => (
@@ -507,13 +514,6 @@ function RevisarExtracao() {
       setSaving(false);
     }
   };
-
-  const scrollTo = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
