@@ -227,34 +227,96 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
 
         # ETAPA 3 — JSON CLÍNICO PADRONIZADO alignment
         prompt = f"""
-Você é um assistente médico sênior especialista em extração de dados clínicos.
-Seu objetivo é extrair o máximo de informações estruturadas do documento médico abaixo.
+Você é um médico assistente sênior treinado para extrair, de forma EXAUSTIVA e
+PRECISA, todos os dados clínicos relevantes de um documento médico (admissão,
+evolução, prescrição, sumário, transferência, etc).
 
-CONTEXTO ADICIONAL:
+CONTEXTO:
 - Nome do arquivo: {filename}
-- Data atual: {datetime.now().strftime("%Y-%m-%d")}
+- Data de hoje: {datetime.now().strftime("%Y-%m-%d")}
 
-CONTEÚDO DO DOCUMENTO:
+DOCUMENTO COMPLETO:
+\"\"\"
 {extracted_text}
+\"\"\"
 
-INSTRUÇÕES DE SAÍDA:
-Retorne ESTRITAMENTE um objeto JSON puro com as seguintes chaves:
-- nome, idade, sexo (M/F/NI), leito, setor
-- data_admissao (YYYY-MM-DD), data_documento (YYYY-MM-DD), motivo_admissao, hda
-- lista_de_problemas (array de strings)
-- antibioticos (array de objetos com: nome, dose, via, frequencia, data_inicio)
-- medicacoes (array de strings)
-- laboratorios (array de objetos com: data, texto_compacto, valores)
-- exame_fisico (objeto detalhado com: geral, acv, ar, abdome, neuro, extremidades, pele)
-- condutas (array de strings)
-- pendencias (array de strings)
-- alertas (array de strings: riscos, alergias, dados críticos)
-- campos_incertos (array de strings com campos que você não localizou com clareza)
+PROTOCOLO DE EXTRAÇÃO (siga em ordem):
+1. LEIA o documento INTEIRO antes de começar. Não extraia campo a campo isoladamente.
+2. Para CADA seção do documento (identificação, HDA, antecedentes, medicações,
+   exame físico, exames, conduta, pendências, evolução), identifique a qual chave
+   do JSON ela pertence e extraia TUDO o que estiver presente.
+3. Se uma informação aparece em mais de um lugar, consolide. Não duplique.
+4. Se houver datas em formatos brasileiros ("15/05/2026"), converta para ISO ("2026-05-15").
+5. Para listas (problemas, ATB, medicações, pendências) extraia CADA item separadamente,
+   não junte vários numa mesma string.
+6. NUNCA invente. Se não encontrou, use null para escalares ou [] para listas e
+   adicione o campo em `campos_incertos`.
 
-REGRAS CLÍNICAS:
-1. Se o nome não estiver no texto, tente inferir do nome do arquivo (ex: "L01-JOAO-SILVA.pdf" -> JOAO SILVA).
-2. Não invente dados. Use null se não encontrar.
-3. Priorize clareza e precisão médica.
+ATENÇÃO ESPECIAL — campos onde modelos costumam falhar:
+- IDADE: procure por "X anos", "X a", data de nascimento (calcule), "idoso de X".
+- SEXO: procure pronomes ("o paciente", "a paciente"), "sexo M/F", "masc/fem".
+- PROBLEMAS ATIVOS vs RESOLVIDOS: ATIVOS é o problem list em curso; RESOLVIDOS
+  são condições que já foram tratadas (geralmente em "antecedentes" ou em
+  "problemas resolvidos"). Separe.
+- ANTECEDENTES PATOLÓGICOS: comorbidades crônicas (HAS, DM, DRC, ICC, neoplasia).
+  Vão em `antecedentes_patologicos`, NÃO em `problemas_ativos`.
+- MEDICAÇÕES DE USO CONTÍNUO (domiciliares, prévias) → `medicacoes_uso_continuo`.
+- PRESCRIÇÃO ATUAL DA INTERNAÇÃO → `prescricao_internacao`.
+- ANTIBIÓTICOS: extraia COM data_inicio, dose, via, frequência. Se não há data,
+  use null e marque em campos_incertos.
+- EXAMES DE IMAGEM (TC, RM, RX, USG, ECO) vão em `exames_imagem`, NÃO em laboratorios.
+- LABORATÓRIOS: extraia em texto compacto inline (ex: "HB 11 | LEUCO 9.500 | PCR 35").
+- EXAME FÍSICO: preencha cada sistema separadamente (geral/acv/ar/abdome/neuro/extremidades/pele).
+
+ESQUEMA JSON OBRIGATÓRIO (retorne APENAS este objeto, sem markdown, sem comentários):
+
+{{
+  "nome": "string ou null",
+  "idade": "number ou null",
+  "sexo": "M | F | NI",
+  "leito": "string ou null",
+  "setor": "string ou null",
+  "data_admissao": "YYYY-MM-DD ou null",
+  "data_documento": "YYYY-MM-DD ou null",
+  "motivo_admissao": "string ou null",
+  "hda": "string completa ou null",
+  "antecedentes_patologicos": ["string", "..."],
+  "medicacoes_uso_continuo": ["string", "..."],
+  "alergias": ["string", "..."],
+  "problemas_ativos": ["string", "..."],
+  "problemas_resolvidos": ["string", "..."],
+  "lista_de_problemas": ["string", "..."],
+  "prescricao_internacao": ["string", "..."],
+  "medicacoes": ["string", "..."],
+  "antibioticos": [
+    {{ "nome": "string", "dose": "string", "via": "string", "frequencia": "string", "data_inicio": "YYYY-MM-DD ou null" }}
+  ],
+  "laboratorios": [
+    {{ "data": "YYYY-MM-DD", "texto_compacto": "HB 11 | LEUCO 9.500 | ...", "valores": {{}} }}
+  ],
+  "exames_imagem": [
+    {{ "data": "YYYY-MM-DD ou null", "modalidade": "TC/RM/RX/USG/ECO", "descricao": "string", "laudo": "string ou null" }}
+  ],
+  "exame_fisico_detalhado": {{
+    "geral": "string ou null",
+    "acv": "string ou null",
+    "ar": "string ou null",
+    "abdome": "string ou null",
+    "neuro": "string ou null",
+    "extremidades": "string ou null",
+    "pele": "string ou null"
+  }},
+  "condutas": ["string", "..."],
+  "pendencias": ["string", "..."],
+  "alertas": ["string", "..."],
+  "campos_incertos": ["string", "..."]
+}}
+
+REGRAS FINAIS:
+- `lista_de_problemas` deve conter problemas_ativos + problemas_resolvidos (compatibilidade).
+- Se o nome não estiver no texto, infira do arquivo (ex: "L01-JOAO-SILVA.pdf" → "JOAO SILVA").
+- Cite SEMPRE em `campos_incertos` aqueles cuja extração foi por inferência ou está duvidosa.
+- Antes de finalizar, REVISE mentalmente: "deixei algum dado de fora?". Se sim, inclua.
 """
 
         messages = [
@@ -272,19 +334,24 @@ REGRAS CLÍNICAS:
                 "content": f"{prompt}\n\nDocumento:\n{extracted_text}"
             })
 
-        # ETAPA 2 — PERFORMANCE: Use gpt-4o-mini for speed as requested
-        model_name = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-        if "4.1" in model_name:
-            model_name = "gpt-4o-mini"
-        
+        # Extração clínica precisa do modelo completo (gpt-4o), não da versão mini.
+        # gpt-4o-mini perde nuances clínicas e omite campos em documentos longos.
+        # Se OPENAI_MODEL apontar para um modelo inválido (ex: "gpt-4.1-mini"),
+        # cai para gpt-4o (não para gpt-4o-mini).
+        VALID_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4-turbo", "gpt-4o-mini"}
+        model_name = os.environ.get("OPENAI_MODEL", "gpt-4o")
+        if model_name not in VALID_MODELS:
+            print(f"[extracao] OPENAI_MODEL='{model_name}' inválido, usando gpt-4o.")
+            model_name = "gpt-4o"
+
         response = None
         for tentativa in range(3):
             try:
                 response = await client.chat.completions.create(
                     model=model_name,
                     messages=messages,
-                    temperature=0.1,
-                    max_tokens=4000,
+                    temperature=0.0,
+                    max_tokens=16000,
                     response_format={ "type": "json_object" }
                 )
                 break
