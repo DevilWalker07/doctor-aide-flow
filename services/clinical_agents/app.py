@@ -2,19 +2,39 @@ import os
 import uuid
 import json
 import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import tempfile
 import io
 import traceback
-from PIL import Image
+import base64
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
+
+import uvicorn
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from PIL import Image, ImageOps
 import pillow_heif
-from openai import AsyncOpenAI
 import mammoth
-from supabase import create_client, Client
+import pypdfium2 as pdfium
+from openai import AsyncOpenAI
+from supabase import create_client
+try:
+    from supabase import Client
+except ImportError:
+    from supabase.client import Client
+
+# Conditional import for docling as it's a heavy dependency
+try:
+    from docling.document_converter import DocumentConverter
+    HAS_DOCLING = True
+except ImportError:
+    HAS_DOCLING = False
+    print("Warning: docling not installed. Falling back to other extraction methods.")
 
 app = FastAPI(title="Doutor Ajuda - Async Clinical Agents")
 
@@ -30,7 +50,7 @@ app.add_middleware(
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
-supabase_client: Client | None = None
+supabase_client: Optional[Client] = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     try:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -39,10 +59,15 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 
 jobs_memory = {}  # fallback se Supabase não estiver configurado
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Use OPENAI_API_KEY or VITE_OPENAI_API_KEY
+openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("VITE_OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=openai_key)
 
 # Add heif/heic support
 pillow_heif.register_heif_opener()
+
+# PDF page cap for image fallback — protects context window and timeout
+MAX_PDF_PAGES = int(os.environ.get("MAX_PDF_PAGES", "8"))
 
 def save_job(job_id: str, data: dict):
     if supabase_client:
@@ -61,7 +86,7 @@ def save_job(job_id: str, data: dict):
             print(f"Supabase save_job error: {e}")
     jobs_memory[job_id] = data
 
-def get_job(job_id: str) -> dict | None:
+def get_job(job_id: str) -> Optional[dict]:
     if supabase_client:
         try:
             result = supabase_client.table("extraction_jobs") \
@@ -92,8 +117,8 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
         if ext in [".heic", ".heif", ".jpg", ".jpeg", ".png", ".webp"]:
             update_job(job_id, "processing", "Preparando imagem...")
             image = Image.open(io.BytesIO(file_bytes))
-            # Fix EXIF orientation
-            image = Image.frombytes(image.mode, image.size, image.tobytes()) # Basic reset or use ExifTags
+            # Rotate per EXIF so phone photos arrive upright at the OpenAI Vision call.
+            image = ImageOps.exif_transpose(image)
             # Resize if too large
             max_size = 1500
             if max(image.size) > max_size:
@@ -104,7 +129,6 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
             image.save(output, format="JPEG", quality=85)
-            import base64
             image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
 
         elif ext in [".txt", ".md"]:
@@ -115,15 +139,17 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             update_job(job_id, "processing", "Lendo documento...")
             # Tentar docling primeiro
             try:
-                from docling.document_converter import DocumentConverter
-                with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
-                    tmp.write(file_bytes)
-                    tmp_path = tmp.name
-                
-                converter = DocumentConverter()
-                doc = converter.convert(tmp_path)
-                extracted_text = doc.document.export_to_markdown()
-                os.remove(tmp_path)
+                if HAS_DOCLING:
+                    with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+                        tmp.write(file_bytes)
+                        tmp_path = tmp.name
+                    
+                    converter = DocumentConverter()
+                    doc = converter.convert(tmp_path)
+                    extracted_text = doc.document.export_to_markdown()
+                    os.remove(tmp_path)
+                else:
+                    raise ImportError("docling not available")
             except Exception as e:
                 # Fallback to mammoth se docling falhar
                 print("Docling falhou para DOCX, usando mammoth:", e)
@@ -136,25 +162,44 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
         elif ext == ".pdf":
             update_job(job_id, "processing", "Lendo PDF...")
             try:
-                from docling.document_converter import DocumentConverter
-                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                    tmp.write(file_bytes)
-                    tmp_path = tmp.name
-                
-                converter = DocumentConverter()
-                doc = converter.convert(tmp_path)
-                extracted_text = doc.document.export_to_markdown()
-                os.remove(tmp_path)
+                if HAS_DOCLING:
+                    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                        tmp.write(file_bytes)
+                        tmp_path = tmp.name
+
+                    converter = DocumentConverter()
+                    doc = converter.convert(tmp_path)
+                    extracted_text = doc.document.export_to_markdown()
+                    os.remove(tmp_path)
+                else:
+                    extracted_text = ""
             except Exception as e:
                 print("Docling falhou para PDF:", e)
                 extracted_text = ""
 
-            if len(extracted_text) < 100:
+            # If docling produced no usable text, try pypdfium2 text extraction
+            # before falling back to vision (which is slow + token-heavy).
+            if len(extracted_text.strip()) < 100:
+                update_job(job_id, "processing", "Extraindo texto do PDF...")
+                try:
+                    pdf = pdfium.PdfDocument(file_bytes)
+                    text_parts = []
+                    for i in range(len(pdf)):
+                        textpage = pdf[i].get_textpage()
+                        text_parts.append(textpage.get_text_range())
+                    extracted_text = "\n\n".join(t for t in text_parts if t).strip()
+                except Exception as e:
+                    print("pypdfium2 text extraction falhou:", e)
+                    extracted_text = ""
+
+            # Still no text? Render pages to images for OpenAI Vision — but cap
+            # at MAX_PDF_PAGES to protect context window and request timeout.
+            if len(extracted_text.strip()) < 100:
                 update_job(job_id, "processing", "Processando páginas...")
-                # Fallback to images page by page
-                import pypdfium2 as pdfium
                 pdf = pdfium.PdfDocument(file_bytes)
-                for i in range(len(pdf)):
+                total_pages = len(pdf)
+                pages_to_render = min(total_pages, MAX_PDF_PAGES)
+                for i in range(pages_to_render):
                     page = pdf[i]
                     bitmap = page.render(scale=2)
                     pil_image = bitmap.to_pil()
@@ -164,12 +209,13 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
                     if max(pil_image.size) > max_size:
                         ratio = max_size / max(pil_image.size)
                         pil_image = pil_image.resize((int(pil_image.size[0] * ratio), int(pil_image.size[1] * ratio)), Image.LANCZOS)
-                    
+
                     output = io.BytesIO()
                     pil_image.save(output, format="JPEG", quality=85)
-                    import base64
                     image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
                 extracted_text = ""
+                if total_pages > pages_to_render:
+                    print(f"PDF truncado: enviando {pages_to_render} de {total_pages} páginas para a IA.")
 
         else:
             raise Exception(f"Formato não suportado: {ext}")
@@ -239,7 +285,7 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
                     model="gpt-4o",
                     messages=messages,
                     temperature=0,
-                    max_tokens=2500,
+                    max_tokens=8000,
                     response_format={ "type": "json_object" }
                 )
                 break
@@ -323,6 +369,17 @@ async def health_check():
     }
 
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", "8000"))
+    port_str = os.environ.get("PORT", "8000")
+    try:
+        # Tenta converter para int, removendo possíveis espaços ou caracteres extras
+        if port_str.startswith('$'):
+            print(f"Warning: Literal variable string detected in PORT: {port_str}")
+            port = 8000
+        else:
+            port = int(port_str)
+    except ValueError:
+        print(f"Warning: Invalid PORT '{port_str}', defaulting to 8000")
+        port = 8000
+    
+    print(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
