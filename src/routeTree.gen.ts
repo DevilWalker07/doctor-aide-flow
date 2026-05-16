@@ -28,6 +28,7 @@ import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
 import { Route as PrescricaoIdRouteImport } from './routes/prescricao.$id'
+import { Route as PassagemMassaBulkJobIdRouteImport } from './routes/passagem-massa.$bulkJobId'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
@@ -129,6 +130,11 @@ const PrescricaoIdRoute = PrescricaoIdRouteImport.update({
   path: '/prescricao/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PassagemMassaBulkJobIdRoute = PassagemMassaBulkJobIdRouteImport.update({
+  id: '/passagem-massa/$bulkJobId',
+  path: '/passagem-massa/$bulkJobId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PacienteTempRoute = PacienteTempRouteImport.update({
   id: '/paciente/temp',
   path: '/paciente/temp',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
+  '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
+    | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
@@ -337,6 +349,7 @@ export interface RootRouteChildren {
   EvolucaoIdRoute: typeof EvolucaoIdRouteWithChildren
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
+  PassagemMassaBulkJobIdRoute: typeof PassagemMassaBulkJobIdRoute
   PrescricaoIdRoute: typeof PrescricaoIdRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
 }
@@ -476,6 +489,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrescricaoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/passagem-massa/$bulkJobId': {
+      id: '/passagem-massa/$bulkJobId'
+      path: '/passagem-massa/$bulkJobId'
+      fullPath: '/passagem-massa/$bulkJobId'
+      preLoaderRoute: typeof PassagemMassaBulkJobIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/paciente/temp': {
       id: '/paciente/temp'
       path: '/paciente/temp'
@@ -548,6 +568,7 @@ const rootRouteChildren: RootRouteChildren = {
   EvolucaoIdRoute: EvolucaoIdRouteWithChildren,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
+  PassagemMassaBulkJobIdRoute: PassagemMassaBulkJobIdRoute,
   PrescricaoIdRoute: PrescricaoIdRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
 }

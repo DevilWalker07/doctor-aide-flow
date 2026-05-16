@@ -107,7 +107,7 @@ def update_job(job_id: str, status: str, stage: str,
         data["error"] = error
     save_job(job_id, data)
 
-async def process_document_background(job_id: str, file_bytes: bytes, filename: str, content_type: str):
+async def process_document_background(job_id: str, file_bytes: bytes, filename: str, content_type: str, model_override: Optional[str] = None):
     ext = os.path.splitext(filename)[1].lower()
     try:
         update_job(job_id, "processing", "Identificando tipo de arquivo...")
@@ -339,9 +339,9 @@ REGRAS FINAIS:
         # Se OPENAI_MODEL apontar para um modelo inválido (ex: "gpt-4.1-mini"),
         # cai para gpt-4o (não para gpt-4o-mini).
         VALID_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4-turbo", "gpt-4o-mini"}
-        model_name = os.environ.get("OPENAI_MODEL", "gpt-4o")
+        model_name = model_override or os.environ.get("OPENAI_MODEL", "gpt-4o")
         if model_name not in VALID_MODELS:
-            print(f"[extracao] OPENAI_MODEL='{model_name}' inválido, usando gpt-4o.")
+            print(f"[extracao] modelo='{model_name}' inválido, usando gpt-4o.")
             model_name = "gpt-4o"
 
         response = None
@@ -376,6 +376,274 @@ REGRAS FINAIS:
     except Exception as e:
         print(traceback.format_exc())
         update_job(job_id, "error", "Erro na extração", error=str(e))
+
+# --- BULK EXTRACTION (passagem de plantão a partir de múltiplos documentos) ---
+
+MAX_BULK_FILES = 20
+
+bulk_jobs_memory: Dict[str, dict] = {}
+
+
+def _save_bulk_job(job_id: str, data: dict):
+    bulk_jobs_memory[job_id] = data
+
+
+def _get_bulk_job(job_id: str) -> Optional[dict]:
+    return bulk_jobs_memory.get(job_id)
+
+
+def _update_bulk_job(job_id: str, **fields):
+    job = bulk_jobs_memory.get(job_id)
+    if not job:
+        return
+    job.update(fields)
+    job["updated_at"] = datetime.now().isoformat()
+
+
+async def _generate_passagem_consolidada(patients: List[dict]) -> dict:
+    """
+    Recebe a lista de JSONs clínicos já extraídos (por gpt-4o-mini) e usa o
+    gpt-4o full numa única chamada para ranquear gravidade, sugerir altas e
+    montar a passagem de plantão consolidada.
+    """
+    if not patients:
+        return {"resumo": "", "ranking": [], "alertas_globais": []}
+
+    # Resumo mínimo por paciente para caber no contexto sem mandar TUDO.
+    compact = []
+    for p in patients:
+        compact.append({
+            "fileName": p.get("fileName"),
+            "nome": p.get("nome"),
+            "idade": p.get("idade"),
+            "sexo": p.get("sexo"),
+            "leito": p.get("leito"),
+            "setor": p.get("setor"),
+            "data_admissao": p.get("data_admissao"),
+            "motivo_admissao": p.get("motivo_admissao"),
+            "problemas_ativos": p.get("problemas_ativos") or p.get("lista_de_problemas") or [],
+            "antibioticos": p.get("antibioticos") or [],
+            "laboratorios": (p.get("laboratorios") or [])[:2],
+            "exame_fisico": p.get("exame_fisico_detalhado") or {},
+            "pendencias": p.get("pendencias") or [],
+            "alertas": p.get("alertas") or [],
+        })
+
+    prompt = f"""
+Você é um médico sênior responsável por preparar a PASSAGEM DE PLANTÃO para
+o colega que está chegando. Recebeu abaixo os dados de {len(patients)} pacientes
+já extraídos. Sua tarefa:
+
+1) RANQUEAR todos por GRAVIDADE clínica:
+   - "critico": VM, DVA, choque, sepse grave, instabilidade hemodinâmica
+   - "grave": ATB IV ativo recente, dispneia, instabilidade, exame físico alterado
+   - "moderado": estável mas em investigação ativa
+   - "leve": estável, possível alta
+
+2) Para cada paciente, indicar:
+   - dias_de_internacao (a partir de data_admissao)
+   - dias_de_antibiotico (D{{N}} a partir do ATB mais antigo ativo)
+   - resumo_uma_linha (motivo + estado atual)
+   - criterios_gravidade_atendidos: lista do que justifica a classificação
+   - sugere_alta (boolean) e por_que_alta (se aplicável)
+   - alertas_pendencias: pendências críticas a observar
+
+3) Escrever uma passagem_texto consolidada e legível em PT-BR, em CAIXA ALTA,
+   listando os pacientes da MAIOR PRA MENOR gravidade, com este formato por paciente:
+       LEITO X — NOME (IDADEa SEXO) — D{{INTERNAÇÃO}}
+       MOTIVO: ...
+       ATB: ... D{{DIA}}
+       LAB: ...
+       PENDÊNCIAS: ...
+       ALERTAS: ...
+
+DADOS DOS PACIENTES:
+{json.dumps(compact, ensure_ascii=False, indent=2)}
+
+DATA DE HOJE: {datetime.now().strftime("%Y-%m-%d")}
+
+REGRAS:
+- Não invente dados. Se faltar, escreva "NÃO REFERIDO".
+- Use SOMENTE os dados fornecidos acima.
+- Antes de finalizar, garanta que TODOS os {len(patients)} pacientes aparecem no ranking.
+
+RETORNE APENAS UM JSON com este schema:
+{{
+  "ranking": [
+    {{
+      "fileName": "string",
+      "leito": "string",
+      "nome": "string",
+      "gravidade": "critico | grave | moderado | leve",
+      "dias_de_internacao": "number ou null",
+      "dias_de_antibiotico": "number ou null",
+      "resumo_uma_linha": "string",
+      "criterios_gravidade_atendidos": ["..."],
+      "sugere_alta": false,
+      "por_que_alta": "string ou null",
+      "alertas_pendencias": ["..."]
+    }}
+  ],
+  "passagem_texto": "string completa em caixa alta",
+  "alertas_globais": ["alertas para o plantão como um todo"],
+  "contagem": {{"critico": 0, "grave": 0, "moderado": 0, "leve": 0}}
+}}
+"""
+
+    VALID_MODELS_FULL = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06"}
+    analysis_model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
+    if analysis_model not in VALID_MODELS_FULL:
+        analysis_model = "gpt-4o"
+
+    response = await client.chat.completions.create(
+        model=analysis_model,
+        messages=[
+            {"role": "system", "content": "Você é um médico sênior. Retorne apenas JSON válido."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        max_tokens=8000,
+        response_format={"type": "json_object"},
+    )
+    raw = response.choices[0].message.content
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"error": "Falha ao parsear JSON da análise", "raw": raw}
+
+
+async def process_bulk_background(bulk_job_id: str, files_data: List[tuple]):
+    """
+    files_data: lista de tuplas (file_bytes, filename, content_type).
+    Cria N sub-jobs reusando process_document_background e roda em paralelo,
+    depois consolida a passagem com gpt-4o.
+    """
+    try:
+        sub_job_ids: List[str] = []
+        for _, filename, _ct in files_data:
+            sj = str(uuid.uuid4())
+            save_job(sj, {
+                "status": "queued",
+                "stage": "Aguardando",
+                "file_name": filename,
+                "result": None,
+                "error": None,
+            })
+            sub_job_ids.append(sj)
+
+        _update_bulk_job(
+            bulk_job_id,
+            status="processing",
+            stage=f"Extraindo {len(sub_job_ids)} documentos em paralelo...",
+            sub_jobs=sub_job_ids,
+            total=len(sub_job_ids),
+        )
+
+        # Roda todas as extrações em paralelo, FORÇANDO gpt-4o-mini por arquivo
+        # para custo baixo. A análise consolidada usa gpt-4o full (1 chamada).
+        bulk_extract_model = os.environ.get("OPENAI_BULK_MODEL", "gpt-4o-mini")
+        tasks = [
+            process_document_background(sj, b, fn, ct, model_override=bulk_extract_model)
+            for sj, (b, fn, ct) in zip(sub_job_ids, files_data)
+        ]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        patients: List[dict] = []
+        errors: List[dict] = []
+        for sj in sub_job_ids:
+            j = get_job(sj)
+            if j and j.get("status") == "done" and j.get("result"):
+                patients.append(j["result"])
+            else:
+                errors.append({
+                    "sub_job_id": sj,
+                    "file_name": (j or {}).get("file_name"),
+                    "error": (j or {}).get("error") or "Falha desconhecida",
+                })
+
+        _update_bulk_job(
+            bulk_job_id,
+            stage=f"Gerando passagem consolidada de {len(patients)} pacientes...",
+            extracted_count=len(patients),
+            error_count=len(errors),
+        )
+
+        passagem = {}
+        if patients:
+            try:
+                passagem = await _generate_passagem_consolidada(patients)
+            except Exception as e:
+                passagem = {"error": f"Falha na análise consolidada: {e}"}
+
+        _update_bulk_job(
+            bulk_job_id,
+            status="done",
+            stage="Concluído",
+            patients=patients,
+            passagem=passagem,
+            errors=errors,
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        _update_bulk_job(bulk_job_id, status="error", error=str(e))
+
+
+@app.post("/extract-bulk")
+@app.post("/api/extract/bulk")
+async def extract_bulk(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+    if len(files) > MAX_BULK_FILES:
+        raise HTTPException(status_code=400, detail=f"Máximo de {MAX_BULK_FILES} arquivos por lote.")
+
+    files_data = []
+    for f in files:
+        files_data.append((await f.read(), f.filename, f.content_type))
+
+    bulk_job_id = str(uuid.uuid4())
+    _save_bulk_job(bulk_job_id, {
+        "status": "queued",
+        "stage": "Lote recebido",
+        "total": len(files_data),
+        "file_names": [fn for _, fn, _ in files_data],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "sub_jobs": [],
+        "patients": [],
+        "passagem": None,
+        "errors": [],
+    })
+
+    background_tasks.add_task(process_bulk_background, bulk_job_id, files_data)
+    return {"bulk_job_id": bulk_job_id, "status": "queued", "total": len(files_data)}
+
+
+@app.get("/extract-bulk/job/{bulk_job_id}")
+@app.get("/api/extract/bulk/job/{bulk_job_id}")
+async def get_bulk_job_status(bulk_job_id: str):
+    job = _get_bulk_job(bulk_job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    # Inclui progresso real consultando sub-jobs.
+    sub_ids = job.get("sub_jobs") or []
+    progress = {"done": 0, "error": 0, "processing": 0, "queued": 0}
+    sub_status = []
+    for sj in sub_ids:
+        s = get_job(sj)
+        if not s:
+            continue
+        st = s.get("status", "queued")
+        progress[st] = progress.get(st, 0) + 1
+        sub_status.append({
+            "sub_job_id": sj,
+            "file_name": s.get("file_name"),
+            "status": st,
+            "stage": s.get("stage"),
+        })
+
+    return {**job, "progress": progress, "sub_status": sub_status}
+
 
 # --- AI ENDPOINTS FOR EVOLUTION / PRESCRIPTION ---
 

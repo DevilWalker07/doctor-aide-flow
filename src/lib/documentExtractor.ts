@@ -192,6 +192,91 @@ export function loadPendingExtraction(): ExtractionSession | null {
   }
 }
 
+// ─── Bulk extraction (passagem de plantão em lote) ────────────────────────────
+
+export interface BulkProgress {
+  done: number;
+  error: number;
+  processing: number;
+  queued: number;
+}
+
+export interface BulkSubStatus {
+  sub_job_id: string;
+  file_name: string;
+  status: "queued" | "processing" | "done" | "error";
+  stage?: string;
+}
+
+export interface PassagemRankingItem {
+  fileName: string;
+  leito: string | null;
+  nome: string | null;
+  gravidade: "critico" | "grave" | "moderado" | "leve";
+  dias_de_internacao: number | null;
+  dias_de_antibiotico: number | null;
+  resumo_uma_linha: string;
+  criterios_gravidade_atendidos: string[];
+  sugere_alta: boolean;
+  por_que_alta: string | null;
+  alertas_pendencias: string[];
+}
+
+export interface BulkJobStatus {
+  status: "queued" | "processing" | "done" | "error";
+  stage?: string;
+  total: number;
+  file_names: string[];
+  sub_jobs: string[];
+  patients: ClinicalExtractionResult[];
+  passagem: {
+    ranking?: PassagemRankingItem[];
+    passagem_texto?: string;
+    alertas_globais?: string[];
+    contagem?: { critico: number; grave: number; moderado: number; leve: number };
+    error?: string;
+  } | null;
+  errors: Array<{ sub_job_id: string; file_name: string; error: string }>;
+  progress: BulkProgress;
+  sub_status: BulkSubStatus[];
+  extracted_count?: number;
+  error_count?: number;
+  error?: string;
+  updated_at?: string;
+  created_at?: string;
+}
+
+export async function startBulkExtractionJob(files: File[]): Promise<string> {
+  if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
+  if (files.length === 0) throw new Error("Nenhum arquivo selecionado.");
+  if (files.length > 20) throw new Error("Máximo de 20 arquivos por lote.");
+
+  const formData = new FormData();
+  for (const f of files) formData.append("files", f);
+
+  const response = await fetch(`${BACKEND_URL}/api/extract/bulk`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.detail || payload?.error || `Erro ao enviar lote (${response.status}).`);
+  }
+  const data = await response.json();
+  if (!data.bulk_job_id) throw new Error("Backend não retornou bulk_job_id.");
+  return data.bulk_job_id as string;
+}
+
+export async function getBulkExtractionJob(bulkJobId: string): Promise<BulkJobStatus> {
+  if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
+  const response = await fetch(`${BACKEND_URL}/api/extract/bulk/job/${bulkJobId}`);
+  if (!response.ok) {
+    if (response.status === 404) throw new Error("Lote não encontrado. O servidor pode ter reiniciado.");
+    throw new Error(`Erro ao consultar lote (${response.status}).`);
+  }
+  return response.json();
+}
+
 /** Clears extraction session data */
 export function clearExtractionSession() {
   storage.clearExtracaoResultado();
