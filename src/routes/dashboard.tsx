@@ -12,6 +12,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
 import { X, Copy, Archive } from "lucide-react";
+import { computeGravidade, gravidadeOrder, maxDiasAtb, GRAVIDADE_STYLES, type Gravidade } from "@/lib/gravidade";
 
 import { storage } from "@/lib/storage";
 
@@ -41,7 +42,8 @@ function DashboardPage() {
   const { userId } = useSupabaseUser();
   const { getShift, clearShift } = useShift();
   const [pacientes, setPacientes] = useState<Patient[]>([]);
-  const [filter, setFilter] = useState<"todos" | "atb" | "pendencias" | "alta">("todos");
+  const [filter, setFilter] = useState<"todos" | "atb" | "pendencias" | "alta" | "critico" | "grave">("todos");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const shift = getShift();
 
@@ -114,34 +116,59 @@ function DashboardPage() {
     loadPatients();
   }, [nav, shift, userId]);
 
+  const enriched = useMemo(() => {
+    return pacientes.map((p) => {
+      const gravidade: Gravidade = computeGravidade({
+        antibioticos: p.antibioticos,
+        pendencias: p.pendencias,
+        lista_de_problemas: p.lista_de_problemas,
+        motivo_admissao: p.motivo_admissao,
+        setor: shift?.setor,
+        status: p.status,
+      });
+      const diasAtb = maxDiasAtb(p.antibioticos);
+      return { ...p, gravidade, diasAtb };
+    });
+  }, [pacientes, shift?.setor]);
+
   const stats = useMemo(() => {
+    const byGrav = { critico: 0, grave: 0, moderado: 0, leve: 0 };
+    for (const p of enriched) byGrav[p.gravidade] += 1;
     return {
-      total: pacientes.length,
-      comAtb: pacientes.filter(p => p.antibioticos.length > 0).length,
-      pendencias: pacientes.filter(p => p.pendencias.length > 0).length,
-      altas: pacientes.filter(p => p.status === "alta_provavel").length,
-      exames: pacientes.filter(p => 
-        p.pendencias.some(pend => 
-          pend.text.toLowerCase().includes("exame") || 
-          pend.text.toLowerCase().includes("resultado")
-        )
-      ).length
+      total: enriched.length,
+      ...byGrav,
+      comAtb: enriched.filter(p => p.antibioticos.length > 0).length,
+      pendencias: enriched.filter(p => p.pendencias.length > 0).length,
+      altas: enriched.filter(p => p.status === "alta_provavel" || p.gravidade === "leve").length,
     };
-  }, [pacientes]);
+  }, [enriched]);
 
   const filteredPacientes = useMemo(() => {
-    let list = [...pacientes];
+    let list = [...enriched];
     if (filter === "atb") list = list.filter(p => p.antibioticos.length > 0);
     if (filter === "pendencias") list = list.filter(p => p.pendencias.length > 0);
-    if (filter === "alta") list = list.filter(p => p.status === "alta_provavel");
-    
-    // Sort by bed number (numeric)
+    if (filter === "alta") list = list.filter(p => p.status === "alta_provavel" || p.gravidade === "leve");
+    if (filter === "critico") list = list.filter(p => p.gravidade === "critico");
+    if (filter === "grave") list = list.filter(p => p.gravidade === "grave" || p.gravidade === "critico");
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(p =>
+        p.nome.toLowerCase().includes(q) ||
+        p.leito.toLowerCase().includes(q) ||
+        (p.motivo_admissao || "").toLowerCase().includes(q)
+      );
+    }
+
+    // Ordenar por gravidade primeiro, depois por leito numérico
     return list.sort((a, b) => {
+      const og = gravidadeOrder(a.gravidade) - gravidadeOrder(b.gravidade);
+      if (og !== 0) return og;
       const numA = parseInt(a.leito.replace(/\D/g, "")) || 0;
       const numB = parseInt(b.leito.replace(/\D/g, "")) || 0;
       return numA - numB;
     });
-  }, [pacientes, filter]);
+  }, [enriched, filter, searchQuery]);
 
   const calculateDValue = (startDateStr: string) => {
     const start = parseISO(startDateStr);
@@ -240,25 +267,56 @@ function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
         
-        {/* Resumo Dinâmico */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Triagem por gravidade */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {([
+            { key: "critico", label: "CRÍTICOS", value: stats.critico, style: GRAVIDADE_STYLES.critico },
+            { key: "grave", label: "GRAVES", value: stats.grave, style: GRAVIDADE_STYLES.grave },
+            { key: "todos", label: "MODERADOS", value: stats.moderado, style: GRAVIDADE_STYLES.moderado },
+            { key: "alta", label: "ALTA POSSÍVEL", value: stats.leve, style: GRAVIDADE_STYLES.leve },
+          ] as const).map((s) => (
+            <button
+              key={s.label}
+              onClick={() => setFilter(s.key)}
+              className={`p-5 rounded-3xl border border-border transition-all hover:scale-105 hover:shadow-xl text-left ${s.style.bg} ${s.style.text} ${filter === s.key ? "ring-2 ring-foreground/20" : ""}`}
+            >
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-90">{s.label}</p>
+              <p className="text-4xl font-black mt-1">{s.value.toString().padStart(2, '0')}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Resumo secundário */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { key: "todos", label: "TOTAL", value: stats.total, color: "text-foreground", bg: "bg-white", icon: ListFilter },
             { key: "atb", label: "COM ATB", value: stats.comAtb, color: "text-ai", bg: "bg-ai/5", icon: Pill },
             { key: "pendencias", label: "PENDÊNCIAS", value: stats.pendencias, color: "text-amber-500", bg: "bg-amber-500/5", icon: AlertTriangle },
             { key: "alta", label: "ALTAS", value: stats.altas, color: "text-emerald-500", bg: "bg-emerald-500/5", icon: CheckCircle2 },
-            { key: "todos", label: "EXAMES", value: stats.exames, color: "text-primary", bg: "bg-primary/5", icon: Activity },
           ].map((s) => (
-            <button 
+            <button
               key={s.label}
               onClick={() => setFilter(s.key as any)}
-              className={`p-6 rounded-[2rem] border border-border flex flex-col items-center gap-2 transition-all hover:scale-105 hover:shadow-xl ${filter === s.key ? "ring-2 ring-primary/40 bg-white" : s.bg}`}
+              className={`p-5 rounded-[2rem] border border-border flex flex-col items-center gap-1 transition-all hover:scale-105 hover:shadow-xl ${filter === s.key ? "ring-2 ring-primary/40 bg-white" : s.bg}`}
             >
-              <s.icon className={`h-5 w-5 ${s.color} mb-1`} />
-              <span className={`text-[10px] font-extrabold uppercase tracking-widest ${s.color}`}>{s.label}</span>
-              <span className="text-3xl font-black">{s.value.toString().padStart(2, '0')}</span>
+              <s.icon className={`h-4 w-4 ${s.color} mb-0.5`} />
+              <span className={`text-[9px] font-extrabold uppercase tracking-widest ${s.color}`}>{s.label}</span>
+              <span className="text-2xl font-black">{s.value.toString().padStart(2, '0')}</span>
             </button>
           ))}
+        </div>
+
+        {/* Busca */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome, leito ou diagnóstico..."
+            aria-label="Buscar paciente"
+            className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-border bg-white text-sm font-bold placeholder:font-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
         </div>
 
         {/* Filtros e Busca */}
@@ -293,13 +351,12 @@ function DashboardPage() {
         {/* Lista de Pacientes */}
         <div className="space-y-4">
            {filteredPacientes.length > 0 ? (
-             filteredPacientes.map((p) => (
-               <div 
+             filteredPacientes.map((p) => {
+               const gStyle = GRAVIDADE_STYLES[p.gravidade];
+               return (
+               <div
                  key={p.id}
-                 className={`group relative bg-white border border-border rounded-[2.5rem] p-8 flex flex-col lg:flex-row items-center gap-8 transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 overflow-hidden ${
-                   p.status === "alta_provavel" ? "border-l-[6px] border-l-emerald-500" :
-                   p.pendencias.length > 0 ? "border-l-[6px] border-l-amber-500" : ""
-                 }`}
+                 className={`group relative bg-white border border-border rounded-[2.5rem] p-8 flex flex-col lg:flex-row items-center gap-8 transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 overflow-hidden border-l-[6px] ${gStyle.ring}`}
                >
                   <div className="flex items-center gap-6 flex-1 min-w-0">
                      <div className="h-16 w-16 rounded-2xl bg-secondary flex flex-col items-center justify-center shrink-0">
@@ -307,9 +364,15 @@ function DashboardPage() {
                         <span className="text-xl font-black text-foreground">{p.leito.replace("L", "")}</span>
                      </div>
                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                           <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${gStyle.bg} ${gStyle.text}`} aria-label={`Gravidade ${gStyle.label}`}>
+                              {gStyle.label}
+                           </span>
                            <h3 className="font-extrabold text-lg text-foreground truncate uppercase">{p.nome}</h3>
                            <span className="px-2 py-0.5 rounded-md bg-secondary text-[10px] font-bold text-muted-foreground">{p.idade}A · {p.sexo}</span>
+                           {p.diasAtb != null && (
+                              <span className="px-2 py-0.5 rounded-md bg-ai/10 text-ai text-[10px] font-black uppercase tracking-widest">ATB D{p.diasAtb}</span>
+                           )}
                         </div>
                         <p className="text-xs font-bold text-muted-foreground truncate uppercase tracking-tight">
                            {p.motivo_admissao || p.lista_de_problemas.slice(0, 2).map(prob => prob.text).join(" · ") || "Sem diagnóstico principal"}
@@ -371,7 +434,7 @@ function DashboardPage() {
                       </button>
                   </div>
                </div>
-             ))
+             );})
            ) : (
              <div className="flex flex-col items-center justify-center py-24 px-6 bg-white border-2 border-dashed border-border rounded-[3rem] text-center">
                 <div className="h-20 w-20 rounded-[2rem] bg-secondary/50 flex items-center justify-center mb-6">
