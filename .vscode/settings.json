@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "services/clinical_agents/venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "services/clinical_agents"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.terminal.activateEnvInCurrentTerminal": true
+}

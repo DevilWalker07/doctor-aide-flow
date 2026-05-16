@@ -67,7 +67,7 @@ client = AsyncOpenAI(api_key=openai_key)
 pillow_heif.register_heif_opener()
 
 # PDF page cap for image fallback — protects context window and timeout
-MAX_PDF_PAGES = int(os.environ.get("MAX_PDF_PAGES", "8"))
+MAX_PDF_PAGES = int(os.environ.get("MAX_PDF_PAGES", "15"))
 
 def save_job(job_id: str, data: dict):
     if supabase_client:
@@ -120,7 +120,7 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             # Rotate per EXIF so phone photos arrive upright at the OpenAI Vision call.
             image = ImageOps.exif_transpose(image)
             # Resize if too large
-            max_size = 1500
+            max_size = 1800
             if max(image.size) > max_size:
                 ratio = max_size / max(image.size)
                 image = image.resize((int(image.size[0] * ratio), int(image.size[1] * ratio)), Image.LANCZOS)
@@ -128,7 +128,7 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             output = io.BytesIO()
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
-            image.save(output, format="JPEG", quality=85)
+            image.save(output, format="JPEG", quality=88)
             image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
 
         elif ext in [".txt", ".md"]:
@@ -195,24 +195,26 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
             # Still no text? Render pages to images for OpenAI Vision — but cap
             # at MAX_PDF_PAGES to protect context window and request timeout.
             if len(extracted_text.strip()) < 100:
-                update_job(job_id, "processing", "Processando páginas...")
+                update_job(job_id, "processing", "Processando páginas (OCR)...")
                 pdf = pdfium.PdfDocument(file_bytes)
                 total_pages = len(pdf)
                 pages_to_render = min(total_pages, MAX_PDF_PAGES)
                 for i in range(pages_to_render):
                     page = pdf[i]
-                    bitmap = page.render(scale=2)
+                    bitmap = page.render(scale=2.5) # Aumentando escala para melhor leitura
                     pil_image = bitmap.to_pil()
                     if pil_image.mode in ("RGBA", "P"):
                         pil_image = pil_image.convert("RGB")
-                    max_size = 1500
+                    
+                    max_size = 1800
                     if max(pil_image.size) > max_size:
                         ratio = max_size / max(pil_image.size)
                         pil_image = pil_image.resize((int(pil_image.size[0] * ratio), int(pil_image.size[1] * ratio)), Image.LANCZOS)
 
                     output = io.BytesIO()
-                    pil_image.save(output, format="JPEG", quality=85)
+                    pil_image.save(output, format="JPEG", quality=88)
                     image_base64_list.append(base64.b64encode(output.getvalue()).decode("utf-8"))
+                
                 extracted_text = ""
                 if total_pages > pages_to_render:
                     print(f"PDF truncado: enviando {pages_to_render} de {total_pages} páginas para a IA.")
@@ -220,51 +222,31 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
         else:
             raise Exception(f"Formato não suportado: {ext}")
 
-        update_job(job_id, "processing", "Organizando dados clínicos...")
+        update_job(job_id, "processing", "Organizando dados clínicos com IA...")
 
-        prompt = """Extraia os dados clínicos do documento e retorne ESTRITAMENTE um JSON com as seguintes chaves (sem formatação markdown ```json, apenas o JSON puramente):
-{
-  "nome": null ou string,
-  "idade": null ou string,
-  "sexo": null ou "M" / "F",
-  "leito": null ou string,
-  "setor": null ou string,
-  "data_admissao": null ou "DD/MM/YYYY",
-  "hda": null ou string,
-  "lista_de_problemas": ["string"],
-  "antibioticos": [
-    {
-      "nome": "string",
-      "dose": "string",
-      "via": "string",
-      "frequencia": "string",
-      "data_inicio": "DD/MM/YYYY"
-    }
-  ],
-  "medicacoes": ["string"],
-  "laboratorios": [
-    {
-      "data": "DD/MM/YYYY",
-      "texto_compacto": "string",
-      "valores": {}
-    }
-  ],
-  "exame_fisico": {
-    "geral": "string ou null",
-    "acv": "string ou null",
-    "ar": "string ou null",
-    "abdome": "string ou null",
-    "neuro": "string ou null",
-    "extremidades": "string ou null",
-    "pele": "string ou null"
-  },
-  "condutas": ["string"],
-  "pendencias": ["string"],
-  "alertas": ["string"]
-}"""
+        prompt = f"""
+Você é um assistente médico sênior especialista em extração de dados clínicos de prontuários.
+Seu objetivo é extrair o máximo de informações estruturadas do documento médico abaixo.
+
+CONTEÚDO DO DOCUMENTO:
+{text_content}
+
+INSTRUÇÕES DE SAÍDA:
+Retorne ESTRITAMENTE um objeto JSON puro (sem blocos markdown) com as seguintes chaves:
+- nome, idade, sexo (M/F), leito, setor
+- data_admissao (YYYY-MM-DD), motivo_admissao, hda
+- lista_de_problemas (array de strings)
+- antibioticos (array de objetos com nome, dose, via, frequencia, data_inicio)
+- medicacoes (array de strings)
+- laboratorios (array de objetos com data, texto_compacto, valores)
+- exame_fisico_detalhado (objeto com: geral, acv, ar, abdome, neuro, extremidades, pele)
+- condutas, pendencias e riscos (arrays de strings)
+
+Se algum dado não for encontrado, use null ou um array vazio [].
+"""
 
         messages = [
-            {"role": "system", "content": "Você é um assistente médico especialista em extração de dados estruturados. Retorne apenas JSON válido."}
+            {"role": "system", "content": "Você é um médico especialista em transcrição de dados estruturados. Retorne apenas JSON válido e preciso."}
         ]
 
         if image_base64_list:
@@ -284,8 +266,8 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
                 response = await client.chat.completions.create(
                     model="gpt-4o",
                     messages=messages,
-                    temperature=0,
-                    max_tokens=8000,
+                    temperature=0.1, # Um pouco de flexibilidade para melhor recall
+                    max_tokens=4000,
                     response_format={ "type": "json_object" }
                 )
                 break
@@ -305,11 +287,16 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
         clinical_json["fileName"] = filename
         clinical_json["engine"] = "openai-vision" if image_base64_list else "openai-text"
         
+        # Garantir campos básicos se estiverem faltando
+        if "exame_fisico_detalhado" not in clinical_json and "exame_fisico" in clinical_json:
+            clinical_json["exame_fisico_detalhado"] = clinical_json["exame_fisico"]
+        
         update_job(job_id, "done", "Pronto para revisão", result=clinical_json)
 
     except Exception as e:
         print(traceback.format_exc())
         update_job(job_id, "error", "Erro na extração", error=str(e))
+
 
 @app.post("/extract-async")
 @app.post("/api/extract/extract-async")

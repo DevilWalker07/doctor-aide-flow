@@ -394,7 +394,15 @@ function RevisarExtracao() {
 
           <Section id="exame-fisico" title="EXAME FÍSICO" icon={<Heart className="h-5 w-5" />}>
             <div className="space-y-8">
-              {[{ k: "geral", l: "GERAL" }, { k: "acv", l: "CARDIO" }, { k: "ar", l: "RESP" }, { k: "abdome", l: "ABDOME" }, { k: "neuro", l: "NEURO" }].map(f => (
+              {[
+                { k: "geral", l: "GERAL" }, 
+                { k: "acv", l: "CARDIOVASCULAR" }, 
+                { k: "ar", l: "RESPIRATÓRIO" }, 
+                { k: "abdome", l: "ABDOME" }, 
+                { k: "neuro", l: "NEUROLÓGICO" },
+                { k: "extremidades", l: "EXTREMIDADES" },
+                { k: "pele", l: "PELE / Fâneros" }
+              ].map(f => (
                 <EditableInput key={f.k} label={f.l} value={data.exame_fisico_detalhado[f.k]} onChange={(v: any) => updateField(`exame_fisico_detalhado.${f.k}`, v)} />
               ))}
             </div>
