@@ -277,7 +277,7 @@ function RevisarExtracao() {
     setSaving(true);
     try {
       const shiftId = storage.getShiftId();
-      if (!shiftId || shiftId.startsWith("temp_")) throw new Error("Sessão offline");
+      if (!shiftId) throw new Error("Sessão inválida");
       const patientPayload = {
         name: data.nome, age: data.idade, sex: data.sexo, bed: data.leito, sector: data.setor,
         admission_date: data.data_admissao, reason_for_admission: data.motivo_admissao, hda: data.hda,
