@@ -1,24 +1,24 @@
-import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+// Local-only mock auth. Replaces Clerk integration.
+// Always returns "signed in" with a stable local user.
+
+import { useSupabaseUser } from "./useSupabaseUser";
 
 export function useAuth() {
-  const { isLoaded, isSignedIn, getToken } = useClerkAuth();
-  const { user } = useUser();
+  const { userId, userName } = useSupabaseUser();
 
   return {
-    user: isSignedIn
-      ? {
-          id: user?.id ?? "",
-          email: user?.primaryEmailAddress?.emailAddress ?? "",
-          user_metadata: {
-            name: user?.fullName ?? "",
-          },
-        }
-      : null,
-    session: isSignedIn ? { access_token: "clerk" } : null,
-    loading: !isLoaded,
-    isLoaded,
-    isSignedIn,
-    clerkUser: user,
-    getToken,
+    user: {
+      id: userId,
+      email: "",
+      user_metadata: {
+        name: userName,
+      },
+    },
+    session: { access_token: "local" },
+    loading: false,
+    isLoaded: true,
+    isSignedIn: true,
+    clerkUser: null,
+    getToken: async () => "local",
   };
 }

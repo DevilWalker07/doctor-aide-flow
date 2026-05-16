@@ -72,7 +72,7 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${BACKEND_URL}/extract-async`, {
+  const response = await fetch(`${BACKEND_URL}/api/extract/extract-async`, {
     method: "POST",
     body: formData,
   });
@@ -98,7 +98,7 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
 export async function getClinicalExtractionJob(jobId: string): Promise<JobStatusResponse> {
   if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
 
-  const response = await fetch(`${BACKEND_URL}/job/${jobId}`);
+  const response = await fetch(`${BACKEND_URL}/api/extract/job/${jobId}`);
   if (!response.ok) {
     if (response.status === 404) throw new Error("Job não encontrado. O servidor pode ter reiniciado.");
     throw new Error(`Erro ao consultar job (${response.status}).`);

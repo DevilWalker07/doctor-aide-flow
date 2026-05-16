@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd C:\\\\Users\\\\LUAN\\\\Desktop\\\\doctor aid\\\\doctor-aide-flow *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
+      "Bash(find C:\\\\\\\\Users\\\\\\\\LUAN\\\\\\\\Desktop\\\\\\\\doctor aid\\\\\\\\doctor-aide-flow *)",
+      "Bash(grep -r \"VITE_CLINICAL_AGENTS_URL\\\\|extraction_jobs\\\\|polling\\\\|job.*status\" \"C:\\\\\\\\Users\\\\\\\\LUAN\\\\\\\\Desktop\\\\\\\\doctor aid\\\\\\\\doctor-aide-flow\\\\\\\\src\" --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(grep -r \"extraction_jobs\\\\|supabase\\\\|createClient\" \"C:\\\\\\\\Users\\\\\\\\LUAN\\\\\\\\Desktop\\\\\\\\doctor aid\\\\\\\\doctor-aide-flow\\\\\\\\src\" --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(grep *)",
+      "Bash(python *)",
+      "PowerShell(python -c \"import ast; ast.parse\\(open\\(r'services/clinical_agents/app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK: app.py is syntactically valid'\\)\")",
+      "PowerShell(Get-Command *)",
+      "PowerShell(py *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}

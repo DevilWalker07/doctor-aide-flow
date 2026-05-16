@@ -1,14 +1,18 @@
-import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from server/ directory explicitly (not project root)
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 import express from "express";
 import cors from "cors";
 import { aiRouter } from "./routes/ai.routes.js";
 import { extractRouter } from "./routes/extract.routes.js";
 import { DEFAULT_MODEL, hasOpenAIKey } from "./services/openaiClient.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = Number(process.env.PORT || 8787);

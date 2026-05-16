@@ -11,6 +11,8 @@ import { getPatientById, createPrescription } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
+import { ControlledInput } from "@/components/ui/controlled-input";
+
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
   head: () => ({ meta: [{ title: "Gerar Prescrição — DOUTOR AJUDA" }] }),
@@ -203,11 +205,11 @@ function PrescricaoPage() {
                   <Chip key={opt} label={opt} selected={dieta === opt} onClick={() => setDieta(opt)} />
                ))}
             </div>
-            <input 
+            <ControlledInput 
                value={dietaComplemento} 
-               onChange={e => setDietaComplemento(e.target.value.toUpperCase())}
-               className={inputCls} 
+               onValueChange={setDietaComplemento}
                placeholder="COMPLEMENTO DA DIETA (EX: VIA ORAL, 1200KCAL...)" 
+               uppercase
             />
          </Section>
 
@@ -242,11 +244,15 @@ function PrescricaoPage() {
             <div className="space-y-3">
                {medicacoes.map((m, idx) => (
                   <div key={m.id} className="flex gap-2">
-                     <input value={m.text} onChange={e => {
+                     <ControlledInput 
+                       value={m.text} 
+                       onValueChange={val => {
                         const next = [...medicacoes];
-                        next[idx].text = e.target.value.toUpperCase();
+                        next[idx].text = val;
                         setMedicacoes(next);
-                     }} className={inputCls} />
+                      }} 
+                      uppercase
+                    />
                      <button onClick={() => setMedicacoes(medicacoes.filter(item => item.id !== m.id))} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                ))}
@@ -307,8 +313,8 @@ function PrescricaoPage() {
                      <option value="SG 5%">SG 5%</option>
                      <option value="Ringer Lactato">Ringer Lactato</option>
                   </select>
-                  <input value={hidratacao.volume} onChange={e => setHidratacao({...hidratacao, volume: e.target.value})} className={inputCls} placeholder="VOLUME (ML)" />
-                  <input value={hidratacao.velocidade} onChange={e => setHidratacao({...hidratacao, velocidade: e.target.value})} className={inputCls} placeholder="VELOCIDADE (ML/H)" />
+                  <ControlledInput value={hidratacao.volume} onValueChange={val => setHidratacao({...hidratacao, volume: val})} placeholder="VOLUME (ML)" />
+                  <ControlledInput value={hidratacao.velocidade} onValueChange={val => setHidratacao({...hidratacao, velocidade: val})} placeholder="VELOCIDADE (ML/H)" />
                </div>
             )}
          </Section>
@@ -318,7 +324,11 @@ function PrescricaoPage() {
             <div className="space-y-3">
                {exames.map((e, idx) => (
                   <div key={idx} className="flex gap-2">
-                     <input value={e} onChange={val => setExames(exames.map((item, i) => i === idx ? val.target.value.toUpperCase() : item))} className={inputCls} />
+                     <ControlledInput 
+                        value={e} 
+                        onValueChange={val => setExames(exames.map((item, i) => i === idx ? val : item))} 
+                        uppercase
+                     />
                      <button onClick={() => setExames(exames.filter((_, i) => i !== idx))} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                ))}
@@ -338,11 +348,16 @@ function PrescricaoPage() {
                   <div className="space-y-3">
                      {dvas.map((d, idx) => (
                         <div key={d.id} className="flex gap-2">
-                           <input value={d.text} onChange={e => {
-                              const next = [...dvas];
-                              next[idx].text = e.target.value.toUpperCase();
-                              setDvas(next);
-                           }} className={inputCls} placeholder="NOME, DOSE, VELOCIDADE..." />
+                           <ControlledInput 
+                              value={d.text} 
+                              onValueChange={val => {
+                                const next = [...dvas];
+                                next[idx].text = val;
+                                setDvas(next);
+                              }} 
+                              placeholder="NOME, DOSE, VELOCIDADE..." 
+                              uppercase
+                           />
                            <button onClick={() => setDvas(dvas.filter(item => item.id !== d.id))} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                         </div>
                      ))}
@@ -353,11 +368,16 @@ function PrescricaoPage() {
                   <div className="space-y-3">
                      {sedacao.map((s, idx) => (
                         <div key={s.id} className="flex gap-2">
-                           <input value={s.text} onChange={e => {
-                              const next = [...sedacao];
-                              next[idx].text = e.target.value.toUpperCase();
-                              setSedacao(next);
-                           }} className={inputCls} placeholder="NOME, DOSE, VELOCIDADE..." />
+                           <ControlledInput 
+                              value={s.text} 
+                              onValueChange={val => {
+                                const next = [...sedacao];
+                                next[idx].text = val;
+                                setSedacao(next);
+                              }} 
+                              placeholder="NOME, DOSE, VELOCIDADE..." 
+                              uppercase
+                           />
                            <button onClick={() => setSedacao(sedacao.filter(item => item.id !== s.id))} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                         </div>
                      ))}
@@ -410,14 +430,14 @@ function EditableList({ items, onChange }: { items: string[], onChange: (items: 
      <div className="space-y-2">
         {items.map((item, idx) => (
            <div key={idx} className="flex gap-2">
-              <input 
+              <ControlledInput 
                  value={item} 
-                 onChange={e => {
+                 onValueChange={val => {
                     const next = [...items];
-                    next[idx] = e.target.value.toUpperCase();
+                    next[idx] = val;
                     onChange(next);
                  }} 
-                 className={inputCls} 
+                 uppercase
               />
               <button onClick={() => onChange(items.filter((_, i) => i !== idx))} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
            </div>

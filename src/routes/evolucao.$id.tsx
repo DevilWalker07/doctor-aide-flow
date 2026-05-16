@@ -11,6 +11,8 @@ import { getPatientById, createEvolution } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { storage } from "@/lib/storage";
 
+import { ControlledTextarea } from "@/components/ui/controlled-input";
+
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
   head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
@@ -243,7 +245,7 @@ function EvolucaoPage() {
       const plantaoAtivo = storage.getPlantaoAtivo();
       const dataPlantao = plantaoAtivo?.date || format(new Date(), "yyyy-MM-dd");
 
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/generate-evolution`, {
+      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/api/ai/gerar-evolucao`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -261,7 +263,7 @@ function EvolucaoPage() {
 
       if (!response.ok) throw new Error("Falha na resposta do servidor");
       const result = await response.json();
-      setEvolutionText(result.evolution_text || "");
+      setEvolutionText(result.evolution_text || result.evolutionText || result.text || "");
       toast.success("Evolução gerada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao gerar evolução", error);
@@ -424,9 +426,9 @@ function EvolucaoPage() {
                            <p className="text-xs font-black uppercase tracking-[0.2em] text-ai animate-pulse">ESTRUTURANDO PRONTUÁRIO...</p>
                         </div>
                      )}
-                     <textarea
+                     <ControlledTextarea
                         value={evolutionText}
-                        onChange={(e) => setEvolutionText(e.target.value)}
+                        onValueChange={setEvolutionText}
                         placeholder="Clique em 'GERAR EVOLUÇÃO' para iniciar o rascunho com IA ou digite aqui..."
                         className="w-full h-full min-h-[500px] bg-secondary/20 border border-border rounded-3xl p-8 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-navy/20 custom-scrollbar uppercase"
                      />

@@ -13,6 +13,8 @@ import { getPatientById, createPatient, updatePatient } from "@/lib/db";
 
 import { storage } from "@/lib/storage";
 
+import { ControlledInput, ControlledTextarea } from "@/components/ui/controlled-input";
+
 export const Route = createFileRoute("/cadastro-manual")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
@@ -286,12 +288,21 @@ function CadastroManualPage() {
            <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">NOME COMPLETO *</label>
-                <input value={form.nome} onChange={e => setForm({...form, nome: e.target.value.toUpperCase()})} className={inputCls} placeholder="Nome do paciente" />
+                <ControlledInput 
+                  value={form.nome} 
+                  onValueChange={v => setForm({...form, nome: v})} 
+                  placeholder="Nome do paciente" 
+                  uppercase 
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">IDADE</label>
-                  <input type="number" value={form.idade} onChange={e => setForm({...form, idade: e.target.value})} className={inputCls} />
+                  <ControlledInput 
+                    type="number" 
+                    value={form.idade} 
+                    onValueChange={v => setForm({...form, idade: v})} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">SEXO</label>
@@ -308,40 +319,55 @@ function CadastroManualPage() {
            <div className="grid md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">LEITO *</label>
-                <input value={form.leito} onChange={e => setForm({...form, leito: e.target.value.toUpperCase()})} className={inputCls} placeholder="Ex: L12" />
+                <ControlledInput 
+                  value={form.leito} 
+                  onValueChange={v => setForm({...form, leito: v})} 
+                  placeholder="Ex: L12" 
+                  uppercase 
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">SETOR</label>
-                <input value={form.setor} onChange={e => setForm({...form, setor: e.target.value.toUpperCase()})} className={inputCls} />
+                <ControlledInput 
+                  value={form.setor} 
+                  onValueChange={v => setForm({...form, setor: v})} 
+                  uppercase
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">DATA DE ADMISSÃO</label>
-                <input type="date" value={form.data_admissao} onChange={e => setForm({...form, data_admissao: e.target.value})} className={inputCls} />
+                <ControlledInput 
+                  type="date" 
+                  value={form.data_admissao} 
+                  onValueChange={v => setForm({...form, data_admissao: v})} 
+                />
               </div>
            </div>
            {tipo === 'admissao' && (
              <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">PROCEDÊNCIA</label>
-                <input value={form.procedencia} onChange={e => setForm({...form, procedencia: e.target.value})} className={inputCls} placeholder="Ex: UPA Central" />
+                <ControlledInput 
+                  value={form.procedencia} 
+                  onValueChange={v => setForm({...form, procedencia: v})} 
+                  placeholder="Ex: UPA Central" 
+                />
              </div>
            )}
         </Section>
 
         {/* MOTIVO DA ADMISSÃO & HDA */}
         <Section title="MOTIVO DA ADMISSÃO" icon={<FileText className="h-5 w-5" />}>
-           <textarea 
+           <ControlledTextarea 
              value={form.motivo_admissao} 
-             onChange={e => setForm({...form, motivo_admissao: e.target.value})} 
-             className={textareaCls} 
+             onValueChange={v => setForm({...form, motivo_admissao: v})} 
              placeholder="Ex: dispneia progressiva há 3 dias..." 
              rows={2}
            />
            <div className="space-y-2 pt-4">
               <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">HDA (HISTÓRIA DA DOENÇA ATUAL)</label>
-              <textarea 
+              <ControlledTextarea 
                 value={form.hda} 
-                onChange={e => setForm({...form, hda: e.target.value})} 
-                className={textareaCls} 
+                onValueChange={v => setForm({...form, hda: v})} 
                 rows={6}
                 placeholder="Descreva o quadro clínico completo..."
               />
@@ -369,11 +395,11 @@ function CadastroManualPage() {
            </div>
            {showCustomComorbidity && (
              <div className="flex gap-2 pt-4 animate-in fade-in slide-in-from-top-2">
-                <input 
+                <ControlledInput 
                   value={customComorbidity} 
-                  onChange={e => setCustomComorbidity(e.target.value.toUpperCase())} 
-                  className={inputCls} 
+                  onValueChange={setCustomComorbidity} 
                   placeholder="DIGITE A COMORBIDADE" 
+                  uppercase
                   onKeyDown={e => {
                     if (e.key === 'Enter' && customComorbidity) {
                       toggleComorbidity(customComorbidity);
@@ -391,7 +417,12 @@ function CadastroManualPage() {
            <div className="space-y-3">
               {form.lista_de_problemas.map(p => (
                 <div key={p.id} className="flex gap-2">
-                  <input value={p.text} onChange={e => updateItem('lista_de_problemas', p.id, e.target.value.toUpperCase())} className={inputCls} placeholder="EX: INSUFICIÊNCIA CARDÍACA DESCOMPENSADA" />
+                  <ControlledInput 
+                    value={p.text} 
+                    onValueChange={v => updateItem('lista_de_problemas', p.id, v)} 
+                    placeholder="EX: INSUFICIÊNCIA CARDÍACA DESCOMPENSADA" 
+                    uppercase
+                  />
                   <button onClick={() => removeItem('lista_de_problemas', p.id)} className="p-4 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive transition-colors group">
                     <Trash2 className="h-5 w-5 group-hover:text-white" />
                   </button>
@@ -414,28 +445,40 @@ function CadastroManualPage() {
                    <div className="grid md:grid-cols-2 gap-4 mb-4">
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-muted-foreground uppercase">NOME DO ATB</label>
-                        <input value={atb.nome} onChange={e => {
-                          const newList = [...form.antibioticos];
-                          newList[idx].nome = e.target.value.toUpperCase();
-                          setForm({...form, antibioticos: newList});
-                        }} className={inputCls} />
+                        <ControlledInput 
+                          value={atb.nome} 
+                          onValueChange={v => {
+                            const newList = [...form.antibioticos];
+                            newList[idx].nome = v;
+                            setForm({...form, antibioticos: newList});
+                          }} 
+                          uppercase
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <label className="text-[9px] font-bold text-muted-foreground uppercase">DOSE</label>
-                          <input value={atb.dose} onChange={e => {
-                            const newList = [...form.antibioticos];
-                            newList[idx].dose = e.target.value.toUpperCase();
-                            setForm({...form, antibioticos: newList});
-                          }} className={inputCls} />
+                          <ControlledInput 
+                            value={atb.dose} 
+                            onValueChange={v => {
+                              const newList = [...form.antibioticos];
+                              newList[idx].dose = v;
+                              setForm({...form, antibioticos: newList});
+                            }} 
+                            uppercase
+                          />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[9px] font-bold text-muted-foreground uppercase">DATA INÍCIO</label>
-                          <input type="date" value={atb.dataInicio} onChange={e => {
-                            const newList = [...form.antibioticos];
-                            newList[idx].dataInicio = e.target.value;
-                            setForm({...form, antibioticos: newList});
-                          }} className={inputCls} />
+                          <ControlledInput 
+                            type="date" 
+                            value={atb.dataInicio} 
+                            onValueChange={v => {
+                              const newList = [...form.antibioticos];
+                              newList[idx].dataInicio = v;
+                              setForm({...form, antibioticos: newList});
+                            }} 
+                          />
                         </div>
                       </div>
                    </div>
@@ -480,7 +523,12 @@ function CadastroManualPage() {
            <div className="space-y-3">
               {form.medicacoes.map(m => (
                 <div key={m.id} className="flex gap-2">
-                  <input value={m.text} onChange={e => updateItem('medicacoes', m.id, e.target.value.toUpperCase())} className={inputCls} placeholder="NOME, DOSE, FREQUÊNCIA" />
+                  <ControlledInput 
+                    value={m.text} 
+                    onValueChange={v => updateItem('medicacoes', m.id, v)} 
+                    placeholder="NOME, DOSE, FREQUÊNCIA" 
+                    uppercase
+                  />
                   <button onClick={() => removeItem('medicacoes', m.id)} className="p-4 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive transition-colors group">
                     <Trash2 className="h-5 w-5 group-hover:text-white" />
                   </button>
@@ -499,11 +547,15 @@ function CadastroManualPage() {
                 <div key={lab.id} className="space-y-3 border-b border-border pb-6 last:border-0">
                    <div className="flex items-center justify-between">
                       <div className="w-40">
-                         <input type="date" value={lab.data} onChange={e => {
-                            const newList = [...form.laboratorios];
-                            newList[idx].data = e.target.value;
-                            setForm({...form, laboratorios: newList});
-                         }} className={inputCls} />
+                         <ControlledInput 
+                           type="date" 
+                           value={lab.data} 
+                           onValueChange={v => {
+                             const newList = [...form.laboratorios];
+                             newList[idx].data = v;
+                             setForm({...form, laboratorios: newList});
+                           }} 
+                         />
                       </div>
                       {idx > 0 && (
                         <button onClick={() => setForm({...form, laboratorios: form.laboratorios.filter(l => l.id !== lab.id)})} className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors">
@@ -511,16 +563,16 @@ function CadastroManualPage() {
                         </button>
                       )}
                    </div>
-                   <textarea 
+                   <ControlledTextarea 
                      value={lab.valor} 
-                     onChange={e => {
+                     onValueChange={v => {
                         const newList = [...form.laboratorios];
-                        newList[idx].valor = e.target.value.toUpperCase();
+                        newList[idx].valor = v;
                         setForm({...form, laboratorios: newList});
                      }} 
-                     className={textareaCls} 
                      placeholder="Hb 10,2 | Ht 31 | Leuco 14500 | PCR 18 | Creat 1,4" 
                      rows={3} 
+                     uppercase
                    />
                 </div>
               ))}
@@ -544,11 +596,11 @@ function CadastroManualPage() {
               ].map(field => (
                 <div key={field.key} className="space-y-1">
                    <label className="text-[9px] font-bold text-muted-foreground uppercase">{field.label}</label>
-                   <input 
+                   <ControlledInput 
                      value={(form.exame_fisico as any)[field.key]} 
-                     onChange={e => setForm({...form, exame_fisico: {...form.exame_fisico, [field.key]: e.target.value.toUpperCase()}})} 
-                     className={inputCls} 
+                     onValueChange={v => setForm({...form, exame_fisico: {...form.exame_fisico, [field.key]: v}})} 
                      placeholder={field.placeholder}
+                     uppercase
                    />
                 </div>
               ))}
@@ -575,10 +627,10 @@ function CadastroManualPage() {
                      {['modo', 'fio2', 'peep', 'volume', 'fr'].map(v => (
                        <div key={v} className="space-y-1">
                           <label className="text-[9px] font-bold text-muted-foreground uppercase">{v.toUpperCase()}</label>
-                          <input 
+                          <ControlledInput 
                             value={(form.uti as any)[v]} 
-                            onChange={e => setForm({...form, uti: {...form.uti, [v]: e.target.value.toUpperCase()}})} 
-                            className={inputCls} 
+                            onValueChange={val => setForm({...form, uti: {...form.uti, [v]: val}})} 
+                            uppercase
                           />
                        </div>
                      ))}
@@ -590,7 +642,12 @@ function CadastroManualPage() {
                       <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">DROGAS VASOATIVAS</label>
                       {form.uti.dva.map(dva => (
                         <div key={dva.id} className="flex gap-2">
-                           <input value={dva.text} onChange={e => setForm({...form, uti: {...form.uti, dva: form.uti.dva.map(item => item.id === dva.id ? {...item, text: e.target.value.toUpperCase()} : item)}})} className={inputCls} placeholder="EX: NORADRENALINA 0.1 MCG/KG/MIN" />
+                           <ControlledInput 
+                            value={dva.text} 
+                            onValueChange={val => setForm({...form, uti: {...form.uti, dva: form.uti.dva.map(item => item.id === dva.id ? {...item, text: val} : item)}})} 
+                            placeholder="EX: NORADRENALINA 0.1 MCG/KG/MIN" 
+                            uppercase
+                           />
                            <button onClick={() => setForm({...form, uti: {...form.uti, dva: form.uti.dva.filter(item => item.id !== dva.id)}})} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       ))}
@@ -599,11 +656,21 @@ function CadastroManualPage() {
                    <div className="space-y-6">
                       <div className="space-y-2">
                          <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">BALANÇO HÍDRICO 24H (ML)</label>
-                         <input type="number" value={form.uti.bh} onChange={e => setForm({...form, uti: {...form.uti, bh: e.target.value}})} className={inputCls} placeholder="EX: +1200" />
+                         <ControlledInput 
+                           type="number" 
+                           value={form.uti.bh} 
+                           onValueChange={v => setForm({...form, uti: {...form.uti, bh: v}})} 
+                           placeholder="EX: +1200" 
+                         />
                       </div>
                       <div className="space-y-2">
                          <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">SEDAÇÃO</label>
-                         <input value={form.uti.sedacao} onChange={e => setForm({...form, uti: {...form.uti, sedacao: e.target.value.toUpperCase()}})} className={inputCls} placeholder="EX: FENTANIL + MIDAZOLAM" />
+                         <ControlledInput 
+                           value={form.uti.sedacao} 
+                           onValueChange={v => setForm({...form, uti: {...form.uti, sedacao: v}})} 
+                           placeholder="EX: FENTANIL + MIDAZOLAM" 
+                           uppercase
+                         />
                       </div>
                    </div>
                 </div>
@@ -616,15 +683,27 @@ function CadastroManualPage() {
              <div className="grid md:grid-cols-3 gap-6">
                 <div className="space-y-1">
                    <label className="text-[9px] font-bold text-muted-foreground uppercase">PESO (KG)</label>
-                   <input type="number" value={form.pediatria.peso} onChange={e => setForm({...form, pediatria: {...form.pediatria, peso: e.target.value}})} className={inputCls} />
+                   <ControlledInput 
+                     type="number" 
+                     value={form.pediatria.peso} 
+                     onValueChange={v => setForm({...form, pediatria: {...form.pediatria, peso: v}})} 
+                   />
                 </div>
                 <div className="space-y-1">
                    <label className="text-[9px] font-bold text-muted-foreground uppercase">ALTURA (CM)</label>
-                   <input type="number" value={form.pediatria.altura} onChange={e => setForm({...form, pediatria: {...form.pediatria, altura: e.target.value}})} className={inputCls} />
+                   <ControlledInput 
+                     type="number" 
+                     value={form.pediatria.altura} 
+                     onValueChange={v => setForm({...form, pediatria: {...form.pediatria, altura: v}})} 
+                   />
                 </div>
                 <div className="space-y-1">
                    <label className="text-[9px] font-bold text-muted-foreground uppercase">IDADE EM MESES</label>
-                   <input type="number" value={form.pediatria.meses} onChange={e => setForm({...form, pediatria: {...form.pediatria, meses: e.target.value}})} className={inputCls} />
+                   <ControlledInput 
+                     type="number" 
+                     value={form.pediatria.meses} 
+                     onValueChange={v => setForm({...form, pediatria: {...form.pediatria, meses: v}})} 
+                   />
                 </div>
              </div>
              <div className="grid md:grid-cols-2 gap-8 pt-6">
@@ -637,7 +716,11 @@ function CadastroManualPage() {
                 </div>
                 <div className="space-y-2">
                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">DESENVOLVIMENTO</label>
-                   <textarea value={form.pediatria.desenvolvimento} onChange={e => setForm({...form, pediatria: {...form.pediatria, desenvolvimento: e.target.value}})} className={textareaCls} rows={2} />
+                   <ControlledTextarea 
+                     value={form.pediatria.desenvolvimento} 
+                     onValueChange={v => setForm({...form, pediatria: {...form.pediatria, desenvolvimento: v}})} 
+                     rows={2} 
+                   />
                 </div>
              </div>
           </Section>
@@ -645,7 +728,13 @@ function CadastroManualPage() {
 
         {/* CONDUTAS */}
         <Section title="CONDUTAS" icon={<Save className="h-5 w-5" />}>
-           <textarea value={form.condutas} onChange={e => setForm({...form, condutas: e.target.value.toUpperCase()})} className={textareaCls} rows={4} placeholder="Digite o plano terapêutico..." />
+           <ControlledTextarea 
+             value={form.condutas} 
+             onValueChange={v => setForm({...form, condutas: v})} 
+             rows={4} 
+             placeholder="Digite o plano terapêutico..." 
+             uppercase
+           />
         </Section>
 
         {/* PENDÊNCIAS */}
@@ -656,7 +745,12 @@ function CadastroManualPage() {
                   <div className="flex items-center justify-center w-12 bg-amber-500/10 text-amber-500 rounded-xl border border-amber-500/20 shrink-0">
                      <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <input value={p.text} onChange={e => updateItem('pendencias', p.id, e.target.value.toUpperCase())} className={inputCls} placeholder="EX: AGUARDANDO RESULTADO DE ECOCARDIOGRAMA" />
+                  <ControlledInput 
+                    value={p.text} 
+                    onValueChange={v => updateItem('pendencias', p.id, v)} 
+                    placeholder="EX: AGUARDANDO RESULTADO DE ECOCARDIOGRAMA" 
+                    uppercase
+                  />
                   <button onClick={() => removeItem('pendencias', p.id)} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-5 w-5" /></button>
                 </div>
               ))}
@@ -665,6 +759,7 @@ function CadastroManualPage() {
               </button>
            </div>
         </Section>
+
 
         {/* BOTÕES FINAIS */}
         <footer className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border p-6 z-40">

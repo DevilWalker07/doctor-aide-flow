@@ -1,10 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
-import { AuthGuard } from "@/components/AuthGuard";
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-
-import appCss from "../styles.css?url";
-
-const PUBLIC_ROUTES = ["/login", "/cadastro", "/recuperar-senha", "/nova-senha"];
 
 function NotFoundComponent() {
   return (
@@ -29,50 +24,14 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DOUTOR AJUDA — Evoluções Médicas" },
-      { name: "description", content: "Plataforma para gerar evoluções médicas hospitalares padronizadas." },
-      { name: "author", content: "Doutor Ajuda" },
-      { property: "og:title", content: "DOUTOR AJUDA" },
-      { property: "og:description", content: "Evoluções médicas padrão-ouro." },
-      { property: "og:type", content: "website" },
-    ],
-    links: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
-      { rel: "stylesheet", href: appCss },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
 
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
 function RootComponent() {
-  const router = useRouterState();
-  const isPublicRoute = PUBLIC_ROUTES.some(r => router.location.pathname.startsWith(r));
-
   return (
     <>
-      {isPublicRoute ? <Outlet /> : <AuthGuard><Outlet /></AuthGuard>}
+      <Outlet />
       <Toaster richColors position="top-right" />
     </>
   );

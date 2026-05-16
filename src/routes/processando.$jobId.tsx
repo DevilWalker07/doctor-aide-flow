@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { Loader2, CheckCircle2, AlertCircle, FileText, X, RefreshCw, ClipboardList } from "lucide-react";
 import { getClinicalExtractionJob } from "@/lib/documentExtractor";
+import { storage } from "@/lib/storage";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/processando/$jobId")({

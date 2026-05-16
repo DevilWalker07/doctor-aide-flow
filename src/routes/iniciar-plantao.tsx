@@ -6,6 +6,8 @@ import { format, parseISO, isValid } from "date-fns";
 import { createShift } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
+import { ControlledInput } from "@/components/ui/controlled-input";
+
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
   head: () => ({ meta: [{ title: "Iniciar Plantão — DOUTOR AJUDA" }] }),
@@ -116,12 +118,12 @@ function IniciarPlantaoPage() {
               <label htmlFor="shift-date" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                  <Calendar className="h-3 w-3" /> DATA DO PLANTÃO
               </label>
-              <input 
+              <ControlledInput 
                 id="shift-date"
                 type="date" 
                 value={data} 
-                onChange={(e) => setData(e.target.value)}
-                className="w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all appearance-none"
+                onValueChange={setData}
+                className="appearance-none"
               />
            </div>
 
@@ -129,15 +131,15 @@ function IniciarPlantaoPage() {
               <label htmlFor="hospital-name" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                  <Building2 className="h-3 w-3" /> HOSPITAL / UNIDADE
               </label>
-              <input 
+              <ControlledInput 
                 id="hospital-name"
                 type="text" 
                 value={hospital} 
-                onChange={(e) => setHospital(e.target.value)}
+                onValueChange={setHospital}
                 placeholder="Ex: Hospital Nair Alves de Souza"
-                className="w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all"
               />
            </div>
+
 
            <div className="pt-4">
               <button 
