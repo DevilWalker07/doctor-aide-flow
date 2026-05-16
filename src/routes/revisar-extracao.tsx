@@ -14,6 +14,11 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/revisar-extracao")({
   component: RevisarExtracao,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      patient_id: search.patient_id as string | undefined,
+    };
+  },
   head: () => ({ meta: [{ title: "Revisar Extração — DOUTOR AJUDA" }] }),
 });
 
