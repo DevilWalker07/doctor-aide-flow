@@ -196,7 +196,16 @@ function PacienteDetailPage() {
                  <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">DATA DE ADMISSÃO</div>
                  <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-black text-primary">{dihInfo?.d}</span>
-                    <span className="text-xs font-bold text-muted-foreground tracking-tight">{format(parseISO(paciente.admissionDate || paciente.admission), "dd/MM/yyyy")}</span>
+                    <span className="text-xs font-bold text-muted-foreground tracking-tight">
+                      {(() => {
+                        try {
+                          const dateStr = paciente.admissionDate || paciente.admission;
+                          if (!dateStr) return "N/A";
+                          const d = parseISO(dateStr);
+                          return isValid(d) ? format(d, "dd/MM/yyyy") : dateStr;
+                        } catch { return "N/A"; }
+                      })()}
+                    </span>
                  </div>
               </div>
            </div>

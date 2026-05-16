@@ -21,10 +21,10 @@ export const Route = createFileRoute("/revisar-extracao")({
 
 // Optimized Input with local state to prevent global freezing
 const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }: any) => {
-  const [local, setLocal] = useState(value);
+  const [local, setLocal] = useState(value || "");
   
   useEffect(() => {
-    setLocal(value);
+    setLocal(value || "");
   }, [value]);
 
   const handleBlur = () => {
@@ -49,10 +49,10 @@ const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }
 });
 
 const EditableInput = memo(({ value, onChange, label, type = "text", placeholder, uppercase = false }: any) => {
-  const [local, setLocal] = useState(value);
+  const [local, setLocal] = useState(value || "");
   
   useEffect(() => {
-    setLocal(value);
+    setLocal(value || "");
   }, [value]);
 
   const handleBlur = () => {
@@ -440,7 +440,11 @@ function RevisarExtracao() {
       storage.clearExtracaoResultado();
       storage.clearUploadPatientId();
       toast.success("Dados salvos com sucesso!");
-      nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
+      if (savedPatient && savedPatient.id) {
+        nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
+      } else {
+        nav({ to: "/dashboard" });
+      }
     } catch (err: any) {
       toast.error(`Erro ao salvar: ${err.message}`);
     } finally {

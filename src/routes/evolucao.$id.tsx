@@ -362,7 +362,15 @@ function EvolucaoPage() {
                               {paciente.data.abx.map((atb: any, i: number) => (
                                  <div key={i} className="flex justify-between items-center p-3 bg-white border border-border rounded-xl">
                                     <span className="text-[10px] font-black text-foreground uppercase">{atb.name}</span>
-                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded">D{differenceInDays(startOfDay(new Date()), startOfDay(parseISO(atb.d0)))}</span>
+                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                       {(() => {
+                                          try {
+                                             const d = parseISO(atb.d0);
+                                             if (!isValid(d)) return "??";
+                                             return `D${differenceInDays(startOfDay(new Date()), startOfDay(d))}`;
+                                          } catch { return "??"; }
+                                       })()}
+                                    </span>
                                  </div>
                               ))}
                            </div>

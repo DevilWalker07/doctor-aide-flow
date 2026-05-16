@@ -191,7 +191,11 @@ function CadastroManualPage() {
         }
 
         toast.success(id ? "Paciente atualizado!" : "Paciente cadastrado com sucesso!");
-        nav({ to: generateEvolution ? "/evolucao/$id" : "/dashboard", params: { id: savedPatient.id } });
+      if (generateEvolution) {
+        nav({ to: "/evolucao/$id", params: { id: savedPatient.id } });
+      } else {
+        nav({ to: "/dashboard" });
+      }
         return;
       }
       
@@ -217,7 +221,11 @@ function CadastroManualPage() {
       localStorage.setItem("da_pacientes", JSON.stringify(existing));
 
       toast.success(id ? "Paciente atualizado localmente!" : "Paciente cadastrado localmente!");
-      nav({ to: generateEvolution ? "/evolucao/$id" : "/dashboard", params: { id: newPatient.id } as any });
+      if (generateEvolution) {
+        nav({ to: "/evolucao/$id", params: { id: newPatient.id } });
+      } else {
+        nav({ to: "/dashboard" });
+      }
     } finally {
       setSaving(false);
     }
