@@ -16,17 +16,17 @@ dias úteis** se você quiser tudo.
 
 Recomendo atacar nessa ordem:
 
-| # | Fase | Por quê | Esforço |
-|---|---|---|---|
-| 1 | Endpoint `/api/ai/refinar-evolucao` no Python | Destrava 1 feature já entregue no frontend que hoje quebra em produção | 30 min |
-| 2 | Antibióticos rotineiros pré-cadastrados | Você pediu, é rápido, alto valor clínico | 3 h |
-| 3 | Export DOCX/PDF/TXT da evolução | Fecha o ciclo "extrair → editar → entregar". Você pediu duas vezes | 4 h |
-| 4 | Página do paciente como centro de operações | Você disse que está incompleta | 1–2 dias |
-| 5 | Prescrição assistida | Completa o tríade clínico (admissão/evolução/prescrição) | 1–2 dias |
-| 6 | Dashboard com triagem visual | Médico precisa "ver o plantão de relance" | 1 dia |
-| 7 | Auth real + sync cloud | Hoje perde dados ao limpar navegador / trocar dispositivo | 1–2 dias |
-| 8 | Bugs pré-existentes do typecheck | 8 erros de TS hoje, gera regressões silenciosas | 2 h |
-| 9 | CI/CD básico | Bloqueia regressões | 2 h |
+| # | Fase | Status | Por quê | Esforço |
+|---|---|---|---|---|
+| 1 | Endpoint `/api/ai/refinar-evolucao` no Python | ✅ **ENTREGUE** | Destrava feature do PR2 | 30 min |
+| 2 | Antibióticos rotineiros pré-cadastrados | ⏳ aguardando lista validada (D2) | Você pediu, alto valor clínico | 3 h |
+| 3 | Export DOCX/PDF/TXT da evolução | ✅ **ENTREGUE** (11/11 E2E) | Fecha o ciclo "extrair → editar → entregar" | 4 h |
+| 4 | Página do paciente como centro de operações | ⏳ aguardando alinhamento | Você disse que está incompleta | 1–2 dias |
+| 5 | Prescrição assistida | ⏳ depende de F2 | Completa o tríade clínico | 1–2 dias |
+| 6 | Dashboard com triagem visual | ✅ **ENTREGUE** (10/10 E2E) | Médico vê plantão de relance | 1 dia |
+| 7 | Auth real + sync cloud | ⏳ aguardando D3 (Clerk vs Supabase) | Hoje perde dados ao limpar navegador | 1–2 dias |
+| 8 | Bugs pré-existentes do typecheck | ✅ **ENTREGUE** (zero erros) | Bloqueia regressões silenciosas | 2 h |
+| 9 | CI/CD básico | ✅ **ENTREGUE** | Bloqueia regressões | 2 h |
 
 ---
 
