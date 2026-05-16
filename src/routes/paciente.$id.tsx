@@ -11,6 +11,10 @@ import { toast } from "sonner";
 import { getPatientById, updatePatient, getEvolutionsByPatient } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { computeGravidade, GRAVIDADE_STYLES } from "@/lib/gravidade";
+import { useSpecialistConsult } from "@/components/specialists/useSpecialistConsult";
+import SpecialistCard from "@/components/specialists/SpecialistCard";
+import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
+import { hasConsultForPatient } from "@/lib/specialists/client";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -211,6 +215,38 @@ function PacienteDetailPage() {
         existing[idx].pendencias = existing[idx].pendencias.filter((p: any) => (p.text || p) !== pendText);
         localStorage.setItem("da_pacientes", JSON.stringify(existing));
       }
+    }
+  };
+
+  // Hook do especialista — sempre antes dos early returns
+  const { specialist, open: drawerOpen, loading: consultLoading, consult, triggerConsult, closeDrawer } = useSpecialistConsult({
+    patient: paciente,
+    evolutions,
+    unitHint: paciente?.sector,
+  });
+
+  const handleAcceptSuggestions = async (acceptedTexts: string[]) => {
+    if (!acceptedTexts.length || !paciente) return;
+    const newPendingTexts = [...(paciente.pendingIssues || []), ...acceptedTexts];
+    const updated = { ...paciente, pendingIssues: newPendingTexts };
+    setPaciente(updated);
+    try {
+      if (!id.startsWith("temp_") && userId) {
+        await updatePatient(id, { pending_issues: newPendingTexts }, userId);
+      } else {
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const idx = existing.findIndex((x: any) => x.id === id);
+        if (idx >= 0) {
+          const existingPend = (existing[idx].pendencias || existing[idx].pending_issues || []).map((p: any) => (typeof p === "string" ? { text: p } : p));
+          const newOnes = acceptedTexts.map((t) => ({ text: t }));
+          existing[idx].pendencias = [...existingPend, ...newOnes];
+          existing[idx].pending_issues = [...(existing[idx].pending_issues || []), ...acceptedTexts];
+          localStorage.setItem("da_pacientes", JSON.stringify(existing));
+        }
+      }
+      toast.success(`${acceptedTexts.length} pendência(s) adicionada(s).`);
+    } catch (err: any) {
+      toast.error(`Erro ao adicionar pendências: ${err.message}`);
     }
   };
 
@@ -699,7 +735,32 @@ function PacienteDetailPage() {
               <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
            </button>
         </div>
+
+        {/* ESPECIALISTA VIRTUAL */}
+        <div className="pt-8">
+           <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
+                 <Activity className="h-5 w-5" />
+              </div>
+              <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">SEGUNDA OPINIÃO IA</h2>
+           </div>
+           <SpecialistCard
+              specialist={specialist}
+              isLoading={consultLoading}
+              hasConsult={paciente ? hasConsultForPatient(paciente.id) : false}
+              onConsult={() => triggerConsult()}
+           />
+        </div>
       </main>
+
+      <SpecialistDrawer
+         open={drawerOpen}
+         onClose={closeDrawer}
+         specialist={specialist}
+         consult={consult}
+         isLoading={consultLoading}
+         onAcceptSuggestions={handleAcceptSuggestions}
+      />
 
       {/* Footer Nav */}
       <div className="max-w-5xl mx-auto px-6 pb-20 text-center">

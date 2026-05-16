@@ -968,6 +968,133 @@ Retorne APENAS o texto editado."""
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# --- SPECIALISTS (Pareceres consultivos de especialistas virtuais) ---
+
+SPECIALIST_PROMPTS: Dict[str, Dict[str, str]] = {
+    "victor": {
+        "nome": "Dr. Victor",
+        "system": (
+            "Você é o Dr. Victor, médico internista com 20 anos de experiência em "
+            "enfermaria de clínica médica. Análise crítica baseada em Harrison's, AMB, "
+            "PCDT/MS e UpToDate. Cubra: avaliação diagnóstica, terapêutica, "
+            "antibioticoterapia (com D-day), exames, condutas sugeridas e alertas."
+        ),
+    },
+    "ana": {
+        "nome": "Dra. Ana",
+        "system": (
+            "Você é a Dra. Ana, médica intensivista. Análise baseada em Surviving "
+            "Sepsis Campaign, AMIB e ventilação mecânica protetora. Cubra: "
+            "neurológico (RASS), CV (DVA, PAM, lactato), respiratório (parâmetros VM, "
+            "P/F), renal/metabólico, infeccioso (D-day), nutrição, profilaxias (TEV, "
+            "úlcera, VAP bundle). Preserve todos os valores numéricos exatos."
+        ),
+    },
+    "cris": {
+        "nome": "Dra. Cris",
+        "system": (
+            "Você é a Dra. Cris, médica pediatra. Análise baseada em SBP e Nelson "
+            "Textbook 21ª ed. ATENÇÃO ESPECIAL: verificar PESO; se ausente, "
+            "primeira sugestão deve ser 'Solicitar pesagem' com prioridade alta. "
+            "Cruzar TODA dose com dose/kg/dia. Usar valores de referência pediátricos."
+        ),
+    },
+    "bruno": {
+        "nome": "Dr. Bruno",
+        "system": (
+            "Você é o Dr. Bruno, médico emergencista (UPA/PS). Análise rápida e "
+            "objetiva: estratificação de risco (Manchester/NEWS2), condutas "
+            "imediatas, exames emergenciais, prescrição, destino do paciente "
+            "(alta/observação/internação/transferência). Baseado em ATLS, ACLS, SBEM."
+        ),
+    },
+    "lucia": {
+        "nome": "Dra. Lúcia",
+        "system": (
+            "Você é a Dra. Lúcia, médica de família. Visão longitudinal centrada na "
+            "pessoa. Baseado em Cadernos AB/MS, WONCA, PCDT. Cubra: avaliação clínica, "
+            "prescrição (polifarmácia, genéricos SUS), prevenção/rastreamento, "
+            "encaminhamentos, plano de seguimento longitudinal."
+        ),
+    },
+}
+
+SPECIALIST_COMMON_TAIL = """
+
+REGRAS ABSOLUTAS:
+- NUNCA invente dados que não estejam no contexto fornecido.
+- Se um dado importante estiver ausente, marque como "DADO AUSENTE" na análise.
+- Toda sugestão é CONSULTIVA — o médico decide.
+- Cite a base de evidência (diretriz, livro, protocolo).
+- Não repita dados crus do contexto — agregue ANÁLISE crítica.
+- Seja objetivo. O médico está no plantão.
+
+FORMATO DE RESPOSTA OBRIGATÓRIO — JSON puro, sem markdown:
+{
+  "sections": [
+    {"title": "AVALIAÇÃO DIAGNÓSTICA", "content": "análise...", "alert": false}
+  ],
+  "suggestions": [
+    {"id": "s1", "text": "ação concreta", "priority": "alta"}
+  ],
+  "references": ["Harrison's 21ª", "Diretriz AMB 2024"]
+}
+
+priority deve ser exatamente: "alta" | "media" | "baixa".
+"""
+
+
+class SpecialistConsultRequest(BaseModel):
+    specialist_id: str
+    clinical_context: str
+    unit_type: Optional[str] = None
+
+
+@app.post("/specialists/consult")
+@app.post("/api/specialists/consult")
+async def specialists_consult(req: SpecialistConsultRequest):
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
+    sid = req.specialist_id
+    if sid not in SPECIALIST_PROMPTS:
+        raise HTTPException(status_code=400, detail=f"Especialista inválido: {sid}")
+    if not req.clinical_context.strip():
+        raise HTTPException(status_code=400, detail="Contexto clínico vazio.")
+
+    spec = SPECIALIST_PROMPTS[sid]
+    system_msg = spec["system"] + SPECIALIST_COMMON_TAIL
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": req.clinical_context},
+            ],
+            temperature=0.1,
+            max_tokens=4000,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        data = json.loads(raw)
+        sections = data.get("sections") or []
+        suggestions = data.get("suggestions") or []
+        references = data.get("references") or []
+        return {
+            "specialist": spec["nome"],
+            "specialist_id": sid,
+            "generated_at": datetime.now().isoformat(),
+            "sections": sections,
+            "suggestions": suggestions,
+            "references": references,
+        }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"IA retornou JSON inválido: {e}")
+    except Exception as e:
+        print(f"Erro no parecer do especialista {sid}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/extract-async")
 @app.post("/api/extract/extract-async")
 async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = File(...)):

@@ -12,6 +12,9 @@ import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 import { exportEvolucao, type ExportFormat } from "@/lib/exportEvolucao";
+import { useSpecialistConsult } from "@/components/specialists/useSpecialistConsult";
+import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
+import SpecialistCard from "@/components/specialists/SpecialistCard";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -538,6 +541,24 @@ function EvolucaoPage() {
     }
   };
 
+  // Hook do especialista: precisa rodar SEMPRE antes de qualquer return
+  // para não violar a ordem de hooks do React.
+  const evolutionsForContext = evolutionText.trim()
+    ? [{ created_at: new Date().toISOString(), content: evolutionText }]
+    : [];
+  const { specialist, open: drawerOpen, loading: consultLoading, consult, triggerConsult, closeDrawer } = useSpecialistConsult({
+    patient: paciente,
+    evolutions: evolutionsForContext,
+    unitHint: tipoUnidade,
+  });
+
+  const handleAcceptSuggestionsEvol = (acceptedTexts: string[]) => {
+    if (!acceptedTexts.length) return;
+    const block = "\n\n# CONDUTAS SUGERIDAS PELO ESPECIALISTA:\n" + acceptedTexts.map((t, i) => `${i + 1}. ${t}`).join("\n");
+    setEvolutionText((prev) => (prev || "") + block);
+    toast.success(`${acceptedTexts.length} sugestão(ões) anexada(s) à evolução.`);
+  };
+
   if (!paciente) return null;
 
   return (
@@ -605,6 +626,12 @@ function EvolucaoPage() {
               <button onClick={handleCopy} disabled={!evolutionText} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50">
                  <Copy className="h-3 w-3" /> COPIAR
               </button>
+              <SpecialistCard
+                 specialist={specialist}
+                 isLoading={consultLoading}
+                 onConsult={() => triggerConsult()}
+                 variant="inline"
+              />
            </div>
         </div>
       </header>
@@ -846,6 +873,15 @@ function EvolucaoPage() {
           </div>
         </div>
       )}
+
+      <SpecialistDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        specialist={specialist}
+        consult={consult}
+        isLoading={consultLoading}
+        onAcceptSuggestions={handleAcceptSuggestionsEvol}
+      />
     </div>
   );
 }
