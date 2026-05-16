@@ -339,7 +339,7 @@ function DashboardPage() {
                      <button onClick={() => nav({ to: "/evolucao/$id", params: { id: p.id } })} className="flex-1 lg:flex-none px-4 py-3 rounded-xl bg-navy text-white text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all">
                         EVOLUIR
                      </button>
-                     <button onClick={() => nav({ to: "/prescricao", params: { id: p.id } as any })} className="flex-1 lg:flex-none px-4 py-3 rounded-xl border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-secondary">
+                      <button onClick={() => nav({ to: "/prescricao/$id", params: { id: p.id } })} className="flex-1 lg:flex-none px-4 py-3 rounded-xl border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-secondary">
                         PRESCRIÇÃO
                      </button>
                       <button onClick={() => nav({ to: "/paciente/$id", params: { id: p.id } })} className="p-3 rounded-xl border border-border text-muted-foreground hover:bg-secondary transition-all">

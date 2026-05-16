@@ -66,7 +66,7 @@ function HistoricoEvolucoesPage() {
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
         <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to={`/paciente/${id}`} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
+            <Link to="/paciente/$id" params={{ id }} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
                <ChevronLeft className="h-5 w-5" />
             </Link>
             <div>

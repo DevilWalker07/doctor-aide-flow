@@ -189,6 +189,7 @@ function EvolucaoPage() {
         if (id.startsWith("temp_")) throw new Error("Local");
         const p = await getPatientById(id, userId!);
         const mapped = {
+          id: p.id,
           name: p.name,
           bed: p.bed,
           admissionDate: p.admission_date,
@@ -200,7 +201,7 @@ function EvolucaoPage() {
             lab: (p.labs?.length > 0) ? { 
               formatted: p.labs[0].texto_compacto 
             } : null,
-            resp: p.physical_exam || {} // Fallback simple mapping for UI
+            resp: p.physical_exam || {} 
           }
         };
         setPaciente(mapped);
@@ -209,6 +210,7 @@ function EvolucaoPage() {
         const p = existing.find((x: any) => x.id === id);
         if (p) {
           setPaciente({
+            id: p.id,
             name: p.nome || p.name,
             bed: p.leito || p.bed,
             admissionDate: p.data_admissao || p.admissionDate,
@@ -219,7 +221,8 @@ function EvolucaoPage() {
               })),
               lab: (p.laboratorios?.length > 0) ? {
                 formatted: p.laboratorios[0].valor || p.laboratorios[0].texto_compacto
-              } : null
+              } : null,
+              resp: p.exame_fisico || p.exame_fisico_detalhado || {}
             }
           });
         }
@@ -393,7 +396,7 @@ function EvolucaoPage() {
                </SectionCard>
 
                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => nav({ to: `/prescricao/${id}` })} className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
+                  <button onClick={() => nav({ to: "/prescricao/$id", params: { id } })} className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
                      <Pill className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2" />
                      <span className="text-[9px] font-black uppercase tracking-widest">PRESCRIÇÃO</span>
                   </button>

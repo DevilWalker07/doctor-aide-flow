@@ -114,18 +114,20 @@ function PacienteDetailPage() {
 
   const handleStatusUpdate = async (status: string) => {
     if (!paciente || !userId) return;
-    const updated = { ...paciente, status };
-    setPaciente(updated);
-    toast.success(status === "alta_provavel" ? "Alta provável marcada!" : "Status atualizado");
-    
     if (!id.startsWith("temp_")) {
-      await updatePatient(id, { status }, userId);
+      const p = await getPatientById(id, userId!);
+      const newStatus = p.status === 'alta_provavel' ? 'internado' : 'alta_provavel';
+      await updatePatient(id, { status: newStatus }, userId!);
+      setPaciente({ ...p, status: newStatus });
+      toast.success(newStatus === 'alta_provavel' ? "Marcado para alta!" : "Internação mantida.");
     } else {
       const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
       const idx = existing.findIndex((x: any) => x.id === id);
       if (idx >= 0) {
         existing[idx].status = status;
         localStorage.setItem("da_pacientes", JSON.stringify(existing));
+        setPaciente({ ...paciente, status });
+        toast.success(status === "alta_provavel" ? "Alta provável marcada!" : "Status atualizado");
       }
     }
   };
@@ -438,29 +440,98 @@ function PacienteDetailPage() {
         </div>
 
         {/* AÇÕES EM DESTAQUE */}
+        {/* AÇÕES EM DESTAQUE */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-12">
-           {[
-             { label: 'GERAR EVOLUÇÃO', icon: TrendingUp, to: `/evolucao/${id}`, primary: true },
-             { label: 'GERAR PRESCRIÇÃO', icon: Pill, to: `/prescricao/${id}` },
-             { label: 'GERAR ENCAMINHAMENTO', icon: ArrowRight, to: `/encaminhamento/${id}` },
-             { label: 'ADICIONAR DOCUMENTO', icon: FileUp, to: `/upload-ia`, search: { patient_id: id } },
-             { label: 'EDITAR PACIENTE', icon: Edit3, to: `/cadastro-manual`, search: { id, tipo: 'internado' } },
-             { label: 'MARCAR ALTA PROVÁVEL', icon: Check, onClick: () => handleStatusUpdate('alta_provavel') },
-           ].map((action: any) => (
-             <button 
-               key={action.label}
-               onClick={action.onClick || (() => nav({ to: action.to, search: action.search }))}
-               className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl ${action.primary ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white border-border text-foreground hover:border-primary/40'}`}
-             >
-                <div className="flex items-center gap-4">
-                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${action.primary ? 'bg-white/20' : 'bg-secondary'}`}>
-                      <action.icon className="h-5 w-5" />
-                   </div>
-                   <span className="text-[10px] font-black uppercase tracking-widest">{action.label}</span>
-                </div>
-                <ArrowRight className={`h-4 w-4 ${action.primary ? 'text-white/40' : 'text-muted-foreground/40'}`} />
-             </button>
-           ))}
+           <button 
+             onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-primary text-white border-primary shadow-lg shadow-primary/20"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-white/20">
+                    <TrendingUp className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">GERAR EVOLUÇÃO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-white/40" />
+           </button>
+
+           <button 
+             onClick={() => nav({ to: "/prescricao/$id", params: { id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <Pill className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">GERAR PRESCRIÇÃO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button 
+             onClick={() => nav({ to: "/encaminhamento/$id", params: { id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <ArrowRight className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">GERAR ENCAMINHAMENTO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button 
+             onClick={() => nav({ to: "/upload-ia", search: { patient_id: id } as any })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <FileUp className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">ADICIONAR DOCUMENTO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button 
+             onClick={() => nav({ to: "/cadastro-manual", search: { id, tipo: 'internado' } as any })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <Edit3 className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">EDITAR PACIENTE</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button 
+             onClick={() => handleStatusUpdate('alta_provavel')}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <Check className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">MARCAR ALTA PROVÁVEL</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button 
+             onClick={() => nav({ to: "/evolucao/$id/historico", params: { id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <Clock className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">VER HISTÓRICO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
         </div>
       </main>
 

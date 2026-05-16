@@ -426,24 +426,51 @@ function RevisarExtracao() {
         pending_issues: data.pendencias.map((p: any) => p.text)
       };
       
-      if (patient_id) {
-        savedPatient = await mergePatientData(patient_id, patientPayload, userId);
-      } else {
-        savedPatient = await createPatient({
-          ...patientPayload,
-          shift_id: shiftId,
-          status: 'internado',
-          tipo_admissao: 'admissao'
-        }, userId);
-      }
+      try {
+        if (patient_id && !patient_id.startsWith("temp_")) {
+          savedPatient = await mergePatientData(patient_id, patientPayload, userId);
+        } else if (shiftId && !shiftId.startsWith("temp_")) {
+          savedPatient = await createPatient({
+            ...patientPayload,
+            shift_id: shiftId,
+            status: 'internado',
+            tipo_admissao: 'admissao'
+          }, userId);
+        } else {
+          throw new Error("Offline fallback required");
+        }
 
-      storage.clearExtracaoResultado();
-      storage.clearUploadPatientId();
-      toast.success("Dados salvos com sucesso!");
-      if (savedPatient && savedPatient.id) {
-        nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
-      } else {
-        nav({ to: "/dashboard" });
+        storage.clearExtracaoResultado();
+        storage.clearUploadPatientId();
+        toast.success("Dados salvos com sucesso!");
+        if (savedPatient && savedPatient.id) {
+          nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
+        } else {
+          nav({ to: "/dashboard" });
+        }
+      } catch (innerErr) {
+        console.warn("Salvando extração localmente", innerErr);
+        const localId = patient_id || "temp_" + Date.now();
+        const newLocalPatient = {
+          id: localId,
+          ...patientPayload,
+          nome: patientPayload.name,
+          leito: patientPayload.bed,
+          data_admissao: patientPayload.admission_date,
+          status: 'internado',
+          criado_em: Date.now()
+        };
+
+        const existing = storage.getLocalPacientes();
+        const idx = existing.findIndex((p: any) => p.id === localId);
+        if (idx >= 0) existing[idx] = newLocalPatient;
+        else existing.push(newLocalPatient);
+
+        localStorage.setItem("da_pacientes", JSON.stringify(existing));
+        storage.clearExtracaoResultado();
+        storage.clearUploadPatientId();
+        toast.success("Dados salvos localmente!");
+        nav({ to: "/paciente/$id", params: { id: localId } });
       }
     } catch (err: any) {
       toast.error(`Erro ao salvar: ${err.message}`);
