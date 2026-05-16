@@ -108,7 +108,6 @@ function HistoricoEvolucoesPage() {
                   <button
                     onClick={() => nav({ to: "/evolucao/$id", params: { id }, search: { from: ev.id } })}
                     className="py-3 px-4 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
-                    aria-label="Usar esta evolução como base"
                   >
                     <ArrowRight className="h-4 w-4" /> USAR COMO BASE
                   </button>

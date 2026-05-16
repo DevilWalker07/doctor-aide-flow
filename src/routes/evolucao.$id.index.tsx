@@ -7,20 +7,15 @@ import {
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import { getPatientById, createEvolution } from "@/lib/db";
+import { getPatientById, createEvolution, getEvolutionsByPatient } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
 
-type EvolucaoSearch = { from?: string };
-
-export const Route = createFileRoute("/evolucao/$id")({
+export const Route = createFileRoute("/evolucao/$id/")({
   component: EvolucaoPage,
   head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
-  validateSearch: (search: Record<string, unknown>): EvolucaoSearch => ({
-    from: typeof search.from === "string" ? search.from : undefined,
-  }),
 });
 
 type Version = {
@@ -195,7 +190,7 @@ QUEIXA PRINCIPAL: [queixa]
 };
 
 function EvolucaoPage() {
-  const { id } = useParams({ from: "/evolucao/$id" });
+  const { id } = useParams({ from: "/evolucao/$id/" });
   const { from } = useSearch({ from: "/evolucao/$id" });
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
@@ -281,7 +276,6 @@ function EvolucaoPage() {
     async function loadBase() {
       if (!from || !userId) return false;
       try {
-        const { getEvolutionsByPatient } = await import("@/lib/db");
         const evols = await getEvolutionsByPatient(id, userId!);
         const base = evols.find((e: any) => e.id === from);
         if (base?.content) {

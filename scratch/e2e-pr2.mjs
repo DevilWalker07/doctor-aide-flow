@@ -82,11 +82,28 @@ try {
 
   await usarBaseBtn.first().click();
   await page.waitForURL(/\/evolucao\/[^/]+\?from=/, { timeout: 5000 });
-  await page.waitForTimeout(800);
+  console.log("  DEBUG URL após click:", page.url());
+  await page.waitForTimeout(2500);
+
+  const dbg = await page.evaluate(() => ({
+    from: window.__evolFrom,
+    evolId: window.__evolId,
+    da_evolucoes_len: (localStorage.getItem("da_evolucoes") || "").length,
+    pacientes_count: JSON.parse(localStorage.getItem("da_pacientes") || "[]").length,
+  }));
+  console.log("  DEBUG evol state:", JSON.stringify(dbg));
+
+  // Esperar até a textarea ter conteúdo OU 8s
+  try {
+    await page.waitForFunction(() => {
+      const ta = document.querySelector("textarea");
+      return ta && ta.value.includes("EVOLUCAO ANTERIOR DIA 1");
+    }, { timeout: 8000 });
+  } catch {}
 
   const textarea = page.locator("textarea").first();
   const val = await textarea.inputValue();
-  log("3.7.b Textarea pré-populada com texto da evolução base", val.includes("EVOLUCAO ANTERIOR DIA 1"), `len=${val.length}`);
+  log("3.7.b Textarea pré-populada com texto da evolução base", val.includes("EVOLUCAO ANTERIOR DIA 1"), `len=${val.length} val_start="${val.slice(0,50)}"`);
 
   // Versão "DE ANTERIOR" deve aparecer no contador
   const versoesBtn = page.getByRole("button", { name: /VERSÕES/i });

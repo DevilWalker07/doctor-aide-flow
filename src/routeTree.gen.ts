@@ -31,8 +31,9 @@ import { Route as PrescricaoIdRouteImport } from './routes/prescricao.$id'
 import { Route as PassagemMassaBulkJobIdRouteImport } from './routes/passagem-massa.$bulkJobId'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
-import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
 import { Route as EncaminhamentoIdRouteImport } from './routes/encaminhamento.$id'
+import { Route as EvolucaoIdRouteRouteImport } from './routes/evolucao.$id.route'
+import { Route as EvolucaoIdIndexRouteImport } from './routes/evolucao.$id.index'
 import { Route as EvolucaoIdHistoricoRouteImport } from './routes/evolucao.$id.historico'
 
 const UploadIaRoute = UploadIaRouteImport.update({
@@ -145,20 +146,25 @@ const PacienteIdRoute = PacienteIdRouteImport.update({
   path: '/paciente/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
-  id: '/evolucao/$id',
-  path: '/evolucao/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const EncaminhamentoIdRoute = EncaminhamentoIdRouteImport.update({
   id: '/encaminhamento/$id',
   path: '/encaminhamento/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EvolucaoIdRouteRoute = EvolucaoIdRouteRouteImport.update({
+  id: '/evolucao/$id',
+  path: '/evolucao/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvolucaoIdIndexRoute = EvolucaoIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EvolucaoIdRouteRoute,
+} as any)
 const EvolucaoIdHistoricoRoute = EvolucaoIdHistoricoRouteImport.update({
   id: '/historico',
   path: '/historico',
-  getParentRoute: () => EvolucaoIdRoute,
+  getParentRoute: () => EvolucaoIdRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -179,14 +185,15 @@ export interface FileRoutesByFullPath {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
+  '/evolucao/$id': typeof EvolucaoIdRouteRouteWithChildren
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/evolucao/$id/': typeof EvolucaoIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -207,13 +214,13 @@ export interface FileRoutesByTo {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/evolucao/$id': typeof EvolucaoIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -234,14 +241,15 @@ export interface FileRoutesById {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
+  '/evolucao/$id': typeof EvolucaoIdRouteRouteWithChildren
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
-  '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/passagem-massa/$bulkJobId': typeof PassagemMassaBulkJobIdRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/evolucao/$id/': typeof EvolucaoIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,14 +271,15 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/upload-ia'
-    | '/encaminhamento/$id'
     | '/evolucao/$id'
+    | '/encaminhamento/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
+    | '/evolucao/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,13 +300,13 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/encaminhamento/$id'
-    | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
+    | '/evolucao/$id'
   id:
     | '__root__'
     | '/'
@@ -317,14 +326,15 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/upload-ia'
-    | '/encaminhamento/$id'
     | '/evolucao/$id'
+    | '/encaminhamento/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/passagem-massa/$bulkJobId'
     | '/prescricao/$id'
     | '/processando/$jobId'
     | '/evolucao/$id/historico'
+    | '/evolucao/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -345,8 +355,8 @@ export interface RootRouteChildren {
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
+  EvolucaoIdRouteRoute: typeof EvolucaoIdRouteRouteWithChildren
   EncaminhamentoIdRoute: typeof EncaminhamentoIdRoute
-  EvolucaoIdRoute: typeof EvolucaoIdRouteWithChildren
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   PassagemMassaBulkJobIdRoute: typeof PassagemMassaBulkJobIdRoute
@@ -510,13 +520,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacienteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/evolucao/$id': {
-      id: '/evolucao/$id'
-      path: '/evolucao/$id'
-      fullPath: '/evolucao/$id'
-      preLoaderRoute: typeof EvolucaoIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/encaminhamento/$id': {
       id: '/encaminhamento/$id'
       path: '/encaminhamento/$id'
@@ -524,26 +527,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncaminhamentoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/evolucao/$id': {
+      id: '/evolucao/$id'
+      path: '/evolucao/$id'
+      fullPath: '/evolucao/$id'
+      preLoaderRoute: typeof EvolucaoIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evolucao/$id/': {
+      id: '/evolucao/$id/'
+      path: '/'
+      fullPath: '/evolucao/$id/'
+      preLoaderRoute: typeof EvolucaoIdIndexRouteImport
+      parentRoute: typeof EvolucaoIdRouteRoute
+    }
     '/evolucao/$id/historico': {
       id: '/evolucao/$id/historico'
       path: '/historico'
       fullPath: '/evolucao/$id/historico'
       preLoaderRoute: typeof EvolucaoIdHistoricoRouteImport
-      parentRoute: typeof EvolucaoIdRoute
+      parentRoute: typeof EvolucaoIdRouteRoute
     }
   }
 }
 
-interface EvolucaoIdRouteChildren {
+interface EvolucaoIdRouteRouteChildren {
   EvolucaoIdHistoricoRoute: typeof EvolucaoIdHistoricoRoute
+  EvolucaoIdIndexRoute: typeof EvolucaoIdIndexRoute
 }
 
-const EvolucaoIdRouteChildren: EvolucaoIdRouteChildren = {
+const EvolucaoIdRouteRouteChildren: EvolucaoIdRouteRouteChildren = {
   EvolucaoIdHistoricoRoute: EvolucaoIdHistoricoRoute,
+  EvolucaoIdIndexRoute: EvolucaoIdIndexRoute,
 }
 
-const EvolucaoIdRouteWithChildren = EvolucaoIdRoute._addFileChildren(
-  EvolucaoIdRouteChildren,
+const EvolucaoIdRouteRouteWithChildren = EvolucaoIdRouteRoute._addFileChildren(
+  EvolucaoIdRouteRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -564,8 +583,8 @@ const rootRouteChildren: RootRouteChildren = {
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
+  EvolucaoIdRouteRoute: EvolucaoIdRouteRouteWithChildren,
   EncaminhamentoIdRoute: EncaminhamentoIdRoute,
-  EvolucaoIdRoute: EvolucaoIdRouteWithChildren,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   PassagemMassaBulkJobIdRoute: PassagemMassaBulkJobIdRoute,
