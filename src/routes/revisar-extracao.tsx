@@ -177,7 +177,8 @@ function inferFromFilename(filename: string) {
 }
 
 function RevisarExtracao() {
-  const { patient_id } = Route.useSearch() as any;
+  const search = Route.useSearch() as any;
+  const patient_id = search?.patient_id;
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
   const [data, setData] = useState<any>(null);
@@ -190,13 +191,23 @@ function RevisarExtracao() {
       nav({ to: "/dashboard" });
       return;
     }
+    
     try {
-      const parsed = JSON.parse(raw);
-      const filename = storage.getJobArquivo();
+      let parsed = JSON.parse(raw);
+      
+      // Fallback: if it's the session object instead of raw result
+      if (parsed && parsed.extracted) {
+        parsed = parsed.extracted;
+      }
+      
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error("Formato de dados inválido");
+      }
+
+      const filename = storage.getJobArquivo() || "Documento";
       const inferred = inferFromFilename(filename);
       
       const preparedData = {
-        ...parsed,
         nome: parsed.nome || inferred.nome || "",
         idade: parsed.idade || "",
         sexo: parsed.sexo || "F",
@@ -205,35 +216,48 @@ function RevisarExtracao() {
         data_admissao: parsed.data_admissao || new Date().toISOString().slice(0, 10),
         hda: parsed.hda || "",
         motivo_admissao: parsed.motivo_admissao || "",
-        lista_de_problemas: (parsed.lista_de_problemas || []).map((p: string) => ({ id: Math.random().toString(36).substr(2, 9), text: p })),
-        antibioticos: (parsed.antibioticos || []).map((a: any) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          nome: typeof a === 'string' ? a : (a.nome || ""),
-          dose: a.dose || "",
-          via: a.via || "",
-          frequencia: a.frequencia || "",
-          dataInicio: a.dataInicio || a.data_inicio || new Date().toISOString().slice(0, 10)
-        })),
-        medicacoes: (parsed.medicacoes || []).map((m: string) => ({ id: Math.random().toString(36).substr(2, 9), text: m })),
-        laboratorios: (parsed.laboratorios || []).map((l: any) => ({ 
-          id: Math.random().toString(36).substr(2, 9), 
-          data: l.data || new Date().toISOString().slice(0, 10),
-          valor: typeof l === 'string' ? l : (l.valor || l.texto_compacto || "") 
-        })),
+        lista_de_problemas: Array.isArray(parsed.lista_de_problemas) 
+          ? parsed.lista_de_problemas.map((p: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof p === 'string' ? p : (p.text || "") }))
+          : [],
+        antibioticos: Array.isArray(parsed.antibioticos)
+          ? parsed.antibioticos.map((a: any) => ({
+              id: Math.random().toString(36).substr(2, 9),
+              nome: typeof a === 'string' ? a : (a.nome || ""),
+              dose: a.dose || "",
+              via: a.via || "",
+              frequencia: a.frequencia || "",
+              dataInicio: a.dataInicio || a.data_inicio || new Date().toISOString().slice(0, 10)
+            }))
+          : [],
+        medicacoes: Array.isArray(parsed.medicacoes)
+          ? parsed.medicacoes.map((m: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof m === 'string' ? m : (m.text || "") }))
+          : [],
+        laboratorios: Array.isArray(parsed.laboratorios)
+          ? parsed.laboratorios.map((l: any) => ({ 
+              id: Math.random().toString(36).substr(2, 9), 
+              data: l.data || new Date().toISOString().slice(0, 10),
+              valor: typeof l === 'string' ? l : (l.valor || l.texto_compacto || "") 
+            }))
+          : [],
         exame_fisico_detalhado: parsed.exame_fisico_detalhado || {
           geral: "", acv: "", ar: "", abdome: "", neuro: "", extremidades: "", pele: ""
         },
-        condutas: (parsed.condutas || []).map((c: string) => ({ id: Math.random().toString(36).substr(2, 9), text: c })),
-        pendencias: (parsed.pendencias || []).map((p: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof p === 'string' ? p : (p.text || "") })),
-        alertas: parsed.alertas || []
+        condutas: Array.isArray(parsed.condutas)
+          ? parsed.condutas.map((c: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof c === 'string' ? c : (c.text || "") }))
+          : [],
+        pendencias: Array.isArray(parsed.pendencias)
+          ? parsed.pendencias.map((p: any) => ({ id: Math.random().toString(36).substr(2, 9), text: typeof p === 'string' ? p : (p.text || "") }))
+          : [],
+        alertas: Array.isArray(parsed.alertas) ? parsed.alertas : []
       };
       
       setData(preparedData);
     } catch (e) {
+      console.error("Erro crítico ao carregar extração:", e);
       toast.error("Erro ao carregar dados da extração.");
       nav({ to: "/dashboard" });
     }
-  }, [nav]);
+  }, [nav, patient_id]);
 
   const updateField = useCallback((path: string, value: any) => {
     setData((prev: any) => {
