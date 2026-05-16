@@ -21,8 +21,8 @@ Recomendo atacar nessa ordem:
 | 1 | Endpoint `/api/ai/refinar-evolucao` no Python | ✅ **ENTREGUE** | Destrava feature do PR2 | 30 min |
 | 2 | Antibióticos rotineiros pré-cadastrados | ✅ **ENTREGUE** (9/9 E2E) | Você pediu, alto valor clínico | 3 h |
 | 3 | Export DOCX/PDF/TXT da evolução | ✅ **ENTREGUE** (11/11 E2E) | Fecha o ciclo "extrair → editar → entregar" | 4 h |
-| 4 | Página do paciente como centro de operações | ⏳ aguardando alinhamento | Você disse que está incompleta | 1–2 dias |
-| 5 | Prescrição assistida | ⏳ depende de F2 | Completa o tríade clínico | 1–2 dias |
+| 4 | Página do paciente como centro de operações | ✅ **ENTREGUE** (11/11 E2E) | Centro de operações com timeline, ações sticky, edição inline | 1–2 dias |
+| 5 | Prescrição assistida | ✅ **ENTREGUE** | Cálculo de TFGe + 14 chips com dose ajustada + DOCX/PDF/TXT | 1–2 dias |
 | 6 | Dashboard com triagem visual | ✅ **ENTREGUE** (10/10 E2E) | Médico vê plantão de relance | 1 dia |
 | 7 | Auth real + sync cloud | ⏳ aguardando D3 (Clerk vs Supabase) | Hoje perde dados ao limpar navegador | 1–2 dias |
 | 8 | Bugs pré-existentes do typecheck | ✅ **ENTREGUE** (zero erros) | Bloqueia regressões silenciosas | 2 h |
