@@ -12,7 +12,6 @@ import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
-import { ControlledTextarea } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -534,9 +533,9 @@ function EvolucaoPage() {
                            <p className="text-xs font-black uppercase tracking-[0.2em] text-ai animate-pulse">ESTRUTURANDO PRONTUÁRIO...</p>
                         </div>
                      )}
-                     <ControlledTextarea
+                     <textarea
                         value={evolutionText}
-                        onValueChange={setEvolutionText}
+                        onChange={(e) => setEvolutionText(e.target.value)}
                         placeholder="Clique em 'GERAR EVOLUÇÃO' para iniciar o rascunho com IA ou digite aqui..."
                         className="w-full h-full min-h-[500px] bg-secondary/20 border border-border rounded-3xl p-8 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-navy/20 custom-scrollbar uppercase"
                      />
