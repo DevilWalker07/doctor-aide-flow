@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import { getPatientById, updatePatient, getLastEvolution } from "@/lib/db";
+import { getPatientById, updatePatient, getEvolutionsByPatient } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { computeGravidade, GRAVIDADE_STYLES } from "@/lib/gravidade";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -59,14 +60,18 @@ function PacienteDetailPage() {
           }
         };
         setPaciente(mapped);
-        
-        const lastEv = await getLastEvolution(id, userId!);
-        setEvolutions(lastEv ? [lastEv] : []);
+
+        const evs = await getEvolutionsByPatient(id, userId!);
+        setEvolutions(evs || []);
       } catch (err) {
         // Local fallback
         const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
         const p = existing.find((x: any) => x.id === id);
         if (p) {
+          const atbList = p.antibioticos || p.antibiotics || [];
+          const labList = p.laboratorios || p.labs || [];
+          const pendList = p.pendencias || p.pending_issues || [];
+          const problemList = p.lista_de_problemas || p.problem_list || [];
           const mapped = {
             id: p.id,
             name: p.nome || p.name,
@@ -74,22 +79,29 @@ function PacienteDetailPage() {
             age: p.idade || p.age,
             sex: p.sexo || p.sex,
             sector: p.setor || p.sector,
-            admissionDate: p.data_admissao || p.admissionDate,
+            admissionDate: p.data_admissao || p.admission_date || p.admissionDate,
+            motivo_admissao: p.motivo_admissao || p.reason_for_admission,
             status: p.status,
-            diagnoses: (p.lista_de_problemas || []).map((t: any) => t.text || t),
-            comorbidities: p.comorbidades || p.comorbidities || [],
-            pendingIssues: (p.pendencias || []).map((t: any) => t.text || t),
+            diagnoses: problemList.map((t: any) => (typeof t === "string" ? t : t.text || "")),
+            comorbidities: p.antecedentes_patologicos || p.comorbidades || p.comorbidities || [],
+            pendingIssues: pendList.map((t: any) => (typeof t === "string" ? t : t.text || "")),
             data: {
-              abx: (p.antibioticos || []).map((a: any) => ({
-                name: a.nome, dose: a.dose, via: a.via, freq: a.frequencia, d0: a.dataInicio || a.data_inicio
+              abx: atbList.map((a: any) => ({
+                name: a.nome || a.name, dose: a.dose, via: a.via, freq: a.frequencia,
+                d0: a.dataInicio || a.data_inicio,
               })),
-              lab: (p.laboratorios?.length > 0) ? {
-                date: p.laboratorios[0].data,
-                formatted: p.laboratorios[0].valor || p.laboratorios[0].texto_compacto
-              } : null
-            }
+              lab: labList.length > 0 ? {
+                date: labList[0].data,
+                formatted: labList[0].valor || labList[0].texto_compacto,
+              } : null,
+            },
           };
           setPaciente(mapped);
+          const localEvs = JSON.parse(localStorage.getItem("da_evolucoes") || "[]")
+            .filter((e: any) => e.patient_id === id)
+            .map((e: any) => ({ ...e, id: e.id || `${e.patient_id}_${e.created_at}` }))
+            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setEvolutions(localEvs);
         }
       } finally {
         setLoading(false);
@@ -163,6 +175,17 @@ function PacienteDetailPage() {
 
   const lastEvolution = evolutions[0];
 
+  const gravidade = useMemo(() => computeGravidade({
+    setor: paciente?.sector,
+    antibioticos: paciente?.data?.abx?.map((a: any) => ({ nome: a.name, via: a.via, data_inicio: a.d0 })) || [],
+    pendencias: paciente?.pendingIssues || [],
+    lista_de_problemas: paciente?.diagnoses || [],
+    motivo_admissao: paciente?.motivo_admissao,
+    status: paciente?.status,
+  }), [paciente]);
+
+  const gStyle = GRAVIDADE_STYLES[gravidade];
+
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Premium Header */}
@@ -174,6 +197,9 @@ function PacienteDetailPage() {
                  <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
               </button>
               <div className="flex items-center gap-2">
+                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${gStyle.bg} ${gStyle.text}`} aria-label={`Gravidade ${gStyle.label}`}>
+                   {gStyle.label}
+                 </span>
                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${paciente.status === 'alta_provavel' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary'}`}>
                    {paciente.status === 'alta_provavel' ? 'ALTA PROVÁVEL' : 'INTERNADO'}
                  </span>

@@ -20,6 +20,15 @@ export async function exportEvolucao(opts: {
   header?: ExportHeader;
   filename_hint?: string;
 }): Promise<void> {
+  return exportTextoMedico(opts);
+}
+
+export async function exportTextoMedico(opts: {
+  text: string;
+  format: ExportFormat;
+  header?: ExportHeader;
+  filename_hint?: string;
+}): Promise<void> {
   if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
 
   // TXT pode ser gerado client-side, sem rede — mais rápido e funciona offline.

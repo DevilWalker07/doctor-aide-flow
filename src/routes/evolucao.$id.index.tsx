@@ -228,42 +228,76 @@ function EvolucaoPage() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
         const p = await getPatientById(id, userId!);
+        const labList = p.labs || [];
         const mapped = {
           id: p.id,
           name: p.name,
+          age: p.age,
+          sex: p.sex,
           bed: p.bed,
+          sector: p.sector,
           admissionDate: p.admission_date,
+          motivo_admissao: p.reason_for_admission,
+          hda: p.hda,
+          antecedentes: (p as any).antecedentes_patologicos || [],
+          medicacoes_uso_continuo: p.medications || [],
+          problemList: p.problem_list || [],
           pendingIssues: p.pending_issues || [],
           data: {
             abx: (p.antibiotics || []).map(a => ({
-              name: a.nome, d0: a.data_inicio
+              name: a.nome,
+              dose: (a as any).dose,
+              via: (a as any).via,
+              frequencia: (a as any).frequencia,
+              d0: a.data_inicio,
             })),
-            lab: (p.labs?.length > 0) ? { 
-              formatted: p.labs[0].texto_compacto 
-            } : null,
-            resp: p.physical_exam || {} 
-          }
+            lab: labList.length > 0 ? { formatted: labList[0].texto_compacto } : null,
+            labs_all: labList.map((l: any) => ({ data: l.data, texto: l.texto_compacto || "" })),
+            resp: p.physical_exam || {},
+            condutas: (p as any).conducts || [],
+          },
         };
         setPaciente(mapped);
       } catch (err) {
         const existing = storage.getLocalPacientes();
         const p = existing.find((x: any) => x.id === id);
         if (p) {
+          const atbList = (p.antibioticos || p.antibiotics || []);
+          const labList = (p.laboratorios || p.labs || []);
+          const pendList = (p.pendencias || p.pending_issues || []);
+          const problemList = (p.lista_de_problemas || p.problem_list || []);
           setPaciente({
             id: p.id,
             name: p.nome || p.name,
+            age: p.idade || p.age,
+            sex: p.sexo || p.sex,
             bed: p.leito || p.bed,
-            admissionDate: p.data_admissao || p.admissionDate,
-            pendingIssues: (p.pendencias || []).map((t: any) => t.text || t),
+            sector: p.setor || p.sector,
+            admissionDate: p.data_admissao || p.admission_date || p.admissionDate,
+            motivo_admissao: p.motivo_admissao || p.reason_for_admission,
+            hda: p.hda,
+            antecedentes: p.antecedentes_patologicos || p.antecedentes || [],
+            medicacoes_uso_continuo: p.medicacoes_uso_continuo || p.medications || p.medicacoes || [],
+            problemList: problemList.map((t: any) => (typeof t === "string" ? t : t.text || "")),
+            pendingIssues: pendList.map((t: any) => (typeof t === "string" ? t : t.text || "")),
             data: {
-              abx: (p.antibioticos || []).map((a: any) => ({
-                name: a.nome, d0: a.dataInicio || a.data_inicio
+              abx: atbList.map((a: any) => ({
+                name: a.nome || a.name,
+                dose: a.dose,
+                via: a.via,
+                frequencia: a.frequencia,
+                d0: a.dataInicio || a.data_inicio,
               })),
-              lab: (p.laboratorios?.length > 0) ? {
-                formatted: p.laboratorios[0].valor || p.laboratorios[0].texto_compacto
+              lab: labList.length > 0 ? {
+                formatted: labList[0].valor || labList[0].texto_compacto || "",
               } : null,
-              resp: p.exame_fisico || p.exame_fisico_detalhado || {}
-            }
+              labs_all: labList.map((l: any) => ({
+                data: l.data,
+                texto: l.valor || l.texto_compacto || "",
+              })),
+              resp: p.exame_fisico || p.exame_fisico_detalhado || p.physical_exam || {},
+              condutas: p.condutas || p.conducts || [],
+            },
           });
         }
       }
