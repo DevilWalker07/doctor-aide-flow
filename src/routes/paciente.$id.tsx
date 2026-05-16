@@ -144,6 +144,57 @@ function PacienteDetailPage() {
     }
   };
 
+  const [editingField, setEditingField] = useState<null | "name" | "bed">(null);
+  const [editValue, setEditValue] = useState("");
+
+  const gravidade = useMemo(() => computeGravidade({
+    setor: paciente?.sector,
+    antibioticos: paciente?.data?.abx?.map((a: any) => ({ nome: a.name, via: a.via, data_inicio: a.d0 })) || [],
+    pendencias: paciente?.pendingIssues || [],
+    lista_de_problemas: paciente?.diagnoses || [],
+    motivo_admissao: paciente?.motivo_admissao,
+    status: paciente?.status,
+  }), [paciente]);
+
+  const startEdit = (field: "name" | "bed") => {
+    setEditingField(field);
+    setEditValue(field === "name" ? (paciente?.name || "") : (paciente?.bed || ""));
+  };
+
+  const saveEdit = async () => {
+    if (!editingField || !paciente) return;
+    const field = editingField;
+    const value = editValue.trim();
+    setEditingField(null);
+    if (!value || value === (field === "name" ? paciente.name : paciente.bed)) return;
+
+    const updates: any = field === "name" ? { name: value } : { bed: value };
+    const updatedLocal = { ...paciente, ...updates };
+    setPaciente(updatedLocal);
+
+    try {
+      if (!id.startsWith("temp_") && userId) {
+        await updatePatient(id, updates, userId);
+      } else {
+        const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const idx = existing.findIndex((x: any) => x.id === id);
+        if (idx >= 0) {
+          if (field === "name") {
+            existing[idx].nome = value;
+            existing[idx].name = value;
+          } else {
+            existing[idx].leito = value;
+            existing[idx].bed = value;
+          }
+          localStorage.setItem("da_pacientes", JSON.stringify(existing));
+        }
+      }
+      toast.success("Salvo.");
+    } catch (err: any) {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    }
+  };
+
   const resolvePendencia = async (pendText: string) => {
     if (!paciente || !userId) return;
     const updatedPendencias = (paciente.pendingIssues || []).filter((p: string) => p !== pendText);
@@ -174,16 +225,6 @@ function PacienteDetailPage() {
   }
 
   const lastEvolution = evolutions[0];
-
-  const gravidade = useMemo(() => computeGravidade({
-    setor: paciente?.sector,
-    antibioticos: paciente?.data?.abx?.map((a: any) => ({ nome: a.name, via: a.via, data_inicio: a.d0 })) || [],
-    pendencias: paciente?.pendingIssues || [],
-    lista_de_problemas: paciente?.diagnoses || [],
-    motivo_admissao: paciente?.motivo_admissao,
-    status: paciente?.status,
-  }), [paciente]);
-
   const gStyle = GRAVIDADE_STYLES[gravidade];
 
   return (
@@ -208,11 +249,49 @@ function PacienteDetailPage() {
 
            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
-                 <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight mb-2 uppercase">
-                    {paciente.name}
-                 </h1>
+                 {editingField === "name" ? (
+                   <input
+                     autoFocus
+                     value={editValue}
+                     onChange={(e) => setEditValue(e.target.value)}
+                     onBlur={saveEdit}
+                     onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingField(null); }}
+                     className="text-3xl md:text-4xl font-black text-foreground tracking-tight mb-2 uppercase bg-secondary/60 border-b-2 border-primary px-3 py-1 rounded outline-none w-full max-w-lg"
+                     aria-label="Editar nome do paciente"
+                   />
+                 ) : (
+                   <h1
+                     onClick={() => startEdit("name")}
+                     className="text-3xl md:text-4xl font-black text-foreground tracking-tight mb-2 uppercase cursor-text hover:bg-secondary/40 px-3 py-1 -mx-3 rounded transition-colors"
+                     title="Clique para editar"
+                   >
+                     {paciente.name}
+                   </h1>
+                 )}
                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                    <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-primary" /> LEITO {paciente.bed}</span>
+                    {editingField === "bed" ? (
+                      <span className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        LEITO
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value.toUpperCase())}
+                          onBlur={saveEdit}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingField(null); }}
+                          className="w-20 px-2 py-0.5 bg-white border-b-2 border-primary outline-none uppercase font-bold"
+                          aria-label="Editar leito"
+                        />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => startEdit("bed")}
+                        className="flex items-center gap-1.5 cursor-text hover:bg-secondary/40 px-1.5 py-0.5 rounded transition-colors"
+                        title="Clique para editar"
+                      >
+                        <div className="h-2 w-2 rounded-full bg-primary" /> LEITO {paciente.bed}
+                      </button>
+                    )}
                     <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-secondary" /> {paciente.age} ANOS · {paciente.sex === 'M' ? 'MASCULINO' : 'FEMININO'}</span>
                     <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-secondary" /> {paciente.sector}</span>
                  </div>
@@ -240,8 +319,48 @@ function PacienteDetailPage() {
         </div>
       </header>
 
+      {/* Barra de ações primárias */}
+      <div className="bg-white/60 backdrop-blur border-b border-border sticky top-[152px] md:top-[176px] z-20">
+         <div className="max-w-5xl mx-auto px-6 py-3 flex flex-wrap items-center gap-2 justify-center">
+            <button
+               onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
+               className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            >
+               <TrendingUp className="h-3.5 w-3.5" /> EVOLUIR
+            </button>
+            <button
+               onClick={() => nav({ to: "/prescricao/$id", params: { id } })}
+               className="px-5 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            >
+               <Pill className="h-3.5 w-3.5" /> PRESCREVER
+            </button>
+            <button
+               onClick={() => nav({ to: "/upload-ia", search: { patient_id: id, tipo: "admissao", engine: "docling", modo: "unico" } as any })}
+               className="px-5 py-2.5 rounded-xl border border-border bg-white text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2"
+            >
+               <FileUp className="h-3.5 w-3.5" /> ANEXAR DOC
+            </button>
+            <button
+               onClick={() => nav({ to: "/encaminhamento/$id", params: { id } })}
+               className="px-5 py-2.5 rounded-xl border border-border bg-white text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2"
+            >
+               <ArrowRight className="h-3.5 w-3.5" /> ENCAMINHAR
+            </button>
+            <button
+               onClick={() => handleStatusUpdate('alta_provavel')}
+               className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                  paciente.status === 'alta_provavel'
+                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                    : "border border-emerald-500/30 bg-white text-emerald-600 hover:bg-emerald-50"
+               }`}
+            >
+               <Check className="h-3.5 w-3.5" /> {paciente.status === 'alta_provavel' ? 'ALTA MARCADA' : 'MARCAR ALTA'}
+            </button>
+         </div>
+      </div>
+
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-12">
-        
+
         {/* LISTA DE PROBLEMAS */}
         <Section title="LISTA DE PROBLEMAS" icon={<ClipboardList className="h-5 w-5" />} action={
           <button onClick={() => nav({ to: "/cadastro-manual", search: { id, tipo: 'internado' } as any })} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center gap-1">
@@ -398,32 +517,53 @@ function PacienteDetailPage() {
         </Section>
 
         <div className="grid md:grid-cols-2 gap-8">
-           {/* ÚLTIMA EVOLUÇÃO */}
+           {/* TIMELINE DE EVOLUÇÕES */}
            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                 <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
-                    <FileText className="h-5 w-5" />
+              <div className="flex items-center gap-3 mb-4 justify-between">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
+                       <FileText className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">EVOLUÇÕES ({evolutions.length})</h2>
                  </div>
-                 <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">ÚLTIMA EVOLUÇÃO</h2>
+                 {evolutions.length > 0 && (
+                    <button onClick={() => nav({ to: "/evolucao/$id/historico", params: { id } })} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1">
+                       VER TODAS <ArrowRight className="h-3 w-3" />
+                    </button>
+                 )}
               </div>
-              <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm">
-                 {lastEvolution ? (
-                   <>
-                      <div className="flex justify-between items-center mb-3">
-                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DATA: {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy HH:mm")}</p>
-                         <button onClick={() => nav({ to: `/evolucao/${id}/historico` })} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1">
-                            VER HISTÓRICO <ArrowRight className="h-3 w-3" />
-                         </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed italic mb-6 line-clamp-3">
-                         {lastEvolution.content}
-                      </p>
-                      <button onClick={() => setModalEvolucao(lastEvolution)} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
-                         VER COMPLETA
-                      </button>
-                   </>
+              <div className="bg-white border border-border rounded-[2.5rem] p-6 shadow-sm">
+                 {evolutions.length === 0 ? (
+                   <p className="text-xs text-muted-foreground italic text-center py-8">Nenhuma evolução registrada.</p>
                  ) : (
-                   <p className="text-xs text-muted-foreground italic">Nenhuma evolução registrada.</p>
+                   <div className="space-y-3 max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
+                      {evolutions.slice(0, 8).map((ev: any, idx: number) => {
+                        const evId = ev.id || `${ev.patient_id}_${ev.created_at}`;
+                        const dataFmt = ev.created_at ? format(parseISO(ev.created_at), "dd/MM HH:mm") : "—";
+                        const isFirst = idx === 0;
+                        return (
+                          <div key={evId} className={`p-4 rounded-2xl border transition-colors ${isFirst ? "bg-primary/5 border-primary/20" : "bg-secondary/20 border-border"}`}>
+                             <div className="flex items-center justify-between mb-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isFirst ? "text-primary" : "text-muted-foreground"}`}>
+                                   {isFirst && "↳ MAIS RECENTE · "}{dataFmt}
+                                </span>
+                             </div>
+                             <p className="text-[11px] text-foreground leading-relaxed line-clamp-3 mb-3 whitespace-pre-wrap">{ev.content}</p>
+                             <div className="flex gap-2">
+                                <button onClick={() => setModalEvolucao(ev)} className="flex-1 py-2 rounded-lg border border-border text-[9px] font-black text-foreground uppercase tracking-widest hover:bg-secondary transition-all">
+                                   VER COMPLETA
+                                </button>
+                                <button
+                                   onClick={() => nav({ to: "/evolucao/$id", params: { id }, search: { from: evId } })}
+                                   className="flex-1 py-2 rounded-lg bg-navy text-white text-[9px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all flex items-center justify-center gap-1"
+                                >
+                                   <ArrowRight className="h-3 w-3" /> USAR COMO BASE
+                                </button>
+                             </div>
+                          </div>
+                        );
+                      })}
+                   </div>
                  )}
               </div>
            </div>
