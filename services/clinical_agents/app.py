@@ -708,6 +708,67 @@ REGRAS:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class RefineEvolutionRequest(BaseModel):
+    current_text: str
+    instruction: str
+    tipo_unidade: Optional[str] = None
+    preferences: Optional[Dict[str, Any]] = None
+
+
+@app.post("/api/ai/refinar-evolucao")
+async def refinar_evolucao(req: RefineEvolutionRequest):
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
+    if not req.current_text.strip():
+        raise HTTPException(status_code=400, detail="Texto atual vazio.")
+    if not req.instruction.strip():
+        raise HTTPException(status_code=400, detail="Instrução vazia.")
+
+    pref = req.preferences or {}
+    uppercase = bool(pref.get("uppercase"))
+
+    system_msg = (
+        "Você edita evoluções médicas conforme instruções precisas. "
+        "Retorne SOMENTE o texto final, sem comentários, sem markdown, sem cabeçalhos extra."
+    )
+    if uppercase:
+        system_msg += " Use SEMPRE CAIXA ALTA."
+
+    user_prompt = f"""Edite o texto abaixo conforme a instrução, preservando estrutura,
+terminologia médica e qualquer informação que a instrução não mande remover.
+Não invente dados clínicos novos — apenas reorganize, encurte, expanda ou corrija o
+que está presente, segundo a instrução.
+
+INSTRUÇÃO:
+{req.instruction.strip()}
+
+TEXTO ATUAL:
+\"\"\"
+{req.current_text}
+\"\"\"
+
+Retorne APENAS o texto editado."""
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.0,
+            max_tokens=16000,
+        )
+        text = response.choices[0].message.content or ""
+        text = text.strip()
+        if uppercase:
+            text = text.upper()
+        return {"evolution_text": text}
+    except Exception as e:
+        print(f"Erro ao refinar evolução: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/extract-async")
 @app.post("/api/extract/extract-async")
 async def extract_async(background_tasks: BackgroundTasks, file: UploadFile = File(...)):

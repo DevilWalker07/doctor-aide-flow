@@ -56,7 +56,7 @@ function EncaminhamentoPage() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
         const p = await getPatientById(id, userId!);
-        setPaciente({ name: p.name, bed: p.bed, ...p });
+        setPaciente({ ...p, name: p.name, bed: p.bed });
       } catch (err) {
         const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
         const p = existing.find((x: any) => x.id === id);

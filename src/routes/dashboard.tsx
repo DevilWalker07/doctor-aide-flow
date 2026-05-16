@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Stethoscope, Plus, LayoutGrid, ListFilter, Pill, 
-  AlertTriangle, CheckCircle2, UserPlus, FileText, 
-  ArrowRight, Activity, Calendar, Building2, User,
+import {
+  Stethoscope, Plus, LayoutGrid, ListFilter, Pill,
+  AlertTriangle, CheckCircle2, UserPlus, FileText,
+  ArrowRight, Activity, Calendar, Building2, User, Users,
   ClipboardList, Search, LogOut
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
@@ -164,6 +164,10 @@ function DashboardPage() {
 
     setIsEnding(true);
     try {
+      if (!shift) {
+        toast.error("Nenhum plantão ativo.");
+        return;
+      }
       // 1. Gerar texto da passagem
       let text = `PASSAGEM DE PLANTÃO - ${shift.setor}\n`;
       text += `DATA: ${shift.data_formatada}\n`;

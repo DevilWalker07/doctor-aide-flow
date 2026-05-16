@@ -87,7 +87,7 @@ function ProcessandoRoute() {
         }
 
         // Only schedule next poll if we're still processing
-        if (pollingRef.current && job.status !== "done" && job.status !== "error") {
+        if (pollingRef.current && job.status !== "done") {
           timeoutId = setTimeout(poll, 3000);
         }
       } catch (err: any) {

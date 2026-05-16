@@ -4,7 +4,7 @@ import {
   ChevronLeft, User, Activity, Pill, AlertTriangle, 
   Calendar, Building2, ClipboardList, FileText, 
   Plus, CheckCircle2, FileUp, Edit3, ArrowRight,
-  TrendingUp, Clock, Info, Check
+  TrendingUp, Clock, Info, Check, X
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from "date-fns";
 import { toast } from "sonner";

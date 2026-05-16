@@ -3,6 +3,7 @@ import { Stethoscope, Baby, HeartPulse, AlertTriangle, Building2, ChevronLeft, A
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
 import { updateShift as dbUpdateShift } from "@/lib/db";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/tipo")({
   component: TipoPage,
@@ -20,6 +21,7 @@ const sectors = [
 function TipoPage() {
   const nav = useNavigate();
   const { updateShift } = useShift();
+  const { userId } = useSupabaseUser();
 
   const handleSelect = async (sector: typeof sectors[0]) => {
     // Always update localStorage
@@ -28,9 +30,9 @@ function TipoPage() {
 
     // Try to update Supabase if we have a real shift ID
     const shiftId = localStorage.getItem("da_shift_id");
-    if (shiftId && !shiftId.startsWith("temp_")) {
+    if (shiftId && !shiftId.startsWith("temp_") && userId) {
       try {
-        await dbUpdateShift(shiftId, { type: sector.id, sector: sector.title });
+        await dbUpdateShift(shiftId, { type: sector.id, sector: sector.title }, userId);
       } catch (err) {
         console.warn("Falha ao atualizar tipo no Supabase", err);
       }
