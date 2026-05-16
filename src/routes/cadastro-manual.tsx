@@ -26,7 +26,24 @@ export const Route = createFileRoute("/cadastro-manual")({
   head: () => ({ meta: [{ title: "Cadastro Manual — DOUTOR AJUDA" }] }),
 });
 
-const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo", "Etilismo", "Neoplasia", "Obesidade"];
+const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo", "Etilismo", "Neoplasia", "Obesidade", "Hipotireoidismo", "DLP", "AVE Prévio"];
+
+const PREDEFINED_MEDS = [
+  { label: "SINTOMÁTICOS", items: ["Dipirona 1g EV 6/6h", "Ondansetrona 8mg EV 8/8h", "Plasil 10mg EV 8/8h"] },
+  { label: "PROFILAXIA", items: ["Enoxaparina 40mg SC 24/24h", "Heparina 5000UI SC 8/8h", "Omeprazol 40mg EV 24/24h"] },
+  { label: "HIDRATAÇÃO", items: ["SF 0,9% 500ml EV agora", "RL 500ml EV agora", "SG 5% 500ml EV agora"] }
+];
+
+const PREDEFINED_PHYSICAL = {
+  estado_geral: ["BEG, LOTE, ACIDANÓTICO, ANICTÉRICO", "MEG, SONOLENTO, DESIDRATADO ++/4+", "REG, LOTE, PALIDEZ CUTÂNEA"],
+  acv: ["RCR 2T BNF SEM SOPROS, PULSOS PRESENTES", "RCR 2T BNF COM SOPRO SISTÓLICO 2+/6+ EM FOCO MITRAL", "ARRITMIA COMPLETA (FA), BNF"],
+  ar: ["MVU SEM RUÍDOS ADVENTÍCIOS, EUPNEICO", "MVU DIMINUÍDO EM BASES, COM ESTERTORES CREPITANTES À DIREITA", "MVU GLOBALMENTE DIMINUÍDO, COM SIBILOS EXPIRATÓRIOS"],
+  abdome: ["RHA+, PLANO, INDOLOR À PALPAÇÃO", "RHA+, DISTENDIDO, TIMPÂNICO, INDOLOR", "RHA DIMINUÍDO, DOLOROSO À PALPAÇÃO EM FID"],
+  neuro: ["GLASGOW 15, SEM DÉFICITS FOCAIS", "GLASGOW 13 (A4V3M6), ISOCÓRICO E FOTORREAGENTE", "VIGIL, ORIENTADO, HEMIPARESIA À DIREITA"],
+};
+
+const PREDEFINED_DVA = ["NORADRENALINA", "DOBUTAMINA", "VASOPRESSINA", "NITROPRUSSIATO", "NIPRIDE", "TRIDIL"];
+const PREDEFINED_VENT = ["PCV", "VCV", "PSV", "CPAP", "SIMV"];
 
 function CadastroManualPage() {
   const { tipo, id } = Route.useSearch() as any;
@@ -250,6 +267,45 @@ function CadastroManualPage() {
       ...f,
       [key]: f[key].filter(item => item.id !== id)
     }));
+  };
+
+  const handleConductKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      const lines = form.condutas.split("\n").filter(Boolean);
+      const lastLine = lines[lines.length - 1] || "";
+      const currentNumberMatch = lastLine.match(/^(\d+)\./);
+      const nextNumber = currentNumberMatch ? parseInt(currentNumberMatch[1]) + 1 : lines.length + 1;
+      
+      // If the textarea is empty or doesn't have enumeration yet, start with 1.
+      if (form.condutas.trim() === "") {
+        e.preventDefault();
+        setForm(f => ({ ...f, condutas: "1. " }));
+        return;
+      }
+
+      // Add next number automatically
+      e.preventDefault();
+      setForm(f => ({ ...f, condutas: form.condutas + "\n" + nextNumber + ". " }));
+    }
+  };
+
+  const handleAISuggestions = async () => {
+    toast.info("A IA está analisando o caso clínico...");
+    // Mock simulation
+    setTimeout(() => {
+      const suggestions = "1. Vigilância hemodiátrica rigorosa\n2. Reavaliar antibioticoterapia em 48h\n3. Controle de balanço hídrico diário\n4. Fisioterapia motora e respiratória";
+      setForm(f => ({ ...f, condutas: f.condutas + (f.condutas ? "\n" : "") + suggestions }));
+      toast.success("Sugestões de conduta adicionadas!");
+    }, 2000);
+  };
+
+  const triggerPhotoExtraction = (field: 'laboratorios' | 'medicacoes') => {
+    toast.promise(new Promise(res => setTimeout(res, 3000)), {
+       loading: "Processando imagem...",
+       success: "Dados extraídos com sucesso!",
+       error: "Falha na extração."
+    });
+    // In a real scenario, this would open a file picker and call the documentExtractor
   };
 
   const addATB = () => {
@@ -528,7 +584,36 @@ function CadastroManualPage() {
 
         {/* MEDICAÇÕES */}
         <Section title="MEDICAÇÕES EM USO" icon={<Pill className="h-5 w-5" />}>
-           <div className="space-y-3">
+           <div className="flex justify-between items-center mb-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">LISTA DE PRESCRIÇÃO</p>
+              <button 
+                onClick={() => triggerPhotoExtraction('medicacoes')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-ai/10 text-ai text-[10px] font-black uppercase tracking-widest border border-ai/20 hover:bg-ai/20 transition-all"
+              >
+                <Activity className="h-3.5 w-3.5" /> EXTRAIR DE FOTO/PRINT
+              </button>
+           </div>
+           
+           <div className="space-y-6">
+              {PREDEFINED_MEDS.map(group => (
+                <div key={group.label} className="space-y-2">
+                   <p className="text-[9px] font-bold text-slate-400 ml-1">{group.label}</p>
+                   <div className="flex flex-wrap gap-2">
+                      {group.items.map(item => (
+                        <button 
+                          key={item} 
+                          onClick={() => setForm(f => ({...f, medicacoes: [...f.medicacoes, { id: Math.random().toString(), text: item.toUpperCase() }]}))}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 bg-white hover:border-primary/40 hover:bg-slate-50"
+                        >
+                          + {item}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+              ))}
+           </div>
+
+           <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
               {form.medicacoes.map(m => (
                 <div key={m.id} className="flex gap-2">
                   <ControlledInput 
@@ -543,13 +628,23 @@ function CadastroManualPage() {
                 </div>
               ))}
               <button onClick={() => addItem('medicacoes')} className="w-full py-4 border-2 border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground hover:border-primary/40 transition-all flex items-center justify-center gap-2">
-                <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
+                <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO MANUAL
               </button>
            </div>
         </Section>
 
         {/* LABORATÓRIOS */}
         <Section title="LABORATÓRIOS" icon={<Activity className="h-5 w-5" />}>
+           <div className="flex justify-between items-center mb-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RESULTADOS E EVOLUÇÃO</p>
+              <button 
+                onClick={() => triggerPhotoExtraction('laboratorios')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary/20 transition-all"
+              >
+                <FlaskConical className="h-3.5 w-3.5" /> EXTRAIR DE EXAME (FOTO/PDF)
+              </button>
+           </div>
+
            <div className="space-y-6">
               {form.laboratorios.map((lab, idx) => (
                 <div key={lab.id} className="space-y-3 border-b border-border pb-6 last:border-0">
@@ -592,22 +687,33 @@ function CadastroManualPage() {
 
         {/* EXAME FÍSICO */}
         <Section title="EXAME FÍSICO" icon={<Thermometer className="h-5 w-5" />}>
-           <div className="space-y-6">
+           <div className="space-y-8">
               {[
-                { key: 'estado_geral', label: 'ESTADO GERAL', placeholder: 'EX: BEG, LOTE, ACIDANÓTICO, ANICTÉRICO...' },
-                { key: 'acv', label: 'ACV (CARDIO-VASCULAR)', placeholder: 'EX: RCR 2T BNF SEM SOPROS, PULSOS PRESENTES' },
-                { key: 'ar', label: 'AR (RESPIRATÓRIO)', placeholder: 'EX: MVU SEM RUÍDOS ADVENTÍCIOS, EUPNEICO' },
-                { key: 'abdome', label: 'ABDOME', placeholder: 'EX: RHA+, PLANO, INDOLOR À PALPAÇÃO' },
-                { key: 'neuro', label: 'NEUROLÓGICO', placeholder: 'EX: GLASGOW 15, SEM DÉFICITS' },
-                { key: 'extremidades', label: 'EXTREMIDADES / MMII', placeholder: 'EX: SEM EDEMAS, SEM SINAIS DE TVP' },
-                { key: 'pele', label: 'PELE / MUCOSAS', placeholder: 'EX: CORADAS, HIDRATADAS, SEM LESÕES' },
+                { key: 'estado_geral', label: 'ESTADO GERAL' },
+                { key: 'acv', label: 'ACV (CARDIO-VASCULAR)' },
+                { key: 'ar', label: 'AR (RESPIRATÓRIO)' },
+                { key: 'abdome', label: 'ABDOME' },
+                { key: 'neuro', label: 'NEUROLÓGICO' },
+                { key: 'extremidades', label: 'EXTREMIDADES / MMII' },
+                { key: 'pele', label: 'PELE / MUCOSAS' },
               ].map(field => (
-                <div key={field.key} className="space-y-1">
-                   <label className="text-[9px] font-bold text-muted-foreground uppercase">{field.label}</label>
+                <div key={field.key} className="space-y-3">
+                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+                   <div className="flex flex-wrap gap-2 mb-2">
+                      {(PREDEFINED_PHYSICAL as any)[field.key]?.map((phrase: string) => (
+                        <button 
+                          key={phrase} 
+                          onClick={() => setForm({...form, exame_fisico: {...form.exame_fisico, [field.key]: phrase.toUpperCase()}})}
+                          className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-500 bg-slate-50/50 hover:border-primary/30 transition-all"
+                        >
+                          + {phrase.split(',')[0]}...
+                        </button>
+                      ))}
+                   </div>
                    <ControlledInput 
                      value={(form.exame_fisico as any)[field.key]} 
                      onValueChange={v => setForm({...form, exame_fisico: {...form.exame_fisico, [field.key]: v}})} 
-                     placeholder={field.placeholder}
+                     placeholder="Clique acima ou digite..."
                      uppercase
                    />
                 </div>
@@ -618,52 +724,89 @@ function CadastroManualPage() {
         {/* CAMPOS EXTRAS (UTI / PEDIATRIA) */}
         {tipoEvolucao === 'uti' && (
           <Section title="CAMPOS UTI" icon={<Wind className="h-5 w-5" />}>
-             <div className="space-y-8">
-                <div className="flex items-center justify-between bg-secondary/30 p-4 rounded-xl border border-border">
-                   <div className="flex items-center gap-3">
-                      <Wind className="h-5 w-5 text-primary" />
-                      <span className="text-xs font-bold uppercase tracking-widest">VENTILAÇÃO MECÂNICA</span>
+             <div className="space-y-10">
+                <div className="flex items-center justify-between bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                   <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                        <Wind className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 block mb-0.5">VENTILAÇÃO MECÂNICA</span>
+                        <p className="text-[9px] font-bold text-slate-400">Marque se o paciente está entubado ou em VNI</p>
+                      </div>
                    </div>
-                   <div className="flex bg-white rounded-lg p-1 border border-border">
-                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: false}})} className={`px-4 py-1.5 rounded-md text-[10px] font-bold transition-all ${!form.uti.vm ? "bg-primary text-white" : "text-muted-foreground"}`}>NÃO</button>
-                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: true}})} className={`px-4 py-1.5 rounded-md text-[10px] font-bold transition-all ${form.uti.vm ? "bg-primary text-white" : "text-muted-foreground"}`}>SIM</button>
+                   <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm">
+                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: false}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${!form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}>NÃO</button>
+                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: true}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}>SIM</button>
                    </div>
                 </div>
 
                 {form.uti.vm && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-2">
-                     {['modo', 'fio2', 'peep', 'volume', 'fr'].map(v => (
-                       <div key={v} className="space-y-1">
-                          <label className="text-[9px] font-bold text-muted-foreground uppercase">{v.toUpperCase()}</label>
-                          <ControlledInput 
-                            value={(form.uti as any)[v]} 
-                            onValueChange={val => setForm({...form, uti: {...form.uti, [v]: val}})} 
-                            uppercase
-                          />
-                       </div>
-                     ))}
+                  <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex flex-wrap gap-2">
+                       {PREDEFINED_VENT.map(m => (
+                         <button key={m} onClick={() => setForm({...form, uti: {...form.uti, modo: m}})} className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${form.uti.modo === m ? "bg-primary text-white border-primary" : "bg-white text-slate-500 border-slate-200 hover:border-primary/30"}`}>
+                           {m}
+                         </button>
+                       ))}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                       {[
+                         { k: 'fio2', l: 'FiO2 (%)' },
+                         { k: 'peep', l: 'PEEP' },
+                         { k: 'volume', l: 'VOL/PRES' },
+                         { k: 'fr', l: 'FR' }
+                       ].map(v => (
+                         <div key={v.k} className="space-y-1.5">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{v.l}</label>
+                            <ControlledInput 
+                              value={(form.uti as any)[v.k]} 
+                              onValueChange={val => setForm({...form, uti: {...form.uti, [v.k]: val}})} 
+                              uppercase
+                            />
+                         </div>
+                       ))}
+                    </div>
                   </div>
                 )}
 
-                <div className="grid md:grid-cols-2 gap-8">
-                   <div className="space-y-3">
-                      <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">DROGAS VASOATIVAS</label>
-                      {form.uti.dva.map(dva => (
-                        <div key={dva.id} className="flex gap-2">
-                           <ControlledInput 
-                            value={dva.text} 
-                            onValueChange={val => setForm({...form, uti: {...form.uti, dva: form.uti.dva.map(item => item.id === dva.id ? {...item, text: val} : item)}})} 
-                            placeholder="EX: NORADRENALINA 0.1 MCG/KG/MIN" 
-                            uppercase
-                           />
-                           <button onClick={() => setForm({...form, uti: {...form.uti, dva: form.uti.dva.filter(item => item.id !== dva.id)}})} className="p-4 rounded-xl bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      ))}
-                      <button onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Date.now().toString(), text: ""}]}})} className="w-full py-4 border-2 border-dashed border-border rounded-xl text-[10px] font-bold text-muted-foreground">+ ADICIONAR DVA</button>
-                   </div>
+                <div className="grid md:grid-cols-2 gap-10 border-t border-slate-100 pt-10">
                    <div className="space-y-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">DROGAS VASOATIVAS</label>
+                        <div className="h-px flex-1 bg-slate-100 mx-4" />
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                         {PREDEFINED_DVA.map(d => (
+                           <button 
+                            key={d} 
+                            onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Math.random().toString(), text: d + " "}]}})}
+                            className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-400 hover:text-primary hover:border-primary/30"
+                           >
+                            + {d}
+                           </button>
+                         ))}
+                      </div>
+                      <div className="space-y-3">
+                        {form.uti.dva.map(dva => (
+                          <div key={dva.id} className="flex gap-2 group">
+                             <ControlledInput 
+                              value={dva.text} 
+                              onValueChange={val => setForm({...form, uti: {...form.uti, dva: form.uti.dva.map(item => item.id === dva.id ? {...item, text: val} : item)}})} 
+                              placeholder="DOSE/VELOCIDADE..." 
+                              uppercase
+                             />
+                             <button onClick={() => setForm({...form, uti: {...form.uti, dva: form.uti.dva.filter(item => item.id !== dva.id)}})} className="p-4 rounded-xl bg-slate-50 text-slate-400 hover:text-destructive transition-colors">
+                                <Trash2 className="h-4 w-4" />
+                             </button>
+                          </div>
+                        ))}
+                        <button onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Date.now().toString(), text: ""}]}})} className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 hover:text-primary hover:border-primary/40 transition-all">+ ADICIONAR DVA MANUAL</button>
+                      </div>
+                   </div>
+                   <div className="space-y-8">
                       <div className="space-y-2">
-                         <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">BALANÇO HÍDRICO 24H (ML)</label>
+                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">BALANÇO HÍDRICO 24H (ML)</label>
                          <ControlledInput 
                            type="number" 
                            value={form.uti.bh} 
@@ -672,7 +815,7 @@ function CadastroManualPage() {
                          />
                       </div>
                       <div className="space-y-2">
-                         <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">SEDAÇÃO</label>
+                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">SEDAÇÃO / ANALGESIA</label>
                          <ControlledInput 
                            value={form.uti.sedacao} 
                            onValueChange={v => setForm({...form, uti: {...form.uti, sedacao: v}})} 
@@ -735,14 +878,30 @@ function CadastroManualPage() {
         )}
 
         {/* CONDUTAS */}
-        <Section title="CONDUTAS" icon={<Save className="h-5 w-5" />}>
+        <Section title="PLANO TERAPÊUTICO / CONDUTAS" icon={<Save className="h-5 w-5" />}>
+           <div className="flex justify-between items-center mb-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DIGITE E DÊ ENTER PARA NUMERAR</p>
+              <button 
+                onClick={handleAISuggestions}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-ai text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all"
+              >
+                <Activity className="h-3.5 w-3.5" /> IA SUGERIR CONDUTAS
+              </button>
+           </div>
            <ControlledTextarea 
              value={form.condutas} 
              onValueChange={v => setForm({...form, condutas: v})} 
-             rows={4} 
-             placeholder="Digite o plano terapêutico..." 
+             onKeyDown={handleConductKeyDown}
+             rows={8} 
+             placeholder="1. Vigiar balanço..." 
              uppercase
            />
+           <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-3">
+              <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+                Dica: Pressione ENTER para criar automaticamente o próximo item da lista.
+              </p>
+           </div>
         </Section>
 
         {/* PENDÊNCIAS */}
