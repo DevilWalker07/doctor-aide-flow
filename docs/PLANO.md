@@ -19,7 +19,7 @@ Recomendo atacar nessa ordem:
 | # | Fase | Status | Por quê | Esforço |
 |---|---|---|---|---|
 | 1 | Endpoint `/api/ai/refinar-evolucao` no Python | ✅ **ENTREGUE** | Destrava feature do PR2 | 30 min |
-| 2 | Antibióticos rotineiros pré-cadastrados | ⏳ aguardando lista validada (D2) | Você pediu, alto valor clínico | 3 h |
+| 2 | Antibióticos rotineiros pré-cadastrados | ✅ **ENTREGUE** (9/9 E2E) | Você pediu, alto valor clínico | 3 h |
 | 3 | Export DOCX/PDF/TXT da evolução | ✅ **ENTREGUE** (11/11 E2E) | Fecha o ciclo "extrair → editar → entregar" | 4 h |
 | 4 | Página do paciente como centro de operações | ⏳ aguardando alinhamento | Você disse que está incompleta | 1–2 dias |
 | 5 | Prescrição assistida | ⏳ depende de F2 | Completa o tríade clínico | 1–2 dias |
