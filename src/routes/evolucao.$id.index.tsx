@@ -15,6 +15,13 @@ import { exportEvolucao, type ExportFormat } from "@/lib/exportEvolucao";
 import { useSpecialistConsult } from "@/components/specialists/useSpecialistConsult";
 import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
 import SpecialistCard from "@/components/specialists/SpecialistCard";
+import {
+  EVOLUTION_TEMPLATES,
+  EVOLUTION_TEMPLATES_BY_CONTEXT,
+  defaultTemplateForUnit,
+  findTemplate,
+  type EvolutionTemplate,
+} from "@/lib/evolutionTemplates";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -210,6 +217,14 @@ function EvolucaoPage() {
   const [isRefining, setIsRefining] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
   const [showVersions, setShowVersions] = useState(false);
+  const [templateId, setTemplateId] = useState<string>(defaultTemplateForUnit("enfermaria_clinica").id);
+  const [rawNotes, setRawNotes] = useState<string>("");
+  const [showRawNotes, setShowRawNotes] = useState<boolean>(false);
+
+  const activeTemplate: EvolutionTemplate = useMemo(
+    () => findTemplate(templateId) || defaultTemplateForUnit(tipoUnidade),
+    [templateId, tipoUnidade]
+  );
 
   const pushVersion = (text: string, source: Version["source"]) => {
     if (!text.trim()) return;
@@ -223,6 +238,15 @@ function EvolucaoPage() {
     setTipoUnidadeState(tipo);
     storage.setEvolTipo(id, tipo);
     storage.setTipo(tipo);
+    // Quando troca a unidade, escolhe o template default desse contexto.
+    const def = defaultTemplateForUnit(tipo);
+    setTemplateId(def.id);
+    try { localStorage.setItem(`da_evol_template_${id}`, def.id); } catch { /* ignore */ }
+  };
+
+  const updateTemplate = (newId: string) => {
+    setTemplateId(newId);
+    try { localStorage.setItem(`da_evol_template_${id}`, newId); } catch { /* ignore */ }
   };
 
   useEffect(() => {
@@ -311,6 +335,18 @@ function EvolucaoPage() {
     const savedTipo = tipoPaciente || storage.getTipo();
     if (savedTipo) setTipoUnidadeState(savedTipo);
 
+    // Restaura template escolhido pra este paciente; senão, default do tipo.
+    try {
+      const savedTemplate = localStorage.getItem(`da_evol_template_${id}`);
+      if (savedTemplate && findTemplate(savedTemplate)) {
+        setTemplateId(savedTemplate);
+      } else {
+        setTemplateId(defaultTemplateForUnit(savedTipo || "").id);
+      }
+    } catch {
+      /* ignore */
+    }
+
     async function loadBase() {
       if (!from || !userId) return false;
       try {
@@ -398,7 +434,10 @@ function EvolucaoPage() {
         body: JSON.stringify({
           patient: paciente,
           tipo_unidade: tipoUnidade,
-          template: TEMPLATES[tipoUnidade] || TEMPLATES.enfermaria_clinica,
+          template: activeTemplate.prompt,
+          template_id: activeTemplate.id,
+          output_style: activeTemplate.outputStyle,
+          raw_notes: rawNotes || undefined,
           data_plantao: dataPlantao,
           preferences: {
             uppercase: true,
@@ -575,18 +614,27 @@ function EvolucaoPage() {
                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">LEITO {paciente.bed} · D{dih} · {tipoUnidade.replace('_', ' ').toUpperCase()}</p>
               </div>
            </div>
-           <div className="flex items-center gap-3">
+           <div className="flex items-center gap-3 flex-wrap">
               <label className="flex items-center gap-2">
-                <span className="sr-only">Tipo de unidade</span>
+                <span className="sr-only">Modelo de evolução</span>
                 <select
-                  value={tipoUnidade}
-                  onChange={(e) => setTipoUnidade(e.target.value)}
-                  className="px-4 py-2.5 rounded-xl border border-border bg-white text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-navy/20 cursor-pointer"
-                  aria-label="Tipo de unidade para o modelo de evolução"
+                  value={templateId}
+                  onChange={(e) => updateTemplate(e.target.value)}
+                  className="px-4 py-2.5 rounded-xl border border-border bg-white text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-navy/20 cursor-pointer max-w-[280px]"
+                  aria-label="Modelo de evolução"
+                  title={activeTemplate.description}
                 >
-                  {TIPOS_UNIDADE.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
+                  {(["uti", "clinica", "pediatria", "ubs", "upa"] as const).map((ctx) => {
+                    const list = EVOLUTION_TEMPLATES_BY_CONTEXT[ctx];
+                    if (list.length === 0) return null;
+                    return (
+                      <optgroup key={ctx} label={list[0].contextLabel}>
+                        {list.map((t) => (
+                          <option key={t.id} value={t.id}>{t.label.replace(/^[^—]+—\s*/, "")}</option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
                 </select>
               </label>
               <button
@@ -741,6 +789,31 @@ function EvolucaoPage() {
                         {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                         {isGenerating ? "GERANDO..." : "GERAR EVOLUÇÃO"}
                      </button>
+                  </div>
+
+                  {/* Anotações brutas (opcional) — quando ditadas ou rascunhadas */}
+                  <div className="mb-4 border-b border-border pb-4">
+                     <button
+                        type="button"
+                        onClick={() => setShowRawNotes((v) => !v)}
+                        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-2 mb-2"
+                        aria-expanded={showRawNotes}
+                     >
+                        <Wand2 className="h-3 w-3" />
+                        {showRawNotes ? "OCULTAR ANOTAÇÕES BRUTAS" : "USAR ANOTAÇÕES BRUTAS COMO ENTRADA"}
+                     </button>
+                     {showRawNotes && (
+                        <textarea
+                           value={rawNotes}
+                           onChange={(e) => setRawNotes(e.target.value)}
+                           placeholder="Cole ou dite suas anotações brutas aqui. A IA vai reestruturar conforme o modelo selecionado."
+                           className="w-full min-h-[120px] bg-secondary/20 border border-border rounded-2xl p-4 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-ai/30"
+                           aria-label="Anotações brutas para reestruturação"
+                        />
+                     )}
+                     <p className="text-[9px] font-bold text-muted-foreground italic mt-1">
+                        Modelo: <span className="text-foreground">{activeTemplate.label}</span> · {activeTemplate.description}
+                     </p>
                   </div>
 
                   <div className="flex-1 relative">

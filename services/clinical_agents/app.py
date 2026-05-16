@@ -857,29 +857,60 @@ class EvolutionRequest(BaseModel):
     template: str
     data_plantao: str
     preferences: Optional[Dict[str, Any]] = None
+    template_id: Optional[str] = None
+    output_style: Optional[str] = None  # "sections" | "continuous" | "soap" | "list"
+    raw_notes: Optional[str] = None     # anotações brutas do médico (opcional)
 
 @app.post("/api/ai/gerar-evolucao")
 async def gerar_evolucao(req: EvolutionRequest):
     if not openai_key:
         raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
-    
+
+    raw_block = (req.raw_notes or "").strip()
+    has_raw = bool(raw_block)
+
     try:
-        # Prompt build
-        prompt = f"""
-Você é um médico assistente sênior. Sua tarefa é gerar uma EVOLUÇÃO MÉDICA impecável baseada nos dados do paciente e no template fornecido.
+        if has_raw:
+            prompt = f"""Você é um médico assistente sênior reestruturando anotações brutas em uma evolução médica.
+
+DADOS DO PACIENTE (contexto adicional):
+{json.dumps(req.patient, indent=2, ensure_ascii=False)}
+
+DATA DO PLANTÃO: {req.data_plantao}
+TIPO DE UNIDADE: {req.tipo_unidade}
+MODELO ESCOLHIDO: {req.template_id or "default"}
+
+INSTRUÇÕES DE FORMATAÇÃO (template):
+{req.template}
+
+ANOTAÇÕES BRUTAS DO MÉDICO (FONTE PRIMÁRIA — priorize estas informações):
+\"\"\"
+{raw_block}
+\"\"\"
+
+REGRAS:
+1. Use as ANOTAÇÕES BRUTAS como fonte PRIMÁRIA de dados clínicos.
+2. Use os dados do paciente apenas para complementar (identificação, ATBs já cadastrados, etc).
+3. Siga EXATAMENTE o formato do template.
+4. Não invente dados. Se algo não foi mencionado, omita silenciosamente.
+5. Preserve valores numéricos exatos (lab, parâmetros VM, doses).
+"""
+        else:
+            prompt = f"""Você é um médico assistente sênior. Sua tarefa é gerar uma EVOLUÇÃO MÉDICA impecável baseada nos dados do paciente e no template fornecido.
 
 DADOS DO PACIENTE:
 {json.dumps(req.patient, indent=2, ensure_ascii=False)}
 
 DATA DO PLANTÃO: {req.data_plantao}
 TIPO DE UNIDADE: {req.tipo_unidade}
+MODELO ESCOLHIDO: {req.template_id or "default"}
 
 TEMPLATE OBRIGATÓRIO:
 {req.template}
 
 REGRAS:
 1. Siga EXATAMENTE o template. Substitua os campos entre [colchetes] pelos dados reais.
-2. Se não houver dado para um campo, use "SEM ALTERAÇÕES", "NADA A DECLARAR" ou remova o campo conforme o bom senso médico.
+2. Se não houver dado para um campo, omita silenciosamente — NÃO invente.
 3. Use terminologia médica técnica e precisa.
 4. Mantenha o texto em CAIXA ALTA se solicitado nas preferências.
 5. Seja conciso e focado em dados relevantes.
