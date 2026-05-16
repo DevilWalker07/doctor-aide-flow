@@ -265,6 +265,13 @@ ATENÇÃO ESPECIAL — campos onde modelos costumam falhar:
 - PRESCRIÇÃO ATUAL DA INTERNAÇÃO → `prescricao_internacao`.
 - ANTIBIÓTICOS: extraia COM data_inicio, dose, via, frequência. Se não há data,
   use null e marque em campos_incertos.
+  NORMALIZE o nome para esta lista canônica quando reconhecer o ATB:
+  CEFTRIAXONA, PIPERACILINA + TAZOBACTAM, VANCOMICINA, MEROPENEM,
+  AMOXICILINA + CLAVULANATO, AZITROMICINA, CLINDAMICINA, METRONIDAZOL,
+  CIPROFLOXACINO, LEVOFLOXACINO, CEFEPIME, POLIMIXINA B, OXACILINA, GENTAMICINA.
+  Apelidos comuns (PIPTAZO, PIP-TAZO, TAZOCIN, ROCEFIN, VANCO, MERO, CLAVULIN,
+  CIPRO, LEVO, CLINDA, METRO, FLAGYL, GENTA) devem ser convertidos para a
+  forma canônica acima.
 - EXAMES DE IMAGEM (TC, RM, RX, USG, ECO) vão em `exames_imagem`, NÃO em laboratorios.
 - LABORATÓRIOS: extraia em texto compacto inline (ex: "HB 11 | LEUCO 9.500 | PCR 35").
 - EXAME FÍSICO: preencha cada sistema separadamente (geral/acv/ar/abdome/neuro/extremidades/pele).

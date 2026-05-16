@@ -11,6 +11,7 @@ import { differenceInDays, parseISO, isValid } from "date-fns";
 import { createPatient, mergePatientData, type Patient } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
+import { ANTIBIOTICOS_ROTINEIROS, searchAntibioticos, type AntibioticoRotineiro } from "@/lib/antibioticos-rotineiros";
 
 export const Route = createFileRoute("/revisar-extracao")({
   component: RevisarExtracao,
@@ -126,33 +127,109 @@ const ProblemList = memo(({ items, onChange }: any) => (
   </div>
 ));
 
-const AntibioticList = memo(({ items, onChange }: any) => (
-  <div className="space-y-8">
-    {items.map((a: any, i: number) => (
-      <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2">
-             <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
-             <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
-          </div>
-          <button onClick={() => onChange(items.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
-        </div>
-        <div className="space-y-6">
-          <EditableInput label="NOME DO ANTIBIÓTICO" value={a.nome} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, nome: v.toUpperCase() }; onChange(list); }} />
-          <div className="grid grid-cols-2 gap-4">
-             <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dose: v.toUpperCase() }; onChange(list); }} />
-             <EditableInput label="VIA" value={a.via} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, via: v.toUpperCase() }; onChange(list); }} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-             <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, frequencia: v.toUpperCase() }; onChange(list); }} />
-             <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dataInicio: v }; onChange(list); }} />
-          </div>
+const AntibioticList = memo(({ items, onChange }: any) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const addRotineiro = (atb: AntibioticoRotineiro) => {
+    onChange([...items, {
+      id: Math.random().toString(36).substr(2, 9),
+      nome: atb.nome,
+      dose: atb.dose,
+      via: atb.via,
+      frequencia: atb.frequencia,
+      dataInicio: today,
+    }]);
+  };
+  return (
+    <div className="space-y-8">
+      <div className="bg-ai/5 border border-ai/20 rounded-2xl p-5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-ai mb-3">
+          ADICIONAR ROTINEIRO (1 CLIQUE)
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {ANTIBIOTICOS_ROTINEIROS.map((atb) => (
+            <button
+              key={atb.nome}
+              type="button"
+              onClick={() => addRotineiro(atb)}
+              className="px-3 py-1.5 rounded-lg bg-white border border-ai/30 text-ai text-[10px] font-black uppercase tracking-wider hover:bg-ai hover:text-white transition-all"
+              title={`${atb.dose} ${atb.via} ${atb.frequencia}`}
+            >
+              + {atb.nome.replace("PIPERACILINA + TAZOBACTAM", "PIP-TAZO").replace("AMOXICILINA + CLAVULANATO", "AMOXI-CLAV")}
+            </button>
+          ))}
         </div>
       </div>
-    ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: new Date().toISOString().slice(0, 10) }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO</button>
-  </div>
-));
+      {items.map((a: any, i: number) => (
+        <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-2">
+               <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
+               <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
+            </div>
+            <button onClick={() => onChange(items.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+          </div>
+          <div className="space-y-6">
+            <AntibioticNameAutocomplete
+              value={a.nome}
+              onSelect={(atb) => {
+                const list = [...items];
+                list[i] = { ...a, nome: atb.nome, dose: a.dose || atb.dose, via: a.via || atb.via, frequencia: a.frequencia || atb.frequencia };
+                onChange(list);
+              }}
+              onTextChange={(v) => { const list = [...items]; list[i] = { ...a, nome: v.toUpperCase() }; onChange(list); }}
+            />
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dose: v.toUpperCase() }; onChange(list); }} />
+               <EditableInput label="VIA" value={a.via} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, via: v.toUpperCase() }; onChange(list); }} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, frequencia: v.toUpperCase() }; onChange(list); }} />
+               <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dataInicio: v }; onChange(list); }} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: today }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ATB MANUAL</button>
+    </div>
+  );
+});
+
+const AntibioticNameAutocomplete = ({ value, onSelect, onTextChange }: {
+  value: string;
+  onSelect: (atb: AntibioticoRotineiro) => void;
+  onTextChange: (v: string) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const suggestions = useMemo(() => value ? searchAntibioticos(value, 6) : [], [value]);
+  return (
+    <div className="relative">
+      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">NOME DO ANTIBIÓTICO</label>
+      <input
+        value={value}
+        onChange={(e) => { onTextChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        className="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary/40"
+        placeholder="Digite ou escolha..."
+      />
+      {open && suggestions.length > 0 && value && !suggestions.some(s => s.nome === value.toUpperCase()) && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
+          {suggestions.map((atb) => (
+            <button
+              key={atb.nome}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelect(atb); setOpen(false); }}
+              className="w-full text-left px-5 py-3 hover:bg-secondary border-b border-slate-100 last:border-b-0"
+            >
+              <p className="text-xs font-black uppercase tracking-wider">{atb.nome}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">{atb.dose} · {atb.via} · {atb.frequencia}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MedicationList = memo(({ items, onChange }: any) => (
   <div className="space-y-4">
