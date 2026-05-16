@@ -274,6 +274,8 @@ REGRAS CLÍNICAS:
 
         # ETAPA 2 — PERFORMANCE: Use gpt-4o-mini for speed as requested
         model_name = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        if "4.1" in model_name:
+            model_name = "gpt-4o-mini"
         
         response = None
         for tentativa in range(3):
