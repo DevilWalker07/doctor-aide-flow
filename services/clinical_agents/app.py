@@ -419,7 +419,7 @@ async def health_check():
     return {
         "status": "ok", 
         "service": "clinical-agents",
-        "version": "async-extract-v2"
+        "version": "async-extract-v3-e2e"
     }
 
 if __name__ == "__main__":
