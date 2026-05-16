@@ -338,11 +338,13 @@ REGRAS FINAIS:
         # gpt-4o-mini perde nuances clínicas e omite campos em documentos longos.
         # Se OPENAI_MODEL apontar para um modelo inválido (ex: "gpt-4.1-mini"),
         # cai para gpt-4o (não para gpt-4o-mini).
+        # Default em gpt-4o-mini (mais barato). Para ativar gpt-4o full,
+        # basta setar OPENAI_MODEL=gpt-4o nas env vars do Railway.
         VALID_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4-turbo", "gpt-4o-mini"}
-        model_name = model_override or os.environ.get("OPENAI_MODEL", "gpt-4o")
+        model_name = model_override or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
         if model_name not in VALID_MODELS:
-            print(f"[extracao] modelo='{model_name}' inválido, usando gpt-4o.")
-            model_name = "gpt-4o"
+            print(f"[extracao] modelo='{model_name}' inválido, usando gpt-4o-mini.")
+            model_name = "gpt-4o-mini"
 
         response = None
         for tentativa in range(3):
@@ -490,10 +492,13 @@ RETORNE APENAS UM JSON com este schema:
 }}
 """
 
-    VALID_MODELS_FULL = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06"}
-    analysis_model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o")
-    if analysis_model not in VALID_MODELS_FULL:
-        analysis_model = "gpt-4o"
+    # Default em gpt-4o-mini para evitar custo extra enquanto OPENAI_ANALYSIS_MODEL
+    # não estiver configurado. Para usar gpt-4o full na análise consolidada,
+    # setar OPENAI_ANALYSIS_MODEL=gpt-4o no Railway.
+    VALID_ANALYSIS_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4o-mini"}
+    analysis_model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o-mini")
+    if analysis_model not in VALID_ANALYSIS_MODELS:
+        analysis_model = "gpt-4o-mini"
 
     response = await client.chat.completions.create(
         model=analysis_model,
