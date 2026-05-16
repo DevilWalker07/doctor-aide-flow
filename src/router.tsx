@@ -5,7 +5,7 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <main className="flex min-h-screen items-center justify-center bg-background px-4" role="main">
       <div className="max-w-md text-center">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
           <svg
@@ -24,7 +24,7 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
           </svg>
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-[#475569] font-medium">
           An unexpected error occurred. Please try again.
         </p>
         {import.meta.env.DEV && error.message && (
@@ -50,7 +50,7 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
           </a>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
