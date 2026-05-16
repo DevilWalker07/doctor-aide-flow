@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile.railway"
   },
   "deploy": {
+    "startCommand": "python app.py",
     "restartPolicyType": "ON_FAILURE",
     "healthCheckPath": "/health",
     "healthCheckTimeout": 100
