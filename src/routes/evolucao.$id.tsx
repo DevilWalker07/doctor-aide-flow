@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  ChevronLeft, Sparkles, Copy, Save, FileText, 
-  Loader2, Pill, Activity, AlertTriangle, 
-  Calendar, ArrowRight, Check
+import {
+  ChevronLeft, Sparkles, Copy, Save, FileText,
+  Loader2, Pill, Activity, AlertTriangle,
+  Calendar, ArrowRight, Check, History, Wand2, X, RotateCcw
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
@@ -13,10 +13,22 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
 
+type EvolucaoSearch = { from?: string };
+
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
   head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
+  validateSearch: (search: Record<string, unknown>): EvolucaoSearch => ({
+    from: typeof search.from === "string" ? search.from : undefined,
+  }),
 });
+
+type Version = {
+  id: string;
+  text: string;
+  createdAt: string;
+  source: "gerar" | "refinar" | "base";
+};
 
 const TIPOS_UNIDADE: { value: string; label: string }[] = [
   { value: "enfermaria_clinica", label: "ENFERMARIA CLÍNICA" },
@@ -184,6 +196,7 @@ QUEIXA PRINCIPAL: [queixa]
 
 function EvolucaoPage() {
   const { id } = useParams({ from: "/evolucao/$id" });
+  const { from } = useSearch({ from: "/evolucao/$id" });
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
@@ -194,6 +207,18 @@ function EvolucaoPage() {
   const [overwriteChoice, setOverwriteChoice] = useState<null | "ask">(null);
   const [rascunhoInfo, setRascunhoInfo] = useState<null | { text: string; savedAt: string }>(null);
   const [didInitDraft, setDidInitDraft] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+
+  const pushVersion = (text: string, source: Version["source"]) => {
+    if (!text.trim()) return;
+    setVersions((prev) => [
+      { id: `v_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, text, createdAt: new Date().toISOString(), source },
+      ...prev,
+    ].slice(0, 20));
+  };
 
   const setTipoUnidade = (tipo: string) => {
     setTipoUnidadeState(tipo);
@@ -253,13 +278,49 @@ function EvolucaoPage() {
     const savedTipo = tipoPaciente || storage.getTipo();
     if (savedTipo) setTipoUnidadeState(savedTipo);
 
-    const rascunho = storage.getEvolRascunho(id);
-    if (rascunho && rascunho.text?.trim()) {
-      setRascunhoInfo(rascunho);
-    } else {
-      setDidInitDraft(true);
+    async function loadBase() {
+      if (!from || !userId) return false;
+      try {
+        const { getEvolutionsByPatient } = await import("@/lib/db");
+        const evols = await getEvolutionsByPatient(id, userId!);
+        const base = evols.find((e: any) => e.id === from);
+        if (base?.content) {
+          setEvolutionText(base.content);
+          pushVersion(base.content, "base");
+          toast.success("Evolução anterior carregada como base.");
+          return true;
+        }
+      } catch {
+        /* tenta fallback local */
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem("da_evolucoes") || "[]");
+        const base = local.find((e: any) => e.id === from || `${e.patient_id}_${e.created_at}` === from);
+        if (base?.content) {
+          setEvolutionText(base.content);
+          pushVersion(base.content, "base");
+          toast.success("Evolução anterior carregada como base.");
+          return true;
+        }
+      } catch {
+        /* ignora */
+      }
+      return false;
     }
-  }, [id, userId]);
+
+    loadBase().then((loadedFromBase) => {
+      if (loadedFromBase) {
+        setDidInitDraft(true);
+        return;
+      }
+      const rascunho = storage.getEvolRascunho(id);
+      if (rascunho && rascunho.text?.trim()) {
+        setRascunhoInfo(rascunho);
+      } else {
+        setDidInitDraft(true);
+      }
+    });
+  }, [id, userId, from]);
 
   useEffect(() => {
     if (!didInitDraft) return;
@@ -318,9 +379,11 @@ function EvolucaoPage() {
       if (!response.ok) throw new Error("Falha na resposta do servidor");
       const result = await response.json();
       const generated = result.evolution_text || result.evolutionText || result.text || "";
-      setEvolutionText(prev =>
-        mode === "append" && prev.trim() ? `${prev}\n\n${generated}` : generated
-      );
+      setEvolutionText(prev => {
+        const next = mode === "append" && prev.trim() ? `${prev}\n\n${generated}` : generated;
+        pushVersion(next, "gerar");
+        return next;
+      });
       toast.success("Evolução gerada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao gerar evolução", error);
@@ -337,6 +400,45 @@ function EvolucaoPage() {
       return;
     }
     runGenerate("replace");
+  };
+
+  const handleRefine = async () => {
+    const instruction = refineInstruction.trim();
+    if (!instruction || !evolutionText.trim()) {
+      toast.error("Escreva uma instrução e tenha texto para refinar.");
+      return;
+    }
+    setIsRefining(true);
+    try {
+      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/api/ai/refinar-evolucao`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_text: evolutionText,
+          instruction,
+          tipo_unidade: tipoUnidade,
+          preferences: { uppercase: true },
+        }),
+      });
+      if (!response.ok) throw new Error(`Servidor retornou ${response.status}`);
+      const result = await response.json();
+      const refined = result.evolution_text || result.evolutionText || result.text || "";
+      if (!refined) throw new Error("Resposta vazia do servidor");
+      setEvolutionText(refined);
+      pushVersion(refined, "refinar");
+      setRefineInstruction("");
+      toast.success("Texto ajustado conforme instrução.");
+    } catch (err: any) {
+      console.error("Erro ao refinar evolução", err);
+      toast.error(`Erro ao refinar: ${err.message}`);
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const restoreVersion = (v: Version) => {
+    setEvolutionText(v.text);
+    toast.success("Versão restaurada.");
   };
 
   const handleCopy = () => {
@@ -409,6 +511,14 @@ function EvolucaoPage() {
                   ))}
                 </select>
               </label>
+              <button
+                onClick={() => setShowVersions(true)}
+                disabled={versions.length === 0}
+                aria-label="Ver versões geradas"
+                className="px-4 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <History className="h-3 w-3" /> VERSÕES ({versions.length})
+              </button>
               <button onClick={handleSave} disabled={!evolutionText || isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
                  {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} SALVAR
               </button>
@@ -540,6 +650,32 @@ function EvolucaoPage() {
                         className="w-full h-full min-h-[500px] bg-secondary/20 border border-border rounded-3xl p-8 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-navy/20 custom-scrollbar uppercase"
                      />
                   </div>
+
+                  <div className="mt-6 border-t border-border pt-6">
+                     <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                        Refinar com instrução
+                     </label>
+                     <div className="flex gap-3">
+                        <input
+                           type="text"
+                           value={refineInstruction}
+                           onChange={(e) => setRefineInstruction(e.target.value)}
+                           onKeyDown={(e) => { if (e.key === "Enter" && !isRefining) handleRefine(); }}
+                           disabled={isRefining || !evolutionText.trim()}
+                           placeholder="ex: encurte, adicione PCR caiu de 12 para 5, corrija o exame físico..."
+                           aria-label="Instrução para refinar a evolução"
+                           className="flex-1 px-4 py-3 rounded-xl border border-border bg-white text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-ai/30 disabled:opacity-50"
+                        />
+                        <button
+                           onClick={handleRefine}
+                           disabled={isRefining || !refineInstruction.trim() || !evolutionText.trim()}
+                           className="px-6 py-3 rounded-xl bg-ai/10 text-ai border border-ai/30 text-[10px] font-black uppercase tracking-widest hover:bg-ai hover:text-white transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                           {isRefining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                           {isRefining ? "AJUSTANDO..." : "AJUSTAR COM IA"}
+                        </button>
+                     </div>
+                  </div>
                </div>
 
                {tipoUnidade === 'uti' && (
@@ -554,6 +690,51 @@ function EvolucaoPage() {
 
          </div>
       </main>
+
+      {showVersions && (
+        <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm flex justify-end" onClick={() => setShowVersions(false)}>
+          <aside
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white border-l border-border shadow-2xl flex flex-col h-full"
+            role="dialog"
+            aria-label="Versões geradas"
+          >
+            <header className="px-6 py-5 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-widest">Versões</h2>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Snapshots desta sessão</p>
+              </div>
+              <button onClick={() => setShowVersions(false)} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary" aria-label="Fechar">
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
+              {versions.length === 0 ? (
+                <p className="text-xs italic text-muted-foreground text-center py-12">Nenhuma versão ainda. Gere ou refine uma evolução.</p>
+              ) : versions.map((v) => (
+                <div key={v.id} className="border border-border rounded-2xl p-4 bg-secondary/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                      {v.source === "gerar" && "GERADA"}
+                      {v.source === "refinar" && "REFINADA"}
+                      {v.source === "base" && "DE ANTERIOR"}
+                      {" · "}
+                      {format(parseISO(v.createdAt), "HH:mm:ss")}
+                    </span>
+                    <button
+                      onClick={() => { restoreVersion(v); setShowVersions(false); }}
+                      className="px-3 py-1.5 rounded-lg bg-navy text-white text-[9px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all flex items-center gap-1"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Restaurar
+                    </button>
+                  </div>
+                  <pre className="text-[10px] font-mono leading-relaxed text-foreground line-clamp-6 whitespace-pre-wrap">{v.text}</pre>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      )}
 
       {overwriteChoice === "ask" && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">

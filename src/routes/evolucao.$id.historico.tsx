@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, FileText, Copy, X, Loader2 } from "lucide-react";
+import { ChevronLeft, FileText, Copy, X, Loader2, ArrowRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { getEvolutionsByPatient, getPatientById } from "@/lib/db";
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/evolucao/$id/historico")({
 
 function HistoricoEvolucoesPage() {
   const { id } = useParams({ from: "/evolucao/$id/historico" });
+  const nav = useNavigate();
   const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
   const [evolucoes, setEvolucoes] = useState<any[]>([]);
@@ -38,7 +39,9 @@ function HistoricoEvolucoesPage() {
           setPaciente({ name: pExisting.nome || pExisting.name, bed: pExisting.leito || pExisting.bed });
         }
         
-        const existingEvol = JSON.parse(localStorage.getItem("da_evolucoes") || "[]").filter((e: any) => e.patient_id === id);
+        const existingEvol = JSON.parse(localStorage.getItem("da_evolucoes") || "[]")
+          .filter((e: any) => e.patient_id === id)
+          .map((e: any) => ({ ...e, id: e.id || `${e.patient_id}_${e.created_at}` }));
         setEvolucoes(existingEvol.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       } finally {
         setLoading(false);
@@ -96,15 +99,23 @@ function HistoricoEvolucoesPage() {
                   {ev.content}
                 </p>
                 <div className="flex gap-3">
-                  <button 
-                    onClick={() => setModalEvolucao(ev)} 
+                  <button
+                    onClick={() => setModalEvolucao(ev)}
                     className="flex-1 py-3 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all"
                   >
                     VER COMPLETA
                   </button>
-                  <button 
-                    onClick={() => handleCopy(ev.content)} 
-                    className="py-3 px-6 rounded-xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all flex items-center justify-center gap-2"
+                  <button
+                    onClick={() => nav({ to: "/evolucao/$id", params: { id }, search: { from: ev.id } })}
+                    className="py-3 px-4 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                    aria-label="Usar esta evolução como base"
+                  >
+                    <ArrowRight className="h-4 w-4" /> USAR COMO BASE
+                  </button>
+                  <button
+                    onClick={() => handleCopy(ev.content)}
+                    className="py-3 px-4 rounded-xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all flex items-center justify-center gap-2"
+                    aria-label="Copiar texto"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
