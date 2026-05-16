@@ -60,6 +60,74 @@ export const storage = {
   },
   setLocalPacientes: (data: any[]) => localStorage.setItem('da_pacientes', JSON.stringify(data)),
 
+  // Merge Local
+  mergeLocalPatient: (id: string, newData: any) => {
+    const raw = localStorage.getItem('da_pacientes');
+    const patients = raw ? JSON.parse(raw) : [];
+    const index = patients.findIndex((p: any) => p.id === id);
+    if (index === -1) return null;
+
+    const existing = patients[index];
+    const merged = { ...existing };
+
+    if (newData.name) merged.name = newData.name;
+    if (newData.age) merged.age = newData.age;
+    if (newData.sex) merged.sex = newData.sex;
+    if (newData.bed) merged.bed = newData.bed;
+    if (newData.sector) merged.sector = newData.sector;
+    if (newData.admission_date) merged.admission_date = newData.admission_date;
+    if (newData.reason_for_admission) merged.reason_for_admission = newData.reason_for_admission;
+    if (newData.hda) merged.hda = newData.hda;
+
+    if (newData.problem_list?.length) {
+      const existingTexts = new Set((existing.problem_list ?? []).map((p: any) => String(p).trim().toLowerCase()));
+      const newProblems = newData.problem_list.filter((p: string) => p && !existingTexts.has(p.trim().toLowerCase()));
+      merged.problem_list = [...(existing.problem_list ?? []), ...newProblems];
+    }
+
+    if (newData.antibiotics?.length) {
+      const existingNames = new Set((existing.antibiotics ?? []).map((a: any) => a.nome?.trim().toLowerCase()));
+      const newAtbs = newData.antibiotics.filter((a: any) => a.nome && !existingNames.has(a.nome.trim().toLowerCase()));
+      merged.antibiotics = [...(existing.antibiotics ?? []), ...newAtbs];
+    }
+
+    if (newData.labs?.length) {
+      const newLabs = newData.labs.filter((l: any) => l.texto_compacto);
+      merged.labs = [...(existing.labs ?? []), ...newLabs];
+    }
+
+    if (newData.medications?.length) {
+      const existingTexts = new Set((existing.medications ?? []).map((m: any) => String(m).trim().toLowerCase()));
+      const newMeds = newData.medications.filter((m: string) => m && !existingTexts.has(m.trim().toLowerCase()));
+      merged.medications = [...(existing.medications ?? []), ...newMeds];
+    }
+
+    if (newData.conducts?.length) {
+      const existingTexts = new Set((existing.conducts ?? []).map((c: any) => String(c).trim().toLowerCase()));
+      const newConducts = newData.conducts.filter((c: string) => c && !existingTexts.has(c.trim().toLowerCase()));
+      merged.conducts = [...(existing.conducts ?? []), ...newConducts];
+    }
+
+    if (newData.pending_issues?.length) {
+      const existingTexts = new Set((existing.pending_issues ?? []).map((p: any) => String(p).trim().toLowerCase()));
+      const newPending = newData.pending_issues.filter((p: string) => p && !existingTexts.has(p.trim().toLowerCase()));
+      merged.pending_issues = [...(existing.pending_issues ?? []), ...newPending];
+    }
+
+    if (newData.physical_exam) {
+      merged.physical_exam = {
+        ...(existing.physical_exam || {}),
+        ...Object.fromEntries(
+          Object.entries(newData.physical_exam).filter(([, v]) => v != null && v !== '')
+        ),
+      };
+    }
+
+    patients[index] = merged;
+    localStorage.setItem('da_pacientes', JSON.stringify(patients));
+    return merged;
+  },
+
   // Limpeza de sessão (ao encerrar plantão ou sair da conta)
   clearSession: () => {
     localStorage.removeItem('da_shift_id');

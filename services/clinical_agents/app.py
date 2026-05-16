@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image, ImageOps
 import pillow_heif
+pillow_heif.register_heif_opener()
 import mammoth
 import pypdfium2 as pdfium
 from openai import AsyncOpenAI

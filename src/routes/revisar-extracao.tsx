@@ -294,6 +294,8 @@ function RevisarExtracao() {
       try {
         if (patient_id && !patient_id.startsWith("temp_")) {
           savedPatient = await mergePatientData(patient_id, patientPayload, userId);
+        } else if (patient_id && patient_id.startsWith("temp_")) {
+          savedPatient = storage.mergeLocalPatient(patient_id, patientPayload);
         } else {
           savedPatient = await createPatient({ ...patientPayload, shift_id: shiftId, status: 'internado', tipo_admissao: 'admissao' }, userId);
         }
