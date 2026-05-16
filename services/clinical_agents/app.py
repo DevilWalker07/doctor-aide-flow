@@ -224,25 +224,36 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
 
         update_job(job_id, "processing", "Organizando dados clínicos com IA...")
 
+        # ETAPA 3 — JSON CLÍNICO PADRONIZADO alignment
         prompt = f"""
-Você é um assistente médico sênior especialista em extração de dados clínicos de prontuários.
+Você é um assistente médico sênior especialista em extração de dados clínicos.
 Seu objetivo é extrair o máximo de informações estruturadas do documento médico abaixo.
 
+CONTEXTO ADICIONAL:
+- Nome do arquivo: {filename}
+- Data atual: {datetime.now().strftime("%Y-%m-%d")}
+
 CONTEÚDO DO DOCUMENTO:
-{text_content}
+{extracted_text}
 
 INSTRUÇÕES DE SAÍDA:
-Retorne ESTRITAMENTE um objeto JSON puro (sem blocos markdown) com as seguintes chaves:
-- nome, idade, sexo (M/F), leito, setor
-- data_admissao (YYYY-MM-DD), motivo_admissao, hda
+Retorne ESTRITAMENTE um objeto JSON puro com as seguintes chaves:
+- nome, idade, sexo (M/F/NI), leito, setor
+- data_admissao (YYYY-MM-DD), data_documento (YYYY-MM-DD), motivo_admissao, hda
 - lista_de_problemas (array de strings)
-- antibioticos (array de objetos com nome, dose, via, frequencia, data_inicio)
+- antibioticos (array de objetos com: nome, dose, via, frequencia, data_inicio)
 - medicacoes (array de strings)
-- laboratorios (array de objetos com data, texto_compacto, valores)
-- exame_fisico_detalhado (objeto com: geral, acv, ar, abdome, neuro, extremidades, pele)
-- condutas, pendencias e riscos (arrays de strings)
+- laboratorios (array de objetos com: data, texto_compacto, valores)
+- exame_fisico (objeto detalhado com: geral, acv, ar, abdome, neuro, extremidades, pele)
+- condutas (array de strings)
+- pendencias (array de strings)
+- alertas (array de strings: riscos, alergias, dados críticos)
+- campos_incertos (array de strings com campos que você não localizou com clareza)
 
-Se algum dado não for encontrado, use null ou um array vazio [].
+REGRAS CLÍNICAS:
+1. Se o nome não estiver no texto, tente inferir do nome do arquivo (ex: "L01-JOAO-SILVA.pdf" -> JOAO SILVA).
+2. Não invente dados. Use null se não encontrar.
+3. Priorize clareza e precisão médica.
 """
 
         messages = [
@@ -260,13 +271,16 @@ Se algum dado não for encontrado, use null ou um array vazio [].
                 "content": f"{prompt}\n\nDocumento:\n{extracted_text}"
             })
 
+        # ETAPA 2 — PERFORMANCE: Use gpt-4o-mini for speed as requested
+        model_name = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        
         response = None
         for tentativa in range(3):
             try:
                 response = await client.chat.completions.create(
-                    model="gpt-4o",
+                    model=model_name,
                     messages=messages,
-                    temperature=0.1, # Um pouco de flexibilidade para melhor recall
+                    temperature=0.1,
                     max_tokens=4000,
                     response_format={ "type": "json_object" }
                 )
@@ -287,15 +301,68 @@ Se algum dado não for encontrado, use null ou um array vazio [].
         clinical_json["fileName"] = filename
         clinical_json["engine"] = "openai-vision" if image_base64_list else "openai-text"
         
-        # Garantir campos básicos se estiverem faltando
-        if "exame_fisico_detalhado" not in clinical_json and "exame_fisico" in clinical_json:
-            clinical_json["exame_fisico_detalhado"] = clinical_json["exame_fisico"]
-        
         update_job(job_id, "done", "Pronto para revisão", result=clinical_json)
 
     except Exception as e:
         print(traceback.format_exc())
         update_job(job_id, "error", "Erro na extração", error=str(e))
+
+# --- AI ENDPOINTS FOR EVOLUTION / PRESCRIPTION ---
+
+class EvolutionRequest(BaseModel):
+    patient: Dict[str, Any]
+    tipo_unidade: str
+    template: str
+    data_plantao: str
+    preferences: Optional[Dict[str, Any]] = None
+
+@app.post("/api/ai/gerar-evolucao")
+async def gerar_evolucao(req: EvolutionRequest):
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
+    
+    try:
+        # Prompt build
+        prompt = f"""
+Você é um médico assistente sênior. Sua tarefa é gerar uma EVOLUÇÃO MÉDICA impecável baseada nos dados do paciente e no template fornecido.
+
+DADOS DO PACIENTE:
+{json.dumps(req.patient, indent=2, ensure_ascii=False)}
+
+DATA DO PLANTÃO: {req.data_plantao}
+TIPO DE UNIDADE: {req.tipo_unidade}
+
+TEMPLATE OBRIGATÓRIO:
+{req.template}
+
+REGRAS:
+1. Siga EXATAMENTE o template. Substitua os campos entre [colchetes] pelos dados reais.
+2. Se não houver dado para um campo, use "SEM ALTERAÇÕES", "NADA A DECLARAR" ou remova o campo conforme o bom senso médico.
+3. Use terminologia médica técnica e precisa.
+4. Mantenha o texto em CAIXA ALTA se solicitado nas preferências.
+5. Seja conciso e focado em dados relevantes.
+"""
+        
+        pref = req.preferences or {}
+        system_msg = "Você é um gerador de evoluções médicas técnicas. Retorne apenas o texto da evolução."
+        if pref.get("uppercase"):
+            system_msg += " SEMPRE EM CAIXA ALTA."
+
+        response = await client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        
+        text = response.choices[0].message.content
+        return {"evolution_text": text}
+
+    except Exception as e:
+        print(f"Erro ao gerar evolução: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/extract-async")

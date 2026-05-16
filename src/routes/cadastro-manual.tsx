@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { 
   ChevronLeft, Save, Plus, Trash2, Pill, Activity, 
   Stethoscope, AlertTriangle, FileText, User, 
-  Thermometer, Wind, Baby, Info
+  Thermometer, Wind, Baby, Info, FlaskConical
 } from "lucide-react";
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/cadastro-manual")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       tipo: (search.tipo as "admissao" | "internado") || "internado",
-      id: (search.id as string) | undefined,
+      id: search.id as string | undefined,
     };
   },
   component: CadastroManualPage,
