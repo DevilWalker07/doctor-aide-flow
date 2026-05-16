@@ -87,7 +87,27 @@ function DashboardPage() {
       } catch (err) {
         console.warn("Failed to load from Supabase, using local", err);
         const localPacientes = storage.getLocalPacientes();
-        setPacientes(localPacientes);
+        const mappedLocal = localPacientes.map((p: any) => ({
+          id: p.id || Math.random().toString(),
+          leito: p.bed || p.leito || "",
+          nome: p.name || p.nome || "",
+          idade: p.age || p.idade || "",
+          sexo: p.sex || p.sexo || "F",
+          motivo_admissao: p.reason_for_admission || p.motivo_admissao || "",
+          hda: p.hda || "",
+          lista_de_problemas: (p.problem_list || p.lista_de_problemas || []).map((t: any) => ({ id: Math.random().toString(), text: typeof t === 'string' ? t : (t.text || "") })),
+          antibioticos: (p.antibiotics || p.antibioticos || []).map((a: any) => ({
+            id: Math.random().toString(),
+            nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, dataInicio: a.data_inicio || a.dataInicio
+          })),
+          medicacoes: (p.medications || p.medicacoes || []).map((t: any) => ({ id: Math.random().toString(), text: typeof t === 'string' ? t : (t.text || "") })),
+          laboratorios: (p.labs || p.laboratorios || []).map((l: any) => ({
+            id: Math.random().toString(), data: l.data, valor: l.texto_compacto || l.valor
+          })),
+          pendencias: (p.pending_issues || p.pendencias || []).map((t: any) => ({ id: Math.random().toString(), text: typeof t === 'string' ? t : (t.text || "") })),
+          status: (p.status as any) || "internado"
+        }));
+        setPacientes(mappedLocal);
       }
     }
     
