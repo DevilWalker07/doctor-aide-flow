@@ -421,9 +421,11 @@ async def health_check():
         "service": "clinical-agents",
         "version": "async-extract-v3-e2e",
         "checks": {
-            "supabase": bool(SUPABASE_URL and SUPABASE_SERVICE_KEY),
-            "openai": bool(openai_key),
-            "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+            "supabase_service_key": bool(os.environ.get("SUPABASE_SERVICE_KEY")),
+            "supabase_key": bool(os.environ.get("SUPABASE_KEY")),
+            "supabase_url": bool(os.environ.get("SUPABASE_URL")),
+            "openai_key": bool(openai_key),
+            "openai_model_env": os.environ.get("OPENAI_MODEL")
         }
     }
 
