@@ -8,6 +8,30 @@ export const storage = {
   getTipo: () => localStorage.getItem('da_tipo_evolucao') ?? 'enfermaria_clinica',
   setTipo: (tipo: string) => localStorage.setItem('da_tipo_evolucao', tipo),
 
+  // Tipo de evolução por paciente (sobrescreve o global quando setado)
+  getEvolTipo: (patientId: string) =>
+    localStorage.getItem(`da_evol_tipo_${patientId}`),
+  setEvolTipo: (patientId: string, tipo: string) =>
+    localStorage.setItem(`da_evol_tipo_${patientId}`, tipo),
+
+  // Rascunho de evolução em edição (auto-save)
+  getEvolRascunho: (patientId: string): { text: string; savedAt: string } | null => {
+    const raw = localStorage.getItem(`da_evol_rascunho_${patientId}`);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  },
+  setEvolRascunho: (patientId: string, text: string) =>
+    localStorage.setItem(
+      `da_evol_rascunho_${patientId}`,
+      JSON.stringify({ text, savedAt: new Date().toISOString() })
+    ),
+  clearEvolRascunho: (patientId: string) =>
+    localStorage.removeItem(`da_evol_rascunho_${patientId}`),
+
   // Job em andamento (Railway / Safari persistence)
   getJobAtivo: () => localStorage.getItem('da_job_ativo'),
   setJobAtivo: (id: string) => localStorage.setItem('da_job_ativo', id),

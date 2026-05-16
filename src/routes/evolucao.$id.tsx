@@ -19,6 +19,16 @@ export const Route = createFileRoute("/evolucao/$id")({
   head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
 });
 
+const TIPOS_UNIDADE: { value: string; label: string }[] = [
+  { value: "enfermaria_clinica", label: "ENFERMARIA CLÍNICA" },
+  { value: "enfermaria_pediatrica", label: "ENFERMARIA PEDIÁTRICA" },
+  { value: "uti", label: "UTI" },
+  { value: "upa", label: "UPA / EMERGÊNCIA" },
+  { value: "ubs", label: "UBS / AMBULATÓRIO" },
+];
+
+const RASCUNHO_DEBOUNCE_MS = 1000;
+
 const TEMPLATES: Record<string, string> = {
   enfermaria_clinica: `EVOLUÇÃO MÉDICA — [DATA]
 
@@ -178,10 +188,19 @@ function EvolucaoPage() {
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
   const [paciente, setPaciente] = useState<any>(null);
-  const [tipoUnidade, setTipoUnidade] = useState<string>("enfermaria_clinica");
+  const [tipoUnidade, setTipoUnidadeState] = useState<string>("enfermaria_clinica");
   const [evolutionText, setEvolutionText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [overwriteChoice, setOverwriteChoice] = useState<null | "ask">(null);
+  const [rascunhoInfo, setRascunhoInfo] = useState<null | { text: string; savedAt: string }>(null);
+  const [didInitDraft, setDidInitDraft] = useState(false);
+
+  const setTipoUnidade = (tipo: string) => {
+    setTipoUnidadeState(tipo);
+    storage.setEvolTipo(id, tipo);
+    storage.setTipo(tipo);
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -230,10 +249,42 @@ function EvolucaoPage() {
       }
     }
     load();
-    
-    const savedTipo = storage.getTipo();
-    if (savedTipo) setTipoUnidade(savedTipo);
+
+    const tipoPaciente = storage.getEvolTipo(id);
+    const savedTipo = tipoPaciente || storage.getTipo();
+    if (savedTipo) setTipoUnidadeState(savedTipo);
+
+    const rascunho = storage.getEvolRascunho(id);
+    if (rascunho && rascunho.text?.trim()) {
+      setRascunhoInfo(rascunho);
+    } else {
+      setDidInitDraft(true);
+    }
   }, [id, userId]);
+
+  useEffect(() => {
+    if (!didInitDraft) return;
+    if (!evolutionText.trim()) {
+      storage.clearEvolRascunho(id);
+      return;
+    }
+    const timer = setTimeout(() => {
+      storage.setEvolRascunho(id, evolutionText);
+    }, RASCUNHO_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [evolutionText, id, didInitDraft]);
+
+  const restaurarRascunho = () => {
+    if (rascunhoInfo) setEvolutionText(rascunhoInfo.text);
+    setRascunhoInfo(null);
+    setDidInitDraft(true);
+  };
+
+  const descartarRascunho = () => {
+    storage.clearEvolRascunho(id);
+    setRascunhoInfo(null);
+    setDidInitDraft(true);
+  };
 
   const dih = useMemo(() => {
     if (!paciente?.admissionDate && !paciente?.admission) return 0;
@@ -242,7 +293,7 @@ function EvolucaoPage() {
     return differenceInDays(startOfDay(new Date()), admission);
   }, [paciente]);
 
-  const handleGenerate = async () => {
+  const runGenerate = async (mode: "replace" | "append") => {
     if (!paciente) return;
     setIsGenerating(true);
     try {
@@ -267,7 +318,10 @@ function EvolucaoPage() {
 
       if (!response.ok) throw new Error("Falha na resposta do servidor");
       const result = await response.json();
-      setEvolutionText(result.evolution_text || result.evolutionText || result.text || "");
+      const generated = result.evolution_text || result.evolutionText || result.text || "";
+      setEvolutionText(prev =>
+        mode === "append" && prev.trim() ? `${prev}\n\n${generated}` : generated
+      );
       toast.success("Evolução gerada com sucesso!");
     } catch (error: any) {
       console.error("Erro ao gerar evolução", error);
@@ -275,6 +329,15 @@ function EvolucaoPage() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleGenerate = () => {
+    if (!paciente) return;
+    if (evolutionText.trim()) {
+      setOverwriteChoice("ask");
+      return;
+    }
+    runGenerate("replace");
   };
 
   const handleCopy = () => {
@@ -311,6 +374,7 @@ function EvolucaoPage() {
       localStorage.setItem("da_evolucoes", JSON.stringify(existing));
       toast.success("Evolução salva localmente!");
     } finally {
+      storage.clearEvolRascunho(id);
       setIsSaving(false);
       nav({ to: "/paciente/$id", params: { id } });
     }
@@ -333,6 +397,19 @@ function EvolucaoPage() {
               </div>
            </div>
            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2">
+                <span className="sr-only">Tipo de unidade</span>
+                <select
+                  value={tipoUnidade}
+                  onChange={(e) => setTipoUnidade(e.target.value)}
+                  className="px-4 py-2.5 rounded-xl border border-border bg-white text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-navy/20 cursor-pointer"
+                  aria-label="Tipo de unidade para o modelo de evolução"
+                >
+                  {TIPOS_UNIDADE.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </label>
               <button onClick={handleSave} disabled={!evolutionText || isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
                  {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} SALVAR
               </button>
@@ -342,6 +419,25 @@ function EvolucaoPage() {
            </div>
         </div>
       </header>
+
+      {rascunhoInfo && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-[11px] font-bold text-amber-900 uppercase tracking-wider">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Rascunho não salvo encontrado de {format(parseISO(rascunhoInfo.savedAt), "dd/MM/yyyy 'às' HH:mm")}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={restaurarRascunho} className="px-4 py-2 rounded-lg bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all">
+                Restaurar
+              </button>
+              <button onClick={descartarRascunho} className="px-4 py-2 rounded-lg border border-amber-300 text-amber-900 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all">
+                Descartar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-6 py-12">
          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
@@ -459,6 +555,37 @@ function EvolucaoPage() {
 
          </div>
       </main>
+
+      {overwriteChoice === "ask" && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[2rem] border border-border shadow-2xl overflow-hidden">
+            <header className="px-8 py-6 border-b border-border bg-secondary/30">
+              <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Já existe texto no campo</h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Como você quer gerar a nova evolução?</p>
+            </header>
+            <div className="p-6 space-y-3">
+              <button
+                onClick={() => { setOverwriteChoice(null); runGenerate("replace"); }}
+                className="w-full px-6 py-4 rounded-xl bg-navy text-white text-[11px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all text-left"
+              >
+                Substituir texto atual
+              </button>
+              <button
+                onClick={() => { setOverwriteChoice(null); runGenerate("append"); }}
+                className="w-full px-6 py-4 rounded-xl border border-border text-foreground text-[11px] font-black uppercase tracking-widest hover:bg-secondary transition-all text-left"
+              >
+                Anexar abaixo
+              </button>
+              <button
+                onClick={() => setOverwriteChoice(null)}
+                className="w-full px-6 py-4 rounded-xl text-muted-foreground text-[11px] font-black uppercase tracking-widest hover:bg-secondary transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
