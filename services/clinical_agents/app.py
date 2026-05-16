@@ -419,7 +419,12 @@ async def health_check():
     return {
         "status": "ok", 
         "service": "clinical-agents",
-        "version": "async-extract-v3-e2e"
+        "version": "async-extract-v3-e2e",
+        "checks": {
+            "supabase": bool(SUPABASE_URL and SUPABASE_SERVICE_KEY),
+            "openai": bool(openai_key),
+            "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        }
     }
 
 if __name__ == "__main__":
