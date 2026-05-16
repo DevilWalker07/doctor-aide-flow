@@ -7,5 +7,7 @@ docling
 mammoth
 openai
 pypdfium2
-supabase==2.10.0 
+supabase==2.10.0
 python-dotenv
+python-docx
+reportlab

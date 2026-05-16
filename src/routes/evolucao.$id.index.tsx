@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import {
-  ChevronLeft, Sparkles, Copy, Save, FileText,
+  ChevronLeft, Sparkles, Copy, Save, FileText, Download,
   Loader2, Pill, Activity, AlertTriangle,
   Calendar, ArrowRight, Check, History, Wand2, X, RotateCcw
 } from "lucide-react";
@@ -11,6 +11,7 @@ import { getPatientById, createEvolution, getEvolutionsByPatient } from "@/lib/d
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
+import { exportEvolucao, type ExportFormat } from "@/lib/exportEvolucao";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -441,6 +442,34 @@ function EvolucaoPage() {
     toast.success("Copiado para a área de transferência!");
   };
 
+  const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
+  const handleExport = async (fmt: ExportFormat) => {
+    if (!evolutionText.trim() || !paciente) return;
+    setIsExporting(fmt);
+    try {
+      const plantao = storage.getPlantaoAtivo();
+      await exportEvolucao({
+        text: evolutionText,
+        format: fmt,
+        filename_hint: `evolucao_${(paciente.name || "paciente").toString().replace(/\s+/g, "_")}_${format(new Date(), "yyyy-MM-dd")}`,
+        header: {
+          hospital: storage.getHospitalPadrao() || plantao?.hospital || "",
+          medico: storage.getNomeMedico() || "",
+          crm: storage.getCRM() || "",
+          paciente: paciente.name || "",
+          leito: paciente.bed || "",
+          data: format(new Date(), "dd/MM/yyyy"),
+          tipo: `EVOLUÇÃO ${tipoUnidade.replace(/_/g, " ").toUpperCase()}`,
+        },
+      });
+      toast.success(`Arquivo ${fmt.toUpperCase()} baixado.`);
+    } catch (err: any) {
+      toast.error(`Falha ao exportar ${fmt.toUpperCase()}: ${err.message}`);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!evolutionText || !userId) return;
     setIsSaving(true);
@@ -513,6 +542,29 @@ function EvolucaoPage() {
               >
                 <History className="h-3 w-3" /> VERSÕES ({versions.length})
               </button>
+              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-white" role="group" aria-label="Exportar evolução">
+                <button
+                  onClick={() => handleExport("docx")}
+                  disabled={!evolutionText || isExporting !== null}
+                  className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isExporting === "docx" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} DOCX
+                </button>
+                <button
+                  onClick={() => handleExport("pdf")}
+                  disabled={!evolutionText || isExporting !== null}
+                  className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isExporting === "pdf" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} PDF
+                </button>
+                <button
+                  onClick={() => handleExport("txt")}
+                  disabled={!evolutionText || isExporting !== null}
+                  className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isExporting === "txt" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} TXT
+                </button>
+              </div>
               <button onClick={handleSave} disabled={!evolutionText || isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
                  {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} SALVAR
               </button>

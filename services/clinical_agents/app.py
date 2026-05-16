@@ -16,6 +16,7 @@ load_dotenv()
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from PIL import Image, ImageOps
 import pillow_heif
@@ -648,6 +649,197 @@ async def get_bulk_job_status(bulk_job_id: str):
         })
 
     return {**job, "progress": progress, "sub_status": sub_status}
+
+
+# --- DOCUMENT EXPORT (DOCX / PDF / TXT) ---
+
+class ExportRequest(BaseModel):
+    text: str
+    format: str  # "docx" | "pdf" | "txt"
+    header: Optional[Dict[str, Any]] = None  # {hospital, medico, crm, paciente, leito, data, tipo}
+    filename_hint: Optional[str] = None
+
+
+def _safe_filename(s: str) -> str:
+    if not s:
+        return "evolucao"
+    keep = "".join(c if c.isalnum() or c in "-_" else "_" for c in s)
+    return keep.strip("_") or "evolucao"
+
+
+def _build_docx_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    from docx import Document
+    from docx.shared import Pt, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Cm(2)
+    section.bottom_margin = Cm(2)
+    section.left_margin = Cm(2)
+    section.right_margin = Cm(2)
+
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    if hospital or medico:
+        h = doc.add_paragraph()
+        h.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run_left = h.add_run(hospital)
+        run_left.bold = True
+        h.add_run("\t" * 6)
+        right = f"{medico}" + (f" — CRM {crm}" if crm else "")
+        h.add_run(right)
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title.add_run(tipo.upper())
+    title_run.bold = True
+    title_run.font.size = Pt(14)
+
+    meta = doc.add_paragraph()
+    meta_text = []
+    if paciente: meta_text.append(f"PACIENTE: {paciente}")
+    if leito: meta_text.append(f"LEITO: {leito}")
+    if data: meta_text.append(f"DATA: {data}")
+    meta.add_run(" · ".join(meta_text)).bold = True
+
+    doc.add_paragraph("─" * 80)
+
+    for raw_line in text.split("\n"):
+        p = doc.add_paragraph(raw_line)
+        for run in p.runs:
+            run.font.size = Pt(11)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+def _build_pdf_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.colors import HexColor
+
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=2 * cm, rightMargin=2 * cm,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        title=tipo,
+    )
+    styles = getSampleStyleSheet()
+    body = ParagraphStyle("body", parent=styles["BodyText"], fontName="Helvetica",
+                          fontSize=10, leading=13, alignment=TA_LEFT)
+    head_style = ParagraphStyle("head", parent=styles["Normal"], fontSize=9,
+                                textColor=HexColor("#555"))
+    title_style = ParagraphStyle("title", parent=styles["Heading1"], fontSize=13,
+                                 alignment=TA_CENTER, spaceAfter=8)
+    meta_style = ParagraphStyle("meta", parent=styles["Normal"], fontSize=10,
+                                alignment=TA_CENTER, spaceAfter=12)
+
+    flow = []
+    if hospital or medico:
+        right = (medico or "") + (f" — CRM {crm}" if crm else "")
+        flow.append(Paragraph(f"<b>{hospital}</b>" + (f"&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;{right}" if right else ""), head_style))
+        flow.append(Spacer(1, 8))
+
+    flow.append(Paragraph(tipo.upper(), title_style))
+    meta_bits = []
+    if paciente: meta_bits.append(f"<b>PACIENTE:</b> {paciente}")
+    if leito: meta_bits.append(f"<b>LEITO:</b> {leito}")
+    if data: meta_bits.append(f"<b>DATA:</b> {data}")
+    if meta_bits:
+        flow.append(Paragraph(" &middot; ".join(meta_bits), meta_style))
+    flow.append(Paragraph("─" * 90, head_style))
+    flow.append(Spacer(1, 8))
+
+    for raw_line in text.split("\n"):
+        safe = raw_line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if not safe.strip():
+            flow.append(Spacer(1, 6))
+        else:
+            flow.append(Paragraph(safe, body))
+
+    doc.build(flow)
+    return buf.getvalue()
+
+
+def _build_txt_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    lines = []
+    if hospital or medico:
+        right = (medico or "") + (f" — CRM {crm}" if crm else "")
+        lines.append(f"{hospital}    {right}".strip())
+        lines.append("")
+    lines.append(tipo.upper())
+    meta = []
+    if paciente: meta.append(f"PACIENTE: {paciente}")
+    if leito: meta.append(f"LEITO: {leito}")
+    if data: meta.append(f"DATA: {data}")
+    if meta:
+        lines.append("  ·  ".join(meta))
+    lines.append("─" * 80)
+    lines.append("")
+    lines.append(text)
+    return ("\n".join(lines)).encode("utf-8")
+
+
+@app.post("/export-evolucao")
+@app.post("/api/export/evolucao")
+async def export_evolucao(req: ExportRequest):
+    fmt = (req.format or "").lower().strip()
+    if fmt not in {"docx", "pdf", "txt"}:
+        raise HTTPException(status_code=400, detail="Formato deve ser docx, pdf ou txt.")
+    if not req.text or not req.text.strip():
+        raise HTTPException(status_code=400, detail="Texto vazio.")
+
+    header = req.header or {}
+    base = _safe_filename(req.filename_hint or header.get("paciente") or "evolucao")
+    filename = f"{base}.{fmt}"
+
+    try:
+        if fmt == "docx":
+            data = _build_docx_bytes(req.text, header)
+            media = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif fmt == "pdf":
+            data = _build_pdf_bytes(req.text, header)
+            media = "application/pdf"
+        else:
+            data = _build_txt_bytes(req.text, header)
+            media = "text/plain; charset=utf-8"
+    except Exception as e:
+        print(f"Erro ao gerar {fmt}: {e}")
+        raise HTTPException(status_code=500, detail=f"Falha ao gerar {fmt}: {e}")
+
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # --- AI ENDPOINTS FOR EVOLUTION / PRESCRIPTION ---
