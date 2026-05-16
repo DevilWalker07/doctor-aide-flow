@@ -9,6 +9,7 @@ import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fn
 import { toast } from "sonner";
 import { getPatientById, createEvolution } from "@/lib/db";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
 import { ControlledTextarea } from "@/components/ui/controlled-input";
