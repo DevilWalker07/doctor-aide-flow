@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadIaRouteImport } from './routes/upload-ia'
 import { Route as TipoRouteImport } from './routes/tipo'
+import { Route as TestThrowRouteImport } from './routes/test-throw'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
@@ -44,6 +45,11 @@ const UploadIaRoute = UploadIaRouteImport.update({
 const TipoRoute = TipoRouteImport.update({
   id: '/tipo',
   path: '/tipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestThrowRoute = TestThrowRouteImport.update({
+  id: '/test-throw',
+  path: '/test-throw',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoundRoute = RoundRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
+  '/test-throw': typeof TestThrowRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRouteRouteWithChildren
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
+  '/test-throw': typeof TestThrowRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/encaminhamento/$id': typeof EncaminhamentoIdRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
+  '/test-throw': typeof TestThrowRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRouteRouteWithChildren
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
+    | '/test-throw'
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
+    | '/test-throw'
     | '/tipo'
     | '/upload-ia'
     | '/encaminhamento/$id'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
+    | '/test-throw'
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
+  TestThrowRoute: typeof TestThrowRoute
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
   EvolucaoIdRouteRoute: typeof EvolucaoIdRouteRouteWithChildren
@@ -378,6 +391,13 @@ declare module '@tanstack/react-router' {
       path: '/tipo'
       fullPath: '/tipo'
       preLoaderRoute: typeof TipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-throw': {
+      id: '/test-throw'
+      path: '/test-throw'
+      fullPath: '/test-throw'
+      preLoaderRoute: typeof TestThrowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/round': {
@@ -581,6 +601,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,
+  TestThrowRoute: TestThrowRoute,
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
   EvolucaoIdRouteRoute: EvolucaoIdRouteRouteWithChildren,
