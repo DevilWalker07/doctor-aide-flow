@@ -152,8 +152,111 @@ export const storage = {
     return merged;
   },
 
-  // Limpeza de sessão (ao encerrar plantão ou sair da conta)
+  // ========== ARQUIVO DE PLANTÕES ==========
+  // Antes que clearSession() apague os dados clínicos do plantão, arquivamos
+  // um snapshot. Permite revisitar e até reabrir plantões antigos.
+
+  /** Lê o plantão ativo do storage + dados clínicos e gera um snapshot. */
+  archiveCurrentShift: (): ArchivedShift | null => {
+    const plantaoRaw = localStorage.getItem('da_plantao_ativo');
+    const shiftId = localStorage.getItem('da_shift_id');
+    if (!plantaoRaw || !shiftId) return null;
+    let plantao: any;
+    try { plantao = JSON.parse(plantaoRaw); } catch { return null; }
+
+    const snapshot: ArchivedShift['snapshot'] = {
+      pacientes: safeJSON('da_pacientes') || [],
+      evolucoes: safeJSON('da_evolucoes') || [],
+      prescricoes: safeJSON('da_prescricoes') || [],
+      encaminhamentos: safeJSON('da_encaminhamentos') || [],
+      passagens: safeJSON('da_passagens') || [],
+    };
+
+    const totalRegistros =
+      snapshot.pacientes.length + snapshot.evolucoes.length +
+      snapshot.prescricoes.length + snapshot.encaminhamentos.length +
+      snapshot.passagens.length;
+    if (totalRegistros === 0) return null; // não arquiva plantão vazio
+
+    const archived: ArchivedShift = {
+      shift_id: shiftId,
+      hospital: plantao.hospital || '',
+      setor: plantao.setor || plantao.sector || '',
+      tipo: plantao.tipo || plantao.type || '',
+      data: plantao.data || plantao.date || '',
+      data_formatada: plantao.data_formatada || '',
+      encerrado_em: new Date().toISOString(),
+      snapshot,
+    };
+
+    const existing = safeJSON<ArchivedShift[]>('da_arquivo_plantoes') || [];
+    // Remove qualquer entrada antiga deste shift_id (sobrescreve)
+    const filtered = existing.filter(a => a.shift_id !== shiftId);
+    filtered.unshift(archived);
+    const trimmed = filtered.slice(0, 30); // FIFO máx 30
+    try {
+      localStorage.setItem('da_arquivo_plantoes', JSON.stringify(trimmed));
+    } catch (err) {
+      // Quota: descarta 5 mais antigos e tenta de novo
+      try {
+        localStorage.setItem('da_arquivo_plantoes', JSON.stringify(trimmed.slice(0, 25)));
+      } catch { /* desiste silenciosamente */ }
+    }
+    return archived;
+  },
+
+  listArchivedShifts: (): ArchivedShift[] => safeJSON<ArchivedShift[]>('da_arquivo_plantoes') || [],
+
+  getArchivedShift: (shiftId: string): ArchivedShift | null => {
+    const list = safeJSON<ArchivedShift[]>('da_arquivo_plantoes') || [];
+    return list.find(a => a.shift_id === shiftId) || null;
+  },
+
+  deleteArchivedShift: (shiftId: string) => {
+    const list = safeJSON<ArchivedShift[]>('da_arquivo_plantoes') || [];
+    localStorage.setItem('da_arquivo_plantoes', JSON.stringify(list.filter(a => a.shift_id !== shiftId)));
+  },
+
+  /** Restaura snapshot pras chaves ativas e marca como plantão ativo. */
+  reopenArchivedShift: (shiftId: string): boolean => {
+    const list = safeJSON<ArchivedShift[]>('da_arquivo_plantoes') || [];
+    const target = list.find(a => a.shift_id === shiftId);
+    if (!target) return false;
+
+    localStorage.setItem('da_shift_id', target.shift_id);
+    localStorage.setItem('da_plantao_ativo', JSON.stringify({
+      id: target.shift_id,
+      data: target.data,
+      data_formatada: target.data_formatada,
+      hospital: target.hospital,
+      setor: target.setor,
+      tipo: target.tipo,
+      status: 'active',
+      criado_em: Date.now(),
+    }));
+    if (target.tipo) localStorage.setItem('da_tipo_evolucao', target.tipo);
+    localStorage.setItem('da_pacientes', JSON.stringify(target.snapshot.pacientes));
+    localStorage.setItem('da_evolucoes', JSON.stringify(target.snapshot.evolucoes));
+    localStorage.setItem('da_prescricoes', JSON.stringify(target.snapshot.prescricoes));
+    localStorage.setItem('da_encaminhamentos', JSON.stringify(target.snapshot.encaminhamentos));
+    localStorage.setItem('da_passagens', JSON.stringify(target.snapshot.passagens));
+
+    // Remove do arquivo (agora está ativo de novo)
+    localStorage.setItem('da_arquivo_plantoes', JSON.stringify(list.filter(a => a.shift_id !== shiftId)));
+    return true;
+  },
+
+  // Limpeza de sessão (ao encerrar plantão ou sair da conta).
+  // Arquiva ANTES de remover. Pacientes/evolucoes/etc não são perdidos.
   clearSession: () => {
+    // Tenta arquivar. Se for sessão sem dados clínicos (ex: logout) o arquivo
+    // é silenciosamente pulado (retorna null).
+    try {
+      storage.archiveCurrentShift();
+    } catch (err) {
+      console.warn('Falha ao arquivar plantão antes de limpar sessão:', err);
+    }
+
     localStorage.removeItem('da_shift_id');
     localStorage.removeItem('da_tipo_evolucao');
     localStorage.removeItem('da_extracao_resultado');
@@ -170,3 +273,31 @@ export const storage = {
     localStorage.removeItem('da_passagens');
   }
 };
+
+// ========== TIPOS / HELPERS ==========
+
+export interface ArchivedShift {
+  shift_id: string;
+  hospital: string;
+  setor: string;
+  tipo: string;
+  data: string;
+  data_formatada: string;
+  encerrado_em: string;
+  snapshot: {
+    pacientes: any[];
+    evolucoes: any[];
+    prescricoes: any[];
+    encaminhamentos: any[];
+    passagens: any[];
+  };
+}
+
+function safeJSON<T = any>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
