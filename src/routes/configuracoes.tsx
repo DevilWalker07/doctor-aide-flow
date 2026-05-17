@@ -247,13 +247,38 @@ function SettingsPage() {
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ALERTA DE CICLO PROLONGADO</label>
                   <div className="flex items-center gap-4">
                      <span className="text-xs font-bold text-foreground">NOTIFICAR SE ATB HÁ MAIS DE</span>
-                     <input 
-                        type="number" 
-                        value={atbAlertDays} 
+                     <input
+                        type="number"
+                        value={atbAlertDays}
                         onChange={e => setAtbAlertDays(e.target.value)}
-                        className="w-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 text-center font-black" 
+                        className="w-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 text-center font-black"
                      />
                      <span className="text-xs font-bold text-foreground">DIAS</span>
+                  </div>
+               </div>
+
+               <div className="space-y-3 p-5 rounded-2xl border border-border bg-secondary/20">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÍVEIS DE ALERTA POR D-DAY</label>
+                  <p className="text-[10px] text-muted-foreground italic">Quando ATB atinge "dia amarelo" → atenção; ao atingir "dia vermelho" → crítico.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-amber-700">AMARELO A PARTIR DE D</span>
+                        <input
+                           type="number" min="1" max="30"
+                           defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_amarelo") || "5", 10))}
+                           onChange={e => localStorage.setItem("da_atb_dia_amarelo", e.target.value || "5")}
+                           className="w-16 bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                        />
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-red-700">VERMELHO A PARTIR DE D</span>
+                        <input
+                           type="number" min="1" max="30"
+                           defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_vermelho") || "7", 10))}
+                           onChange={e => localStorage.setItem("da_atb_dia_vermelho", e.target.value || "7")}
+                           className="w-16 bg-white border border-red-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                        />
+                     </div>
                   </div>
                </div>
             </div>

@@ -14,6 +14,7 @@ import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
 import { X, Copy, Archive } from "lucide-react";
 import { computeGravidade, gravidadeOrder, maxDiasAtb, GRAVIDADE_STYLES, type Gravidade } from "@/lib/gravidade";
+import { getATBsWithAlert, ATB_ALERT_STYLES, type AlertLevel } from "@/lib/atbAlerts";
 import ShiftBadge from "@/components/ShiftBadge";
 
 import { storage } from "@/lib/storage";
@@ -147,9 +148,18 @@ function DashboardPage() {
         status: p.status,
       });
       const diasAtb = maxDiasAtb(p.antibioticos);
-      return { ...p, gravidade, diasAtb };
+      const atbAlerts = getATBsWithAlert({ id: p.id, antibioticos: p.antibioticos });
+      const worstAtbAlert: AlertLevel = atbAlerts.some(a => a.level === "red")
+        ? "red"
+        : atbAlerts.some(a => a.level === "yellow") ? "yellow" : "ok";
+      return { ...p, gravidade, diasAtb, atbAlerts, worstAtbAlert };
     });
   }, [pacientes, shift?.setor]);
+
+  const pacientesComAlertaATB = useMemo(
+    () => enriched.filter(p => p.worstAtbAlert !== "ok"),
+    [enriched]
+  );
 
   const stats = useMemo(() => {
     const byGrav = { critico: 0, grave: 0, moderado: 0, leve: 0 };
@@ -287,6 +297,31 @@ function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
         
+        {/* Alerta agregado de ATB */}
+        {pacientesComAlertaATB.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-4">
+            <div className="h-10 w-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-red-700">
+                {pacientesComAlertaATB.length} paciente(s) com ATB para reavaliar
+              </p>
+              <ul className="mt-2 space-y-1">
+                {pacientesComAlertaATB.slice(0, 5).map((p) => (
+                  <li key={p.id} className="text-[11px] font-bold">
+                    <button onClick={() => nav({ to: "/paciente/$id", params: { id: p.id } })} className="hover:underline text-foreground">
+                      {p.nome || "—"}
+                    </button>
+                    {" — "}
+                    {p.atbAlerts.filter((a) => a.level !== "ok").map((a) => `${a.nome} D${a.dia}`).join(", ")}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {/* Triagem por gravidade */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {([
@@ -390,8 +425,16 @@ function DashboardPage() {
                            </span>
                            <h3 className="font-extrabold text-lg text-foreground truncate uppercase">{p.nome}</h3>
                            <span className="px-2 py-0.5 rounded-md bg-secondary text-[10px] font-bold text-muted-foreground">{p.idade}A · {p.sexo}</span>
-                           {p.diasAtb != null && (
+                           {p.diasAtb != null && p.worstAtbAlert === "ok" && (
                               <span className="px-2 py-0.5 rounded-md bg-ai/10 text-ai text-[10px] font-black uppercase tracking-widest">ATB D{p.diasAtb}</span>
+                           )}
+                           {p.diasAtb != null && p.worstAtbAlert !== "ok" && (
+                              <span
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest ${ATB_ALERT_STYLES[p.worstAtbAlert].bg} ${ATB_ALERT_STYLES[p.worstAtbAlert].text}`}
+                                title={`ATB ${p.worstAtbAlert === "red" ? "requer reavaliação" : "próximo de reavaliação"}`}
+                              >
+                                ⚠ ATB D{p.diasAtb}
+                              </span>
                            )}
                         </div>
                         <p className="text-xs font-bold text-muted-foreground truncate uppercase tracking-tight">

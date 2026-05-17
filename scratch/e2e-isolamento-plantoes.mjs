@@ -43,8 +43,8 @@ try {
   await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2500);
   console.log("  DEBUG URL:", page.url());
-  const dbg = await page.evaluate(() => (window).__dbg);
-  console.log("  DEBUG state:", JSON.stringify(dbg, null, 2).slice(0, 800));
+  const bodySnippet = (await page.locator("body").innerText()).slice(0, 300).replace(/\n+/g, " | ");
+  console.log("  DEBUG body:", bodySnippet);
 
   // Pacientes do plantão atual (UTI) DEVEM aparecer
   log("Iso.a 'ADULTO UTI' aparece no plantão UTI", await page.locator("text=ADULTO UTI").count() > 0);

@@ -16,6 +16,7 @@ import SpecialistCard from "@/components/specialists/SpecialistCard";
 import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
 import { hasConsultForPatient } from "@/lib/specialists/client";
 import ShiftBadge from "@/components/ShiftBadge";
+import ATBAlertBanner from "@/components/atb/ATBAlertBanner";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -406,6 +407,8 @@ function PacienteDetailPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+        <ATBAlertBanner patient={{ id: paciente.id, antibioticos: paciente.data?.abx }} />
 
         {/* LISTA DE PROBLEMAS */}
         <Section title="LISTA DE PROBLEMAS" icon={<ClipboardList className="h-5 w-5" />} action={
