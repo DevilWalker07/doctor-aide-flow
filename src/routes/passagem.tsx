@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Save, Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/passagem")({
   component: PassagemPage,
@@ -176,7 +177,10 @@ function PassagemPage() {
                 <ChevronLeft className="h-5 w-5" />
              </button>
              <div>
-                <h1 className="text-xl font-black text-foreground uppercase tracking-tight">MAPA DE PASSAGEM</h1>
+                <div className="flex items-center gap-2 mb-1">
+                   <h1 className="text-xl font-black text-foreground uppercase tracking-tight">MAPA DE PASSAGEM</h1>
+                   <ShiftBadge silent />
+                </div>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{shiftData?.setor || "Setor"} · {format(new Date(), "dd/MM/yyyy")}</p>
              </div>
           </div>

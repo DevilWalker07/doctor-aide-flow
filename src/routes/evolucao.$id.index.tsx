@@ -22,6 +22,7 @@ import {
   findTemplate,
   type EvolutionTemplate,
 } from "@/lib/evolutionTemplates";
+import ShiftBadge from "@/components/ShiftBadge";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -610,7 +611,10 @@ function EvolucaoPage() {
                  <ChevronLeft className="h-5 w-5" />
               </button>
               <div>
-                 <h1 className="text-xl font-black text-foreground tracking-tight uppercase">{paciente.name}</h1>
+                 <div className="flex items-center gap-2 mb-1">
+                    <h1 className="text-xl font-black text-foreground tracking-tight uppercase">{paciente.name}</h1>
+                    <ShiftBadge silent />
+                 </div>
                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">LEITO {paciente.bed} · D{dih} · {tipoUnidade.replace('_', ' ').toUpperCase()}</p>
               </div>
            </div>

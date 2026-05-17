@@ -13,6 +13,7 @@ import { storage } from "@/lib/storage";
 import { ANTIBIOTICOS_ROTINEIROS, searchAntibioticos, type AntibioticoRotineiro } from "@/lib/antibioticos-rotineiros";
 import { cockcroftGault, sugerirDose, classificarTFG } from "@/lib/dose-clearance";
 import { exportTextoMedico, type ExportFormat } from "@/lib/exportEvolucao";
+import ShiftBadge from "@/components/ShiftBadge";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
@@ -252,7 +253,10 @@ function PrescricaoPage() {
                  <ChevronLeft className="h-5 w-5" />
               </button>
               <div>
-                 <h1 className="text-xl font-black text-foreground tracking-tight uppercase">PRESCRIÇÃO MÉDICA</h1>
+                 <div className="flex items-center gap-2 mb-1">
+                    <h1 className="text-xl font-black text-foreground tracking-tight uppercase">PRESCRIÇÃO MÉDICA</h1>
+                    <ShiftBadge silent />
+                 </div>
                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}</p>
               </div>
            </div>

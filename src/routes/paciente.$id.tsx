@@ -15,6 +15,7 @@ import { useSpecialistConsult } from "@/components/specialists/useSpecialistCons
 import SpecialistCard from "@/components/specialists/SpecialistCard";
 import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
 import { hasConsultForPatient } from "@/lib/specialists/client";
+import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -274,6 +275,7 @@ function PacienteDetailPage() {
                  <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
               </button>
               <div className="flex items-center gap-2">
+                 <ShiftBadge />
                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${gStyle.bg} ${gStyle.text}`} aria-label={`Gravidade ${gStyle.label}`}>
                    {gStyle.label}
                  </span>

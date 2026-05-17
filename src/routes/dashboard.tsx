@@ -14,6 +14,7 @@ import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
 import { X, Copy, Archive } from "lucide-react";
 import { computeGravidade, gravidadeOrder, maxDiasAtb, GRAVIDADE_STYLES, type Gravidade } from "@/lib/gravidade";
+import ShiftBadge from "@/components/ShiftBadge";
 
 import { storage } from "@/lib/storage";
 
@@ -264,9 +265,9 @@ function DashboardPage() {
              </div>
              <div>
                 <h1 className="text-sm font-extrabold tracking-tight">DASHBOARD DO PLANTÃO</h1>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                   <Building2 className="h-3 w-3" /> {shift.setor || "Sem Setor"} · <Calendar className="h-3 w-3" /> {shift.data_formatada}
-                </p>
+                <div className="mt-1">
+                  <ShiftBadge />
+                </div>
              </div>
           </div>
 
