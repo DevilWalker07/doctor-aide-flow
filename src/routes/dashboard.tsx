@@ -52,7 +52,7 @@ function DashboardPage() {
   useEffect(() => {
     if (!userId) return;
     if (!shift) {
-      nav({ to: "/iniciar-plantao" });
+      nav({ to: "/plantoes" });
       return;
     }
     
