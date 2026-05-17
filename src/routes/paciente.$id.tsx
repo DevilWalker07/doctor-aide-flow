@@ -383,6 +383,14 @@ function PacienteDetailPage() {
                <ArrowRight className="h-3.5 w-3.5" /> ENCAMINHAR
             </button>
             <button
+               onClick={() => triggerConsult()}
+               disabled={consultLoading}
+               className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 ${specialist.cor.bg} ${specialist.cor.text} hover:-translate-y-0.5`}
+               title={`Solicitar parecer do(a) ${specialist.nome}`}
+            >
+               <Activity className="h-3.5 w-3.5" /> PARECER {specialist.nome.split(" ")[1] || "IA"}
+            </button>
+            <button
                onClick={() => handleStatusUpdate('alta_provavel')}
                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
                   paciente.status === 'alta_provavel'

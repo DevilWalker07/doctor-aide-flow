@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
 import { getPatientsByShift, closeShift, createHandoff } from "@/lib/db";
+import { hasSupabaseConfig } from "@/lib/supabase";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { differenceInDays, parseISO, isValid, format } from "date-fns";
 import { toast } from "sonner";
@@ -57,9 +58,9 @@ function DashboardPage() {
     async function loadPatients() {
       try {
         const shiftId = storage.getShiftId();
-        if (shiftId && !shiftId.startsWith("temp_")) {
+        if (hasSupabaseConfig && shiftId && !shiftId.startsWith("temp_")) {
           const dbPatients = await getPatientsByShift(shiftId, userId!);
-          
+
           // Map DB models to component state structure
           const mapped = dbPatients.map(p => ({
             id: p.id,
@@ -81,14 +82,32 @@ function DashboardPage() {
             pendencias: (p.pending_issues || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
             status: (p.status as any) || "internado"
           }));
-          
-          setPacientes(mapped);
-          return;
+
+          // Se Supabase retornou pacientes, usa apenas eles.
+          // Se vazio, cai pro fallback local (alguns pacientes podem estar offline).
+          if (mapped.length > 0) {
+            setPacientes(mapped);
+            return;
+          }
         }
         throw new Error("Offline or temp ID");
       } catch (err) {
         console.warn("Failed to load from Supabase, using local", err);
-        const localPacientes = storage.getLocalPacientes();
+        const currentShiftId = storage.getShiftId();
+        const plantao = storage.getPlantaoAtivo();
+        const currentSector = (shift?.setor || plantao?.setor || "").toLowerCase();
+        const allLocal = storage.getLocalPacientes();
+        // Filtro: paciente pertence ao plantão atual se tiver shift_id igual,
+        // ou (legado) se não tiver shift_id mas tiver o mesmo setor.
+        const localPacientes = allLocal.filter((p: any) => {
+          if (p.shift_id && currentShiftId) return p.shift_id === currentShiftId;
+          if (!p.shift_id) {
+            const pSetor = (p.setor || p.sector || "").toLowerCase();
+            if (!pSetor || !currentSector) return false;
+            return pSetor === currentSector;
+          }
+          return false;
+        });
         const mappedLocal = localPacientes.map((p: any) => ({
           id: p.id || Math.random().toString(),
           leito: p.bed || p.leito || "",

@@ -380,10 +380,16 @@ function RevisarExtracao() {
         toast.success("Salvo com sucesso!");
         nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
       } catch {
-        // Fallback local
+        // Fallback local — sempre marca o paciente com o shift_id ATIVO
+        // para que ele apareça apenas no dashboard daquele plantão.
         const localId = patient_id || "temp_" + Date.now();
         const existing = storage.getLocalPacientes();
-        existing.push({ id: localId, ...patientPayload, status: 'internado' });
+        const existingIdx = existing.findIndex((p: any) => p.id === localId);
+        if (existingIdx >= 0) {
+          existing[existingIdx] = { ...existing[existingIdx], ...patientPayload, shift_id: shiftId, status: 'internado' };
+        } else {
+          existing.push({ id: localId, ...patientPayload, shift_id: shiftId, status: 'internado' });
+        }
         storage.setLocalPacientes(existing);
         storage.clearExtracaoResultado();
         toast.success("Salvo localmente!");

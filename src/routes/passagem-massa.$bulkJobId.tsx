@@ -79,7 +79,15 @@ function PassagemMassaPage() {
           if (merged) mergedCount += 1;
         } else {
           const id = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          novos.push({ ...mapped, id, created_at: new Date().toISOString() });
+          const shiftId = storage.getShiftId();
+          const plantao = storage.getPlantaoAtivo();
+          novos.push({
+            ...mapped,
+            id,
+            shift_id: shiftId || undefined,
+            setor: mapped.setor || plantao?.setor || undefined,
+            created_at: new Date().toISOString(),
+          });
         }
       }
       if (novos.length) {
