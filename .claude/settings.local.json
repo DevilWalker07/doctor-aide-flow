@@ -13,7 +13,9 @@
       "PowerShell(py *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__get_edge_function",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__deploy_edge_function"
     ]
   }
 }

@@ -14,7 +14,7 @@ serve(async (req) => {
     const payload = await req.json();
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-3.5-turbo";
+    const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-5";
 
     if (!OPENAI_API_KEY) {
       throw new Error("Missing OPENAI_API_KEY secret");
