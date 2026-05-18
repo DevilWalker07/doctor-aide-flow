@@ -25,7 +25,7 @@ export default function SpecialistCard({ specialist, isLoading, hasConsult, onCo
   }
 
   return (
-    <div className="bg-white border border-border rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
+    <div className="bg-elevated border border-border rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
       <div className={`rounded-2xl ${specialist.cor.bg}/10 p-1`}>
         <SpecialistAvatar specialistId={specialist.id} size={64} />
       </div>

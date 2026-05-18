@@ -114,7 +114,7 @@ function UploadIAPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center">
-        <div className="w-full mb-8 flex gap-2 p-1 rounded-2xl border border-border bg-white" role="tablist" aria-label="Modo de upload">
+        <div className="w-full mb-8 flex gap-2 p-1 rounded-2xl border border-border bg-elevated" role="tablist" aria-label="Modo de upload">
           <button
             onClick={() => switchModo("unico")}
             role="tab"
@@ -149,7 +149,7 @@ function UploadIAPage() {
           </p>
         </div>
 
-        <div className="w-full bg-white border border-border rounded-[2.5rem] p-10 shadow-xl">
+        <div className="w-full bg-elevated border border-border rounded-[2.5rem] p-10 shadow-xl">
           <input
             type="file"
             ref={fileInputRef}

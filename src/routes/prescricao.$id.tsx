@@ -245,7 +245,7 @@ function PrescricaoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
            <div className="flex items-center gap-4">
@@ -261,7 +261,7 @@ function PrescricaoPage() {
               </div>
            </div>
            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-white" role="group" aria-label="Exportar prescrição">
+              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-elevated" role="group" aria-label="Exportar prescrição">
                 {(["docx", "pdf", "txt"] as const).map((fmt) => (
                   <button
                     key={fmt}
@@ -370,7 +370,7 @@ function PrescricaoPage() {
                      className={inputCls}
                      aria-label="Creatinina em mg/dL"
                   />
-                  <div className="flex items-center justify-center bg-white border border-border rounded-xl px-4">
+                  <div className="flex items-center justify-center bg-elevated border border-border rounded-xl px-4">
                      {tfg != null ? (
                         <div className="text-center">
                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">TFGe (CG)</p>
@@ -395,7 +395,7 @@ function PrescricaoPage() {
                         key={atb.nome}
                         type="button"
                         onClick={() => addAtbFromRotineiro(atb)}
-                        className="px-3 py-1.5 rounded-lg bg-white border border-ai/30 text-ai text-[10px] font-black uppercase tracking-wider hover:bg-ai hover:text-white transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-elevated border border-ai/30 text-ai text-[10px] font-black uppercase tracking-wider hover:bg-ai hover:text-white transition-all"
                         title={`${atb.dose} ${atb.via} ${atb.frequencia}`}
                      >
                         + {atb.nome.replace("PIPERACILINA + TAZOBACTAM", "PIP-TAZO").replace("AMOXICILINA + CLAVULANATO", "AMOXI-CLAV")}
@@ -561,7 +561,7 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.2em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[2rem] p-8 shadow-sm">
+      <div className="bg-elevated border border-border rounded-[2rem] p-8 shadow-sm">
         {children}
       </div>
     </div>
@@ -572,7 +572,7 @@ function Chip({ label, selected, onClick }: { label: string, selected: boolean, 
   return (
     <button 
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${selected ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${selected ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-elevated text-muted-foreground border-border hover:border-primary/40"}`}
     >
       {label}
     </button>
@@ -600,4 +600,4 @@ function EditableList({ items, onChange }: { items: string[], onChange: (items: 
   );
 }
 
-const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";

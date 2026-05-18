@@ -29,7 +29,7 @@ function PacienteTempPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
-        <div className="bg-white border border-border rounded-[3rem] p-10 shadow-xl">
+        <div className="bg-elevated border border-border rounded-[3rem] p-10 shadow-xl">
           <div className="flex items-center gap-6 mb-10 border-b border-border pb-8">
             <div className="h-20 w-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
               <User className="h-10 w-10" />

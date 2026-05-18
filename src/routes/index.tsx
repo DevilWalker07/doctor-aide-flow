@@ -187,10 +187,10 @@ function HomePage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+          <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-elevated border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
             <Settings2 className="h-5 w-5" />
           </Link>
-          <button onClick={handleLogout} className="h-12 w-12 rounded-2xl bg-white border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive transition-all shadow-sm">
+          <button onClick={handleLogout} className="h-12 w-12 rounded-2xl bg-elevated border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive transition-all shadow-sm">
             <LogOut className="h-5 w-5" />
           </button>
         </div>
@@ -221,7 +221,7 @@ function HomePage() {
            <div className="grid grid-cols-2 gap-3">
              <button
                onClick={() => nav({ to: "/lab-rapido" })}
-               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
+               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-elevated border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
              >
                <div className="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
                  <Activity className="h-4 w-4" />
@@ -233,7 +233,7 @@ function HomePage() {
              </button>
              <button
                onClick={() => nav({ to: "/especialistas" })}
-               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
+               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-elevated border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
              >
                <div className="h-9 w-9 rounded-lg bg-violet-500/10 text-violet-600 flex items-center justify-center">
                  <Stethoscope className="h-4 w-4" />
@@ -246,7 +246,7 @@ function HomePage() {
            </div>
 
            {plantaoAtivo && (
-             <div className="bg-white border-2 border-primary/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
+             <div className="bg-elevated border-2 border-primary/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4">
                    <div className="flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-emerald-400 opacity-75"></span>
@@ -283,7 +283,7 @@ function HomePage() {
            )}
 
            {closedShifts.length > 0 && (
-             <div className="bg-white border border-border rounded-[2.5rem] p-6 shadow-sm">
+             <div className="bg-elevated border border-border rounded-[2.5rem] p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                    <History className="h-4 w-4 text-muted-foreground" />
                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">PLANTÕES ANTERIORES</span>
@@ -298,7 +298,7 @@ function HomePage() {
                          <div className="flex gap-2">
                             <button 
                               onClick={() => handleViewHandoff(s.id)}
-                              className="flex-1 py-2 rounded-lg bg-white border border-border text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-secondary transition-all"
+                              className="flex-1 py-2 rounded-lg bg-elevated border border-border text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-secondary transition-all"
                             >
                                <ExternalLink className="h-3 w-3" /> VER PASSAGEM
                             </button>
@@ -317,7 +317,7 @@ function HomePage() {
 
            <button 
              onClick={() => nav({ to: "/configuracoes" })}
-             className="py-5 rounded-[2.5rem] bg-white border border-border text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] hover:bg-secondary transition-all"
+             className="py-5 rounded-[2.5rem] bg-elevated border border-border text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] hover:bg-secondary transition-all"
            >
               CONFIGURAÇÕES DO PERFIL
            </button>
@@ -347,10 +347,10 @@ function HomePage() {
       {/* Modal Visualizar Passagem */}
       {selectedHandoff && (
         <div className="fixed inset-0 bg-navy/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-           <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+           <div className="bg-elevated rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
               <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/20">
                  <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">ARQUIVO DE PASSAGEM</h2>
-                 <button onClick={() => setSelectedHandoff(null)} className="p-2 hover:bg-white rounded-full transition-all">
+                 <button onClick={() => setSelectedHandoff(null)} className="p-2 hover:bg-elevated rounded-full transition-all">
                     <X className="h-4 w-4" />
                  </button>
               </div>
@@ -374,7 +374,7 @@ function HomePage() {
       {/* Modal Reabrir */}
       {showReopenModal && (
         <div className="fixed inset-0 bg-navy/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-           <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+           <div className="bg-elevated rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
               <div className="p-8 text-center space-y-6">
                  <div className="h-16 w-16 rounded-[2rem] bg-primary/10 text-primary flex items-center justify-center mx-auto">
                     <RefreshCw className={`h-8 w-8 ${isProcessing ? 'animate-spin' : ''}`} />

@@ -53,7 +53,7 @@ export default function ATBAlertBanner({ patient, onChanged }: Props) {
             </div>
             <button
               onClick={() => handleReavaliar(atb)}
-              className="px-3 py-2 rounded-lg bg-white border border-border text-[10px] font-black text-foreground uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1 shrink-0"
+              className="px-3 py-2 rounded-lg bg-elevated border border-border text-[10px] font-black text-foreground uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1 shrink-0"
             >
               <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Registrar reavaliação
             </button>

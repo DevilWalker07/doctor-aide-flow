@@ -38,7 +38,7 @@ function PacienteInternadoTriage() {
           {/* Foto de Prontuário */}
           <button
             onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "vision" } as any })}
-            className="group relative bg-white border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">
@@ -58,7 +58,7 @@ function PacienteInternadoTriage() {
           {/* PDF / DOCX */}
           <button
             onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "docling" } as any })}
-            className="group relative bg-white border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">
@@ -78,7 +78,7 @@ function PacienteInternadoTriage() {
           {/* Preencher Manualmente */}
           <button
             onClick={() => nav({ to: "/cadastro-manual", search: { tipo: "internado" } as any })}
-            className="group relative bg-white border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-secondary/20 hover:border-foreground/20 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-secondary/20 hover:border-foreground/20 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-secondary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-secondary/50 flex items-center justify-center text-foreground/60 mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">

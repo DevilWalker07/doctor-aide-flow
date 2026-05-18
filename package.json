@@ -13,7 +13,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "start": "tsx server/index.ts"
+    "start": "tsx server/index.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install --with-deps chromium"
   },
   "engines": {
     "node": "22.x",
@@ -92,6 +95,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^1.4.0",
+    "@playwright/test": "^1.60.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/node": "^22.16.5",

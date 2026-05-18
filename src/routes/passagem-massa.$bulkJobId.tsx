@@ -142,7 +142,7 @@ function PassagemMassaPage() {
             </p>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl p-6 shadow-sm">
+          <div className="bg-elevated border border-border rounded-2xl p-6 shadow-sm">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-3">
               <span>{done + errs} de {total}</span>
               <span>{pct}%</span>
@@ -154,7 +154,7 @@ function PassagemMassaPage() {
 
           <div className="space-y-2">
             {(job.sub_status || []).map((s) => (
-              <div key={s.sub_job_id} className="flex items-center gap-3 px-4 py-3 bg-white border border-border rounded-xl text-xs">
+              <div key={s.sub_job_id} className="flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl text-xs">
                 {s.status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />}
                 {s.status === "error" && <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />}
                 {(s.status === "processing" || s.status === "queued") && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
@@ -197,7 +197,7 @@ function PassagemMassaPage() {
           <button
             onClick={copyPassagem}
             disabled={!passagemTexto}
-            className="px-6 py-3 rounded-xl border border-border bg-white text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-3 rounded-xl border border-border bg-elevated text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <Copy className="h-3 w-3" /> COPIAR PASSAGEM
           </button>
@@ -215,7 +215,7 @@ function PassagemMassaPage() {
           {ranking.map((p, i) => {
             const style = GRAVIDADE_STYLES[p.gravidade] || GRAVIDADE_STYLES.moderado;
             return (
-              <div key={`${p.fileName}-${i}`} className="bg-white border border-border rounded-2xl p-5 shadow-sm hover:border-primary/40 transition-colors">
+              <div key={`${p.fileName}-${i}`} className="bg-elevated border border-border rounded-2xl p-5 shadow-sm hover:border-primary/40 transition-colors">
                 <div className="flex items-start gap-4 flex-wrap">
                   <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${style.bg} ${style.text}`}>
                     {style.label}
@@ -247,7 +247,7 @@ function PassagemMassaPage() {
         </div>
 
         {passagemTexto && (
-          <div className="bg-white border border-border rounded-[2rem] p-6 shadow-sm">
+          <div className="bg-elevated border border-border rounded-[2rem] p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-xs font-black uppercase tracking-[0.2em]">PASSAGEM CONSOLIDADA</h2>
@@ -263,7 +263,7 @@ function PassagemMassaPage() {
 function Shell({ title, children }: { title: string; children: any }) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <Link to="/upload-ia" search={{ tipo: "admissao", engine: "docling", modo: "lote", patient_id: undefined }} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary">
             <ChevronLeft className="h-5 w-5" />

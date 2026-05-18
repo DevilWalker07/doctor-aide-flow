@@ -183,7 +183,7 @@ function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
         <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
            <Link to="/dashboard" className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
@@ -234,7 +234,7 @@ function SettingsPage() {
                         <button 
                            key={opt.id} 
                            onClick={() => setAtbDayRule(opt.id)}
-                           className={`p-6 rounded-[2rem] border text-left transition-all ${atbDayRule === opt.id ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-white border-border hover:border-primary/40'}`}
+                           className={`p-6 rounded-[2rem] border text-left transition-all ${atbDayRule === opt.id ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-elevated border-border hover:border-primary/40'}`}
                         >
                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">{opt.label}</p>
                            <p className="text-[9px] text-muted-foreground font-bold">{opt.desc}</p>
@@ -267,7 +267,7 @@ function SettingsPage() {
                            type="number" min="1" max="30"
                            defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_amarelo") || "5", 10))}
                            onChange={e => localStorage.setItem("da_atb_dia_amarelo", e.target.value || "5")}
-                           className="w-16 bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                           className="w-16 bg-elevated border border-amber-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
                         />
                      </div>
                      <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ function SettingsPage() {
                            type="number" min="1" max="30"
                            defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_vermelho") || "7", 10))}
                            onChange={e => localStorage.setItem("da_atb_dia_vermelho", e.target.value || "7")}
-                           className="w-16 bg-white border border-red-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                           className="w-16 bg-elevated border border-red-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
                         />
                      </div>
                   </div>
@@ -291,7 +291,7 @@ function SettingsPage() {
          <Section title="BACKEND DE IA" icon={<Globe className="h-5 w-5" />}>
             <div className="flex items-center justify-between p-6 bg-secondary/30 rounded-[2rem] border border-border">
                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center border border-border shadow-sm">
+                  <div className="h-10 w-10 rounded-2xl bg-elevated flex items-center justify-center border border-border shadow-sm">
                      <RefreshCw className={`h-5 w-5 text-primary ${aiStatus === 'loading' ? 'animate-spin' : ''}`} />
                   </div>
                   <div>
@@ -313,7 +313,7 @@ function SettingsPage() {
                      </div>
                   </div>
                </div>
-               <button onClick={checkHealth} className="px-6 py-2.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest bg-white hover:bg-secondary transition-all">
+               <button onClick={checkHealth} className="px-6 py-2.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest bg-elevated hover:bg-secondary transition-all">
                   TESTAR CONEXÃO
                </button>
             </div>
@@ -370,11 +370,11 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
+      <div className="bg-elevated border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
         {children}
       </div>
     </div>
   );
 }
 
-const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";

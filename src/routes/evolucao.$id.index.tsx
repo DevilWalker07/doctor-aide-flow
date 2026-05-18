@@ -603,7 +603,7 @@ function EvolucaoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
            <div className="flex items-center gap-4">
@@ -624,7 +624,7 @@ function EvolucaoPage() {
                 <select
                   value={templateId}
                   onChange={(e) => updateTemplate(e.target.value)}
-                  className="px-4 py-2.5 rounded-xl border border-border bg-white text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-navy/20 cursor-pointer max-w-[280px]"
+                  className="px-4 py-2.5 rounded-xl border border-border bg-elevated text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-navy/20 cursor-pointer max-w-[280px]"
                   aria-label="Modelo de evolução"
                   title={activeTemplate.description}
                 >
@@ -649,7 +649,7 @@ function EvolucaoPage() {
               >
                 <History className="h-3 w-3" /> VERSÕES ({versions.length})
               </button>
-              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-white" role="group" aria-label="Exportar evolução">
+              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-elevated" role="group" aria-label="Exportar evolução">
                 <button
                   onClick={() => handleExport("docx")}
                   disabled={!evolutionText || isExporting !== null}
@@ -728,7 +728,7 @@ function EvolucaoPage() {
                         {paciente.data?.abx?.length > 0 ? (
                            <div className="space-y-2">
                               {paciente.data.abx.map((atb: any, i: number) => (
-                                 <div key={i} className="flex justify-between items-center p-3 bg-white border border-border rounded-xl">
+                                 <div key={i} className="flex justify-between items-center p-3 bg-elevated border border-border rounded-xl">
                                     <span className="text-[10px] font-black text-foreground uppercase">{atb.name}</span>
                                     <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded">
                                        {(() => {
@@ -761,11 +761,11 @@ function EvolucaoPage() {
                </SectionCard>
 
                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => nav({ to: "/prescricao/$id", params: { id } })} className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
+                  <button onClick={() => nav({ to: "/prescricao/$id", params: { id } })} className="flex flex-col items-center justify-center p-6 bg-elevated border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
                      <Pill className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2" />
                      <span className="text-[9px] font-black uppercase tracking-widest">PRESCRIÇÃO</span>
                   </button>
-                  <button onClick={() => nav({ to: "/dashboard" })} className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
+                  <button onClick={() => nav({ to: "/dashboard" })} className="flex flex-col items-center justify-center p-6 bg-elevated border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group">
                      <ArrowRight className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2" />
                      <span className="text-[9px] font-black uppercase tracking-widest">PASSAGEM</span>
                   </button>
@@ -774,7 +774,7 @@ function EvolucaoPage() {
 
             {/* ÁREA PRINCIPAL */}
             <div className="space-y-6 order-1 lg:order-2">
-               <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm flex flex-col min-h-[600px]">
+               <div className="bg-elevated border border-border rounded-[2.5rem] p-8 shadow-sm flex flex-col min-h-[600px]">
                   <div className="flex items-center justify-between mb-8">
                      <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-2xl bg-ai/10 flex items-center justify-center text-ai border border-ai/20">
@@ -822,7 +822,7 @@ function EvolucaoPage() {
 
                   <div className="flex-1 relative">
                      {isGenerating && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-ai/40">
+                        <div className="absolute inset-0 bg-elevated/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-ai/40">
                            <Loader2 className="h-12 w-12 text-ai animate-spin mb-6" />
                            <p className="text-xs font-black uppercase tracking-[0.2em] text-ai animate-pulse">ESTRUTURANDO PRONTUÁRIO...</p>
                         </div>
@@ -848,7 +848,7 @@ function EvolucaoPage() {
                            disabled={isRefining || !evolutionText.trim()}
                            placeholder="ex: encurte, adicione PCR caiu de 12 para 5, corrija o exame físico..."
                            aria-label="Instrução para refinar a evolução"
-                           className="flex-1 px-4 py-3 rounded-xl border border-border bg-white text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-ai/30 disabled:opacity-50"
+                           className="flex-1 px-4 py-3 rounded-xl border border-border bg-elevated text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-ai/30 disabled:opacity-50"
                         />
                         <button
                            onClick={handleRefine}
@@ -879,7 +879,7 @@ function EvolucaoPage() {
         <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm flex justify-end" onClick={() => setShowVersions(false)}>
           <aside
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white border-l border-border shadow-2xl flex flex-col h-full"
+            className="w-full max-w-md bg-elevated border-l border-border shadow-2xl flex flex-col h-full"
             role="dialog"
             aria-label="Versões geradas"
           >
@@ -922,7 +922,7 @@ function EvolucaoPage() {
 
       {overwriteChoice === "ask" && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[2rem] border border-border shadow-2xl overflow-hidden">
+          <div className="bg-elevated w-full max-w-md rounded-[2rem] border border-border shadow-2xl overflow-hidden">
             <header className="px-8 py-6 border-b border-border bg-secondary/30">
               <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Já existe texto no campo</h2>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Como você quer gerar a nova evolução?</p>
@@ -965,7 +965,7 @@ function EvolucaoPage() {
 
 function SectionCard({ title, icon, children }: { title: string, icon: any, children: any }) {
   return (
-    <div className="bg-white border border-border rounded-[2rem] overflow-hidden shadow-sm">
+    <div className="bg-elevated border border-border rounded-[2rem] overflow-hidden shadow-sm">
       <header className="px-6 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
         <div className="text-muted-foreground">{icon}</div>
         <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">{title}</h3>
@@ -979,7 +979,7 @@ function SectionCard({ title, icon, children }: { title: string, icon: any, chil
 
 function MiniStat({ label, value }: { label: string, value: string }) {
   return (
-    <div className="bg-white border border-border rounded-2xl p-4 text-center shadow-sm">
+    <div className="bg-elevated border border-border rounded-2xl p-4 text-center shadow-sm">
        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
        <p className="text-lg font-black text-foreground">{value}</p>
     </div>

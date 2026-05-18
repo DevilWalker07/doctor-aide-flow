@@ -170,7 +170,7 @@ function PassagemPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
              <button onClick={() => nav({ to: "/dashboard" })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary">
@@ -196,7 +196,7 @@ function PassagemPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="bg-white border border-border rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="bg-elevated border border-border rounded-[2rem] shadow-sm overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead className="bg-secondary/50 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
               <tr>

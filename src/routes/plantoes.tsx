@@ -67,7 +67,7 @@ function PlantoesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <button
             onClick={() => nav({ to: "/" })}
@@ -103,7 +103,7 @@ function PlantoesPage() {
         {activeTab === "ativos" && (
           <section>
             {plantaoAtivo ? (
-              <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-lg">
+              <div className="bg-elevated border border-border rounded-[2.5rem] p-8 shadow-lg">
                 <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                   <div>
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary mb-2">
@@ -140,7 +140,7 @@ function PlantoesPage() {
                       const ok = window.confirm("Encerrar este plantão? Os dados serão arquivados.");
                       if (ok) nav({ to: "/dashboard", search: { encerrar: "1" } as any });
                     }}
-                    className="px-6 py-4 rounded-xl border border-destructive/30 bg-white text-destructive text-[10px] font-black uppercase tracking-widest hover:bg-destructive/10 transition-all"
+                    className="px-6 py-4 rounded-xl border border-destructive/30 bg-elevated text-destructive text-[10px] font-black uppercase tracking-widest hover:bg-destructive/10 transition-all"
                   >
                     ENCERRAR
                   </button>
@@ -182,7 +182,7 @@ function PlantoesPage() {
 
         {activeTab === "novo" && (
           <section>
-            <div className="bg-white border-2 border-dashed border-border rounded-[2.5rem] p-12 text-center">
+            <div className="bg-elevated border-2 border-dashed border-border rounded-[2.5rem] p-12 text-center">
               <div className="h-20 w-20 rounded-[2rem] bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
                 <Plus className="h-10 w-10" />
               </div>
@@ -205,7 +205,7 @@ function PlantoesPage() {
 
       {verPassagem && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setVerPassagem(null)}>
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-elevated w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
             <header className="px-8 py-6 border-b border-border bg-secondary/30 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-black uppercase tracking-widest">PASSAGENS DO PLANTÃO</h2>
@@ -247,7 +247,7 @@ function EmptyCard({ icon, title, description, action }: {
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="bg-white border-2 border-dashed border-border rounded-[2.5rem] p-12 text-center">
+    <div className="bg-elevated border-2 border-dashed border-border rounded-[2.5rem] p-12 text-center">
       <div className="h-20 w-20 rounded-[2rem] bg-secondary/50 text-muted-foreground/60 flex items-center justify-center mx-auto mb-6">
         {icon}
       </div>
@@ -270,7 +270,7 @@ function ArquivadoCard({ shift, onReabrir, onVerPassagem }: {
 }) {
   const total = shift.snapshot.pacientes.length;
   return (
-    <div className="bg-white border border-border rounded-3xl p-6 shadow-sm hover:border-primary/30 transition-colors">
+    <div className="bg-elevated border border-border rounded-3xl p-6 shadow-sm hover:border-primary/30 transition-colors">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">

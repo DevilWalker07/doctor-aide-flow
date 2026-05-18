@@ -18,7 +18,7 @@ export default function ErrorPage({ error, reset }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-12">
-      <div className="w-full max-w-xl bg-white border border-border rounded-[2.5rem] p-10 shadow-2xl">
+      <div className="w-full max-w-xl bg-elevated border border-border rounded-[2.5rem] p-10 shadow-2xl">
         <div className="flex items-center gap-4 mb-6">
           <div className="h-14 w-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
             <AlertTriangle className="h-7 w-7" />
@@ -62,7 +62,7 @@ export default function ErrorPage({ error, reset }: Props) {
           </Link>
           <button
             onClick={handleReload}
-            className="px-5 py-3 rounded-xl border border-border bg-white text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center justify-center gap-2"
+            className="px-5 py-3 rounded-xl border border-border bg-elevated text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center justify-center gap-2"
           >
             <RefreshCw className="h-3.5 w-3.5" /> RECARREGAR
           </button>

@@ -15,12 +15,12 @@ export function Checklist({ items, onNavigate }: { items: ChecklistItem[]; onNav
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-xs font-extrabold uppercase tracking-widest text-white/90">CHECKLIST</h3>
-          <span className="text-[10px] uppercase font-bold tracking-widest bg-white/10 px-2 py-1 rounded-md text-white/90">
+          <span className="text-[10px] uppercase font-bold tracking-widest bg-elevated/10 px-2 py-1 rounded-md text-white/90">
             {doneCount}/{items.length}
           </span>
         </div>
 
-        <div className="h-1.5 w-full bg-white/10 rounded-full mb-6 overflow-hidden">
+        <div className="h-1.5 w-full bg-elevated/10 rounded-full mb-6 overflow-hidden">
           <div className="h-full bg-primary transition-all duration-1000 ease-out rounded-full" style={{ width: `${progress}%` }} />
         </div>
 
@@ -29,7 +29,7 @@ export function Checklist({ items, onNavigate }: { items: ChecklistItem[]; onNav
             <li
               key={it.id}
               onClick={() => onNavigate?.(it.id)}
-              className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-elevated/10 transition-colors cursor-pointer"
             >
               <StatusIcon s={it.status} />
               <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${it.status === "done" ? "text-white" : "text-white/50 group-hover:text-white/80"}`}>

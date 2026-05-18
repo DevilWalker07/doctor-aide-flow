@@ -15,7 +15,7 @@ interface Props {
 const PRIORITY_STYLES: Record<SuggestionPriority, { label: string; bg: string; text: string }> = {
   alta: { label: "ALTA", bg: "bg-red-100", text: "text-red-700" },
   media: { label: "MÉDIA", bg: "bg-amber-100", text: "text-amber-700" },
-  baixa: { label: "BAIXA", bg: "bg-slate-100", text: "text-slate-600" },
+  baixa: { label: "BAIXA", bg: "bg-subtle", text: "text-foreground/80" },
 };
 
 export default function SpecialistDrawer({ open, onClose, specialist, consult, isLoading, onAcceptSuggestions }: Props) {
@@ -44,20 +44,20 @@ export default function SpecialistDrawer({ open, onClose, specialist, consult, i
   return (
     <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm flex justify-end" onClick={onClose}>
       <aside
-        className="w-full max-w-xl bg-white border-l border-border shadow-2xl flex flex-col h-full"
+        className="w-full max-w-xl bg-elevated border-l border-border shadow-2xl flex flex-col h-full"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={`Parecer de ${specialist.nome}`}
       >
         <header className={`px-6 py-5 border-b border-border ${specialist.cor.bg} ${specialist.cor.text} flex items-center gap-4`}>
-          <SpecialistAvatar specialistId={specialist.id} size={56} className="rounded-full bg-white/20" />
+          <SpecialistAvatar specialistId={specialist.id} size={56} className="rounded-full bg-elevated/20" />
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-black uppercase tracking-widest">{specialist.nome} — Parecer Clínico</h2>
             <p className="text-[10px] font-bold opacity-90 uppercase tracking-widest">
               {specialist.titulo} · {consult ? `Gerado ${formatTime(consult.generated_at)}` : "Aguardando…"}
             </p>
           </div>
-          <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors" aria-label="Fechar parecer">
+          <button onClick={onClose} className="h-10 w-10 rounded-full bg-elevated/20 flex items-center justify-center hover:bg-elevated/30 transition-colors" aria-label="Fechar parecer">
             <X className="h-5 w-5" />
           </button>
         </header>
@@ -88,7 +88,7 @@ export default function SpecialistDrawer({ open, onClose, specialist, consult, i
           ))}
 
           {!isLoading && consult && consult.suggestions.length > 0 && (
-            <div className="bg-white border border-border rounded-2xl p-4">
+            <div className="bg-elevated border border-border rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Condutas sugeridas</h3>
                 <div className="flex gap-2">
@@ -133,7 +133,7 @@ export default function SpecialistDrawer({ open, onClose, specialist, consult, i
           )}
         </div>
 
-        <footer className="px-6 py-4 border-t border-border bg-white">
+        <footer className="px-6 py-4 border-t border-border bg-elevated">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               {acceptedTexts.length} de {consult?.suggestions.length || 0} selecionada(s)
