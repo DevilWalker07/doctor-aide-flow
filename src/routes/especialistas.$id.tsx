@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, Send, Loader2, Copy, Trash2 } from "lucide-react";
 import { SPECIALISTS, type SpecialistId } from "@/lib/specialists/types";
 import { SpecialistAvatar } from "@/components/specialists/SpecialistAvatar";
-import { supabase } from "@/lib/supabase";
+import { invokeEdgeFunction } from "@/lib/edgeFunctions";
 import { toast } from "sonner";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -79,14 +79,14 @@ function ChatEspecialistaPage() {
     setSending(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("specialist-chat", {
-        body: {
+      const data = await invokeEdgeFunction<{ reply: string; generated_at: string }>(
+        "specialist-chat",
+        {
           specialist_id: specialistId,
           messages: next.map(m => ({ role: m.role, content: m.content })),
         },
-      });
-      if (error) throw new Error(error.message || "Erro na conversa");
-      if (data?.error) throw new Error(data.error);
+        { timeoutMs: 180_000 },
+      );
 
       const reply: ChatMsg = {
         id: `a-${Date.now()}`,

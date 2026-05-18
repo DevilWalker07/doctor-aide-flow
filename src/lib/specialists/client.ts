@@ -1,22 +1,10 @@
-import { supabase } from "../supabase";
+import { invokeEdgeFunction } from "../edgeFunctions";
 import type { ConsultRequestPayload, ConsultResponse, SavedConsult } from "./types";
 
 const STORAGE_PREFIX = "da_specialist_consult_";
 
 export async function consultSpecialist(payload: ConsultRequestPayload): Promise<ConsultResponse> {
-  const { data, error } = await supabase.functions.invoke("specialist-consult", {
-    body: payload,
-  });
-  if (error) {
-    throw new Error(error.message || "Erro ao consultar especialista.");
-  }
-  if (!data || typeof data !== "object") {
-    throw new Error("Resposta inválida do especialista.");
-  }
-  if ((data as any).error) {
-    throw new Error((data as any).error);
-  }
-  return data as ConsultResponse;
+  return invokeEdgeFunction<ConsultResponse>("specialist-consult", payload, { timeoutMs: 180_000 });
 }
 
 /**

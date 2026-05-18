@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { ChevronLeft, Upload, FileText, Copy, Check, Loader2, X, Image as ImageIcon, FileType } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { invokeEdgeFunction } from "@/lib/edgeFunctions";
 import { toast } from "sonner";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -41,12 +41,7 @@ async function extractOne(payload: {
   fileType?: string;
   fileName?: string;
 }): Promise<any> {
-  const { data, error } = await supabase.functions.invoke("lab-extractor", {
-    body: payload,
-  });
-  if (error) throw new Error(error.message || "Falha na extração");
-  if (data?.error) throw new Error(data.error);
-  return data;
+  return invokeEdgeFunction<any>("lab-extractor", payload, { timeoutMs: 180_000 });
 }
 
 function LabRapidoPage() {
