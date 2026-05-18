@@ -8,7 +8,7 @@
  * - Se médico registrou reavaliação nas últimas 48h: alerta silenciado.
  */
 
-import { calcularDiaAtb } from "./medical/antibiotico";
+import { calcularDiaAtb, isAtbAtivo } from "./medical/antibiotico";
 import { storage } from "./storage";
 
 export type AlertLevel = "ok" | "yellow" | "red";
@@ -22,6 +22,10 @@ export interface RawATB {
   data_inicio?: string;
   dataInicio?: string;
   d0?: string;
+  data_fim?: string;
+  dataFim?: string;
+  end_date?: string;
+  status?: string;
 }
 
 export interface ATBWithAlert {
@@ -100,7 +104,7 @@ function getATBsFromPatient(p: PatientForATBAlert): RawATB[] {
 
 export function getATBsWithAlert(patient: PatientForATBAlert): ATBWithAlert[] {
   const cfg = readConfig();
-  const list = getATBsFromPatient(patient);
+  const list = getATBsFromPatient(patient).filter(isAtbAtivo);
   return list.map((a) => {
     const dia = diaAtbToday(a, cfg.modo) ?? 0;
     const nomeNorm = getATBName(a);

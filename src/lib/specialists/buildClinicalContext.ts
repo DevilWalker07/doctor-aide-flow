@@ -128,21 +128,44 @@ export function buildClinicalContext(
     problemasResolvidos.forEach((p: any) => out.push(`  - ${textOf(p)}`));
   }
 
-  // ANTIBIÓTICOS DETALHADOS (raw + mapeado: data.abx)
+  // ANTIBIÓTICOS — separa ativos de já finalizados/suspensos
   let atbs = pickArr(patient, ["antibioticos", "antibiotics"]);
   if (!atbs.length && Array.isArray(patient?.data?.abx)) atbs = patient.data.abx;
   if (atbs.length) {
-    out.push("\nANTIBIÓTICOS EM USO:");
-    atbs.forEach((a: any, i: number) => {
-      const nome = a.nome || a.name || "ATB";
-      const dose = a.dose || "";
-      const via = a.via || "";
-      const freq = a.frequencia || a.freq || "";
-      const dInicio = a.data_inicio || a.dataInicio || a.d0;
-      const d = dia(dInicio);
-      const dDay = d != null ? `D${d + 1}` : "D?";
-      out.push(`  ${i + 1}. ${nome} ${dose} ${via} ${freq} — ${dDay} (início ${fmtDate(dInicio)})`);
-    });
+    const ativos: any[] = [];
+    const finalizados: any[] = [];
+    for (const a of atbs) {
+      const status = (a.status || "").toLowerCase();
+      const fim = a.data_fim || a.dataFim || a.end_date;
+      const fimPassado = fim ? new Date(`${fim}T00:00:00`).getTime() <= Date.now() : false;
+      if (status === "finalizado" || status === "suspenso" || fimPassado) finalizados.push(a);
+      else ativos.push(a);
+    }
+
+    if (ativos.length) {
+      out.push("\nANTIBIÓTICOS EM USO:");
+      ativos.forEach((a: any, i: number) => {
+        const nome = a.nome || a.name || "ATB";
+        const dose = a.dose || "";
+        const via = a.via || "";
+        const freq = a.frequencia || a.freq || "";
+        const dInicio = a.data_inicio || a.dataInicio || a.d0;
+        const d = dia(dInicio);
+        const dDay = d != null ? `D${d + 1}` : "D?";
+        out.push(`  ${i + 1}. ${nome} ${dose} ${via} ${freq} — ${dDay} (início ${fmtDate(dInicio)})`);
+      });
+    }
+
+    if (finalizados.length) {
+      out.push("\nANTIBIÓTICOS JÁ FINALIZADOS (histórico — não contar D-day):");
+      finalizados.forEach((a: any, i: number) => {
+        const nome = a.nome || a.name || "ATB";
+        const dInicio = a.data_inicio || a.dataInicio || a.d0;
+        const dFim = a.data_fim || a.dataFim || a.end_date;
+        const motivo = (a.status || "").toLowerCase() === "suspenso" ? "suspenso" : "finalizado";
+        out.push(`  ${i + 1}. ${nome} — ${motivo} (${fmtDate(dInicio)} → ${fmtDate(dFim) || "?"})`);
+      });
+    }
   }
 
   // PRESCRIÇÃO ATUAL DA INTERNAÇÃO

@@ -359,7 +359,12 @@ function RevisarExtracao() {
         name: data.nome, age: data.idade, sex: data.sexo, bed: data.leito, sector: data.setor,
         admission_date: data.data_admissao, reason_for_admission: data.motivo_admissao, hda: data.hda,
         problem_list: data.lista_de_problemas.map((p: any) => p.text),
-        antibiotics: data.antibioticos.map((a: any) => ({ nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio })),
+        antibiotics: data.antibioticos.map((a: any) => ({
+          nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia,
+          data_inicio: a.dataInicio,
+          ...(a.dataFim || a.data_fim ? { data_fim: a.dataFim || a.data_fim } : {}),
+          ...(a.status ? { status: a.status } : {}),
+        })),
         medications: data.medicacoes.map((m: any) => m.text),
         labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor })),
         physical_exam: data.exame_fisico_detalhado,

@@ -31,6 +31,52 @@ function PacienteDetailPage() {
   const [evolutions, setEvolutions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalEvolucao, setModalEvolucao] = useState<any>(null);
+  const [atbToFinalize, setAtbToFinalize] = useState<{ index: number; atb: any } | null>(null);
+
+  const finalizeAtb = async (status: "finalizado" | "suspenso", dataFim: string) => {
+    if (!atbToFinalize || !paciente) return;
+    try {
+      // Atualiza no objeto local
+      const newAbx = [...paciente.data.abx];
+      newAbx[atbToFinalize.index] = { ...newAbx[atbToFinalize.index], status, data_fim: dataFim };
+      const newPaciente = { ...paciente, data: { ...paciente.data, abx: newAbx } };
+      setPaciente(newPaciente);
+
+      // Mapeia pro formato do DB (campos data_inicio, nome, etc)
+      const dbAntibiotics = newAbx.map((a: any) => ({
+        nome: a.name,
+        dose: a.dose,
+        via: a.via,
+        frequencia: a.freq,
+        data_inicio: a.d0,
+        ...(a.data_fim ? { data_fim: a.data_fim } : {}),
+        ...(a.status ? { status: a.status } : {}),
+      }));
+
+      // Persiste: Supabase primeiro, fallback localStorage
+      if (userId && !id.startsWith("temp_")) {
+        try {
+          await updatePatient(id, { antibiotics: dbAntibiotics as any }, userId);
+        } catch (e) {
+          console.warn("Falha ao salvar no Supabase, salvo só local", e);
+        }
+      }
+      // Atualiza localStorage também
+      try {
+        const local = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+        const idx = local.findIndex((p: any) => p.id === id);
+        if (idx >= 0) {
+          local[idx] = { ...local[idx], antibiotics: dbAntibiotics, antibioticos: dbAntibiotics };
+          localStorage.setItem("da_pacientes", JSON.stringify(local));
+        }
+      } catch { /* ignore */ }
+
+      setAtbToFinalize(null);
+      toast.success(`${atbToFinalize.atb.name} marcado como ${status}`);
+    } catch (e: any) {
+      toast.error("Erro ao finalizar: " + (e.message || "?"));
+    }
+  };
 
   useEffect(() => {
     if (!userId) {
@@ -57,7 +103,8 @@ function PacienteDetailPage() {
           pendingIssues: p.pending_issues || [],
           data: {
             abx: (p.antibiotics || []).map(a => ({
-              name: a.nome, dose: a.dose, via: a.via, freq: a.frequencia, d0: a.data_inicio
+              name: a.nome, dose: a.dose, via: a.via, freq: a.frequencia, d0: a.data_inicio,
+              data_fim: (a as any).data_fim, status: (a as any).status,
             })),
             lab: (p.labs?.length > 0) ? { 
               date: p.labs[0].data, 
@@ -460,6 +507,7 @@ function PacienteDetailPage() {
            <div className="space-y-8">
               {paciente.data?.abx?.length > 0 ? (
                 paciente.data.abx.map((atb: any, i: number) => {
+                  const isFinalizado = atb.status === "finalizado" || atb.status === "suspenso" || (atb.data_fim && new Date(`${atb.data_fim}T00:00:00`).getTime() <= Date.now());
                   const dValue = differenceInDays(startOfDay(new Date()), startOfDay(parseISO(atb.d0)));
                   const dSafe = dValue >= 0 ? dValue : 0;
                   const maxDays = 7;
@@ -470,19 +518,40 @@ function PacienteDetailPage() {
                   const colorClass = dSafe <= 3 ? "text-emerald-500" : dSafe <= 5 ? "text-amber-500" : "text-destructive";
                   
                   return (
-                    <div key={i} className="space-y-4">
+                    <div key={i} className={`space-y-4 ${isFinalizado ? "opacity-60" : ""}`}>
                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                             <h3 className="font-black text-foreground uppercase tracking-tight text-lg">{atb.name}</h3>
+                          <div className="flex-1 min-w-0">
+                             <div className="flex items-center gap-2 flex-wrap">
+                               <h3 className="font-black text-foreground uppercase tracking-tight text-lg">{atb.name}</h3>
+                               {isFinalizado && (
+                                 <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold uppercase tracking-wide">
+                                   {atb.status === "suspenso" ? "Suspenso" : "Finalizado"}
+                                 </span>
+                               )}
+                             </div>
                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 {atb.dose} · {atb.via} · {atb.freq}
                              </p>
                           </div>
-                          <div className="text-right">
-                             <div className="text-2xl font-black text-foreground">D{dSafe}</div>
-                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                                INÍCIO: {format(parseISO(atb.d0), "dd/MM/yyyy")}
-                             </p>
+                          <div className="text-right flex items-center gap-3">
+                             {!isFinalizado && (
+                               <button
+                                 onClick={() => setAtbToFinalize({ index: i, atb })}
+                                 className="px-3 h-8 rounded-md border border-border bg-white dark:bg-elevated text-[11px] font-semibold hover:bg-subtle transition-colors"
+                                 title="Marcar como finalizado/suspenso"
+                               >
+                                 Finalizar
+                               </button>
+                             )}
+                             <div>
+                               <div className="text-2xl font-black text-foreground">D{dSafe}</div>
+                               <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                                  INÍCIO: {format(parseISO(atb.d0), "dd/MM/yyyy")}
+                                  {atb.data_fim && (
+                                    <> · FIM: {format(parseISO(atb.data_fim), "dd/MM/yyyy")}</>
+                                  )}
+                               </p>
+                             </div>
                           </div>
                        </div>
                        
@@ -821,6 +890,129 @@ function PacienteDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Modal finalizar ATB */}
+      {atbToFinalize && (
+        <FinalizeAtbModal
+          atb={atbToFinalize.atb}
+          onClose={() => setAtbToFinalize(null)}
+          onConfirm={finalizeAtb}
+        />
+      )}
+    </div>
+  );
+}
+
+function FinalizeAtbModal({
+  atb,
+  onClose,
+  onConfirm,
+}: {
+  atb: any;
+  onClose: () => void;
+  onConfirm: (status: "finalizado" | "suspenso", dataFim: string) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [dataFim, setDataFim] = useState(today);
+  const [status, setStatus] = useState<"finalizado" | "suspenso">("finalizado");
+  const [saving, setSaving] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!dataFim) return;
+    setSaving(true);
+    await onConfirm(status, dataFim);
+    setSaving(false);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-elevated rounded-xl w-full max-w-md shadow-xl border border-border"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold">Finalizar antibiótico</h2>
+              <p className="text-[13px] text-muted-foreground mt-0.5">{atb.name}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 -mr-1 rounded-md hover:bg-subtle text-muted-foreground"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-[13px] font-medium mb-1.5 block">Status</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatus("finalizado")}
+                  className={`h-10 rounded-md border text-[13px] font-medium transition-colors ${
+                    status === "finalizado"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-elevated hover:bg-subtle"
+                  }`}
+                >
+                  Finalizado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("suspenso")}
+                  className={`h-10 rounded-md border text-[13px] font-medium transition-colors ${
+                    status === "suspenso"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-elevated hover:bg-subtle"
+                  }`}
+                >
+                  Suspenso
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Finalizado = ciclo completo. Suspenso = parou antes do previsto.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="data_fim" className="text-[13px] font-medium mb-1.5 block">
+                Data de fim
+              </label>
+              <input
+                id="data_fim"
+                type="date"
+                value={dataFim}
+                max={today}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-elevated text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={onClose}
+                disabled={saving}
+                className="flex-1 h-10 rounded-md border border-border bg-elevated text-sm font-medium hover:bg-subtle transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={saving || !dataFim}
+                className="flex-1 h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {saving ? "Salvando…" : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

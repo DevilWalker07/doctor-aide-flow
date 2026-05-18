@@ -42,12 +42,18 @@ export interface Patient {
   updated_at: string
 }
 
+export type AntibioticStatus = "ativo" | "finalizado" | "suspenso"
+
 export interface Antibiotic {
   nome: string
   dose: string
   via: string
   frequencia: string
   data_inicio: string
+  /** Data em que o ATB foi suspenso ou finalizado. Undefined = ainda em uso. */
+  data_fim?: string
+  /** Status explícito. Undefined é tratado como "ativo" (backward-compat). */
+  status?: AntibioticStatus
 }
 
 export interface Lab {

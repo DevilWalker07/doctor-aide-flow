@@ -30,7 +30,16 @@ interface Patient {
   motivo_admissao?: string;
   hda?: string;
   lista_de_problemas: { id: string; text: string }[];
-  antibioticos: { id: string; nome: string; dose: string; via: string; frequencia: string; dataInicio: string }[];
+  antibioticos: {
+    id: string;
+    nome: string;
+    dose: string;
+    via: string;
+    frequencia: string;
+    dataInicio: string;
+    data_fim?: string;
+    status?: string;
+  }[];
   medicacoes: { id: string; text: string }[];
   laboratorios: { id: string; data: string; valor: string }[];
   pendencias: { id: string; text: string }[];
@@ -96,7 +105,10 @@ function DashboardPage() {
             lista_de_problemas: (p.problem_list || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
             antibioticos: (p.antibiotics || []).map((a: any) => ({
               id: Math.random().toString(),
-              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, dataInicio: a.data_inicio || a.dataInicio,
+              nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia,
+              dataInicio: a.data_inicio || a.dataInicio,
+              data_fim: a.data_fim || a.dataFim || a.end_date,
+              status: a.status,
             })),
             medicacoes: (p.medications || []).map((t: string) => ({ id: Math.random().toString(), text: t })),
             laboratorios: (p.labs || []).map((l: any) => ({
@@ -525,7 +537,16 @@ interface PatientRowProps {
   onAbrir: () => void;
 }
 function PatientRow({ patient: p, calculateDValue, onEvoluir, onPrescricao, onAbrir }: PatientRowProps) {
-  const atbCount = p.antibioticos.length;
+  const atbsAtivos = p.antibioticos.filter(a => {
+    const s = (a.status || "").toLowerCase();
+    if (s === "finalizado" || s === "suspenso") return false;
+    if (a.data_fim) {
+      const t = new Date(`${a.data_fim}T00:00:00`).getTime();
+      if (!isNaN(t) && t <= Date.now()) return false;
+    }
+    return true;
+  });
+  const atbCount = atbsAtivos.length;
   const pendCount = p.pendencias.length;
 
   return (
@@ -566,7 +587,7 @@ function PatientRow({ patient: p, calculateDValue, onEvoluir, onPrescricao, onAb
             </div>
             {atbCount > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {p.antibioticos.slice(0, 3).map(atb => (
+                {atbsAtivos.slice(0, 3).map(atb => (
                   <span
                     key={atb.id}
                     className={`inline-flex items-center gap-1 px-1.5 h-5 rounded text-[11px] font-medium tabular-nums ${ATB_PILL[p.worstAtbAlert === "ok" ? "ok" : p.worstAtbAlert]}`}

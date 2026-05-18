@@ -37,8 +37,24 @@ REGRAS ABSOLUTAS:
 6. PRESERVE DOSE, VIA, INTERVALO E DATA EXATAMENTE COMO APARECEM.
 7. RETORNE SOMENTE JSON VÁLIDO, SEM MARKDOWN.
 8. EXTRAIA LABORATÓRIOS EM FORMATO COMPACTO COM BARRAS VERTICAIS.
-9. ORGANIZE ANTIBIÓTICOS COM DATA DE INÍCIO, DOSE, VIA, INTERVALO E STATUS.
+9. ORGANIZE ANTIBIÓTICOS COM DATA DE INÍCIO, DATA DE FIM, DOSE, VIA, INTERVALO E STATUS.
 10. EXTRAIA PENDÊNCIAS E CONDUTAS.
+
+REGRAS CRÍTICAS PARA ANTIBIÓTICOS (LEIA COM ATENÇÃO):
+O documento PODE conter ATBs em estados diferentes:
+  (a) ATB EM USO AGORA → status="ativo", end_date=null
+  (b) ATB JÁ FINALIZADO/COMPLETADO → status="finalizado", end_date=DATA EM QUE TERMINOU
+  (c) ATB SUSPENSO POR INTOLERÂNCIA/TROCA → status="suspenso", end_date=DATA EM QUE FOI SUSPENSO
+
+EXEMPLOS DE PISTAS QUE INDICAM ATB FINALIZADO/SUSPENSO:
+- "Ceftriaxona D7/7 — concluído", "ceftriaxona finalizada em 18/05"
+- "Sus pendeu meropenem em 10/05", "trocado por X em 12/05"
+- "ATB prévio: ceftriaxona 10–18/05 (8 dias)"
+- Frases em evolução de dias passados mencionando ATB que NÃO aparece mais na prescrição atual
+
+REGRA DE OURO: Se um ATB aparece SÓ no histórico/evolução anterior mas NÃO aparece na prescrição ATUAL, ele provavelmente está finalizado.
+NUNCA marque um ATB já finalizado como "ativo" — isso faz o sistema contar D-day errado.
+Se houver QUALQUER dúvida sobre estado, marque end_date como null mas adicione um item em uncertain_fields explicando.
 
 JSON OBRIGATÓRIO:
 {
@@ -83,7 +99,7 @@ JSON OBRIGATÓRIO:
       { "name": "", "dose": null, "route": null, "frequency": null, "indication": null }
     ],
     "antibiotics": [
-      { "name": "", "dose": null, "route": null, "frequency": null, "start_date": null, "start_time": null, "status": null }
+      { "name": "", "dose": null, "route": null, "frequency": null, "start_date": null, "end_date": null, "start_time": null, "status": "ativo" }
     ],
     "diet": null,
     "devices": [],

@@ -78,6 +78,17 @@ function diasDeAtb(atb: { data_inicio?: string; dataInicio?: string }): number |
   return Math.floor(ms / 86400000);
 }
 
+function atbAtivo(a: { status?: string; data_fim?: string; dataFim?: string; end_date?: string }): boolean {
+  const status = (a.status || "").toLowerCase();
+  if (status === "finalizado" || status === "suspenso") return false;
+  const fim = a.data_fim || a.dataFim || a.end_date;
+  if (fim) {
+    const d = new Date(`${fim}T00:00:00`);
+    if (!isNaN(d.getTime()) && d.getTime() <= Date.now()) return false;
+  }
+  return true;
+}
+
 export function computeGravidade(p: GravidadeInput): Gravidade {
   const setor = lc(p.setor || p.sector);
   const motivo = lc(p.motivo_admissao || p.reason_for_admission);
@@ -96,7 +107,7 @@ export function computeGravidade(p: GravidadeInput): Gravidade {
     return "critico";
   }
 
-  const atbs = [...(p.antibioticos || []), ...(p.antibiotics || [])];
+  const atbs = [...(p.antibioticos || []), ...(p.antibiotics || [])].filter(atbAtivo);
   const ivAtb = atbs.some(isIV);
 
   if (inUti) return "grave";
@@ -120,10 +131,14 @@ export function gravidadeOrder(g: Gravidade): number {
   return GRAVIDADE_STYLES[g].order;
 }
 
-/** Retorna o maior número de dias de ATB ativo (D{N}) ou null se nenhum. */
-export function maxDiasAtb(atbs: Array<{ data_inicio?: string; dataInicio?: string }>): number | null {
+/** Retorna o maior número de dias de ATB ativo (D{N}) ou null se nenhum.
+ * ATBs com status finalizado/suspenso ou data_fim no passado são ignorados. */
+export function maxDiasAtb(
+  atbs: Array<{ data_inicio?: string; dataInicio?: string; data_fim?: string; dataFim?: string; end_date?: string; status?: string }>,
+): number | null {
   let max: number | null = null;
   for (const a of atbs || []) {
+    if (!atbAtivo(a)) continue;
     const d = diasDeAtb(a);
     if (d != null && (max == null || d > max)) max = d;
   }

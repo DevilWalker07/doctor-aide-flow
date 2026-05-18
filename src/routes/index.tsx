@@ -210,12 +210,40 @@ function HomePage() {
         </div>
 
         <div className="flex flex-col gap-4 w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-           <button 
+           <button
              onClick={() => nav({ to: "/iniciar-plantao" })}
              className="group relative flex items-center justify-center gap-4 py-6 px-10 rounded-[2.5rem] bg-navy text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-navy/30 hover:shadow-navy/50 hover:-translate-y-1 transition-all"
            >
               <Play className="h-5 w-5 fill-current" /> INICIAR NOVO PLANTÃO
            </button>
+
+           {/* Ferramentas rápidas — não precisam de plantão ativo */}
+           <div className="grid grid-cols-2 gap-3">
+             <button
+               onClick={() => nav({ to: "/lab-rapido" })}
+               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
+             >
+               <div className="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                 <Activity className="h-4 w-4" />
+               </div>
+               <div>
+                 <p className="text-sm font-semibold">Extrair laboratório</p>
+                 <p className="text-xs text-muted-foreground">Cole texto ou envie foto/PDF</p>
+               </div>
+             </button>
+             <button
+               onClick={() => nav({ to: "/especialistas" })}
+               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white border border-border hover:border-primary/40 hover:shadow-md transition-all text-left"
+             >
+               <div className="h-9 w-9 rounded-lg bg-violet-500/10 text-violet-600 flex items-center justify-center">
+                 <Stethoscope className="h-4 w-4" />
+               </div>
+               <div>
+                 <p className="text-sm font-semibold">Falar com especialista</p>
+                 <p className="text-xs text-muted-foreground">Chat livre, sem cadastrar paciente</p>
+               </div>
+             </button>
+           </div>
 
            {plantaoAtivo && (
              <div className="bg-white border-2 border-primary/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
