@@ -1,21 +1,22 @@
-import { VITE_CLINICAL_AGENTS_URL } from "../clinicalAgentsConfig";
+import { supabase } from "../supabase";
 import type { ConsultRequestPayload, ConsultResponse, SavedConsult } from "./types";
 
-const BACKEND_URL = VITE_CLINICAL_AGENTS_URL.replace(/\/$/, "");
 const STORAGE_PREFIX = "da_specialist_consult_";
 
 export async function consultSpecialist(payload: ConsultRequestPayload): Promise<ConsultResponse> {
-  if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
-  const response = await fetch(`${BACKEND_URL}/api/specialists/consult`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke("specialist-consult", {
+    body: payload,
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.detail || `Erro ao consultar especialista (${response.status}).`);
+  if (error) {
+    throw new Error(error.message || "Erro ao consultar especialista.");
   }
-  return response.json();
+  if (!data || typeof data !== "object") {
+    throw new Error("Resposta inválida do especialista.");
+  }
+  if ((data as any).error) {
+    throw new Error((data as any).error);
+  }
+  return data as ConsultResponse;
 }
 
 /**
