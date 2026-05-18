@@ -12,8 +12,8 @@ export interface GravidadeInput {
   // Aceita estruturas variadas vindas de pacientes locais e do Supabase.
   setor?: string | null;
   sector?: string | null;
-  antibioticos?: Array<{ nome?: string; via?: string; data_inicio?: string; dataInicio?: string }>;
-  antibiotics?: Array<{ nome?: string; via?: string; data_inicio?: string }>;
+  antibioticos?: Array<{ nome?: string; via?: string; data_inicio?: string; dataInicio?: string; data_fim?: string; dataFim?: string; end_date?: string; status?: string }>;
+  antibiotics?: Array<{ nome?: string; via?: string; data_inicio?: string; data_fim?: string; end_date?: string; status?: string }>;
   pendencias?: Array<{ text?: string } | string>;
   pending_issues?: Array<string>;
   problemas_ativos?: string[];
