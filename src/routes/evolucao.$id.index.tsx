@@ -605,20 +605,20 @@ function EvolucaoPage() {
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+           <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all shrink-0">
                  <ChevronLeft className="h-5 w-5" />
               </button>
-              <div>
-                 <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-xl font-black text-foreground tracking-tight uppercase">{paciente.name}</h1>
+              <div className="min-w-0 flex-1">
+                 <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <h1 className="text-base md:text-xl font-black text-foreground tracking-tight uppercase truncate">{paciente.name}</h1>
                     <ShiftBadge silent />
                  </div>
-                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">LEITO {paciente.bed} · D{dih} · {tipoUnidade.replace('_', ' ').toUpperCase()}</p>
+                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] truncate">LEITO {paciente.bed} · D{dih} · {tipoUnidade.replace('_', ' ').toUpperCase()}</p>
               </div>
            </div>
-           <div className="flex items-center gap-3 flex-wrap">
+           <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
               <label className="flex items-center gap-2">
                 <span className="sr-only">Modelo de evolução</span>
                 <select
@@ -707,7 +707,7 @@ function EvolucaoPage() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">
          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
             
             {/* PAINEL LATERAL */}
@@ -774,7 +774,7 @@ function EvolucaoPage() {
 
             {/* ÁREA PRINCIPAL */}
             <div className="space-y-6 order-1 lg:order-2">
-               <div className="bg-elevated border border-border rounded-[2.5rem] p-8 shadow-sm flex flex-col min-h-[600px]">
+               <div className="bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm flex flex-col min-h-[600px]">
                   <div className="flex items-center justify-between mb-8">
                      <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-2xl bg-ai/10 flex items-center justify-center text-ai border border-ai/20">

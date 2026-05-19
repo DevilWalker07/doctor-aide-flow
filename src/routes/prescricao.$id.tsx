@@ -247,20 +247,20 @@ function PrescricaoPage() {
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+           <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all shrink-0">
                  <ChevronLeft className="h-5 w-5" />
               </button>
-              <div>
-                 <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-xl font-black text-foreground tracking-tight uppercase">PRESCRIÇÃO MÉDICA</h1>
+              <div className="min-w-0 flex-1">
+                 <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <h1 className="text-base md:text-xl font-black text-foreground tracking-tight uppercase truncate">PRESCRIÇÃO MÉDICA</h1>
                     <ShiftBadge silent />
                  </div>
-                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}</p>
+                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] truncate">{paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}</p>
               </div>
            </div>
-           <div className="flex items-center gap-3">
+           <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
               <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-elevated" role="group" aria-label="Exportar prescrição">
                 {(["docx", "pdf", "txt"] as const).map((fmt) => (
                   <button
@@ -283,7 +283,7 @@ function PrescricaoPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-6 md:space-y-8">
          
          {/* 1. DIETA */}
          <Section title="1. DIETA" icon={<Activity className="h-4 w-4" />}>
@@ -561,7 +561,7 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.2em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-elevated border border-border rounded-[2rem] p-8 shadow-sm">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-sm">
         {children}
       </div>
     </div>

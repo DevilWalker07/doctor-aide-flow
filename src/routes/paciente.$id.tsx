@@ -928,14 +928,14 @@ function FinalizeAtbModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end md:items-center justify-center md:p-4 bg-foreground/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-elevated rounded-xl w-full max-w-md shadow-xl border border-border"
+        className="bg-elevated rounded-t-2xl md:rounded-xl w-full max-w-md shadow-xl border-t md:border border-border max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6">
+        <div className="p-5 md:p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-base font-semibold">Finalizar antibiótico</h2>
