@@ -20,15 +20,15 @@ test.describe("Bottom navigation mobile", () => {
       // 5 itens
       await expect(nav.getByRole("link")).toHaveCount(5);
     } else {
-      // Desktop: o nav existe no DOM mas tem md:hidden — não deve ser visível
-      await expect(nav).toBeHidden();
+      // Desktop: o nav existe no DOM mas tem md:hidden — display:none o esconde
+      await expect(nav).not.toBeVisible();
     }
   });
 
   test("bottom-nav esconde em /especialistas/<id> (chat tem input fixo)", async ({ page }) => {
     await page.goto("/especialistas/victor");
-    const nav = page.getByRole("navigation", { name: /navegação principal/i });
-    await expect(nav).toBeHidden();
+    // BottomNav retorna null nessa rota — não está no DOM
+    await expect(page.getByRole("navigation", { name: /navegação principal/i })).toHaveCount(0);
   });
 
   test("clicar em 'Lab' no bottom-nav navega pra /lab-rapido", async ({ page, viewport }) => {

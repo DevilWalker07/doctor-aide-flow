@@ -22,11 +22,11 @@ export default defineConfig({
   expect: { timeout: 5_000 },
 
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://127.0.0.1:5173",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     actionTimeout: 10_000,
-    navigationTimeout: 15_000,
+    navigationTimeout: 30_000, // primeira nav pode esperar Vite compilar
   },
 
   projects: [
@@ -35,16 +35,22 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "mobile-safari",
-      use: { ...devices["iPhone 14"] },
+      // Viewport de iPhone 14 com engine chromium — não precisamos do WebKit real
+      // pra testes funcionais e o CI só instala um browser pra ser rápido.
+      name: "mobile-chromium",
+      use: {
+        ...devices["iPhone 14"],
+        browserName: "chromium",
+        defaultBrowserType: "chromium",
+      },
     },
   ],
 
   webServer: {
-    command: "npm run dev -- --port 5173",
-    port: 5173,
+    command: "npx vite dev --port 5173 --host 127.0.0.1",
+    url: "http://127.0.0.1:5173",
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 90_000,
     stdout: "pipe",
     stderr: "pipe",
   },
