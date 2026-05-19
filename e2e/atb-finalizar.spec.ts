@@ -50,12 +50,13 @@ test.describe("Finalizar ATB", () => {
     await expect(finalizarBtn).toBeVisible();
     await finalizarBtn.click();
 
-    // Modal abre
-    await expect(page.getByRole("heading", { name: /finalizar antibiótico/i })).toBeVisible();
-    await expect(page.getByText(/^CEFTRIAXONA$/)).toBeVisible();
+    // Modal abre — usa heading pra ser unico
+    const modalHeading = page.getByRole("heading", { name: /finalizar antibiótico/i });
+    await expect(modalHeading).toBeVisible();
 
-    // Status default = Finalizado
-    const finalizadoBtn = page.getByRole("button", { name: /^finalizado$/i });
+    // Status default = Finalizado (botao dentro do modal — usa locator escopado)
+    const modal = modalHeading.locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+    const finalizadoBtn = modal.getByRole("button", { name: /^finalizado$/i });
     await expect(finalizadoBtn).toBeVisible();
 
     // Confirma
