@@ -23,9 +23,9 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-foreground/40 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-elevated rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-        <header className="px-8 py-6 border-b border-border flex items-center justify-between bg-subtle">
+    <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center md:p-6 bg-foreground/40 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-elevated rounded-t-2xl md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden max-h-[95vh] md:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300">
+        <header className="px-5 md:px-8 py-4 md:py-6 border-b border-border flex items-center justify-between bg-subtle shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Shield className="h-5 w-5" />
@@ -40,7 +40,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
           </button>
         </header>
 
-        <div className="p-8 space-y-6">
+        <div className="p-5 md:p-8 space-y-5 md:space-y-6 overflow-y-auto">
           <div className="space-y-4">
             <label className="text-[10px] font-black text-foreground uppercase tracking-[0.2em] block ml-1">Motor de IA</label>
             <div className="grid grid-cols-2 gap-3 p-1 bg-subtle rounded-2xl">
@@ -78,7 +78,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </div>
 
-        <footer className="px-8 py-6 bg-subtle border-t border-border flex gap-3">
+        <footer className="px-5 md:px-8 py-4 md:py-6 bg-subtle border-t border-border flex gap-3 shrink-0">
           <button onClick={onClose} className="flex-1 py-4 rounded-2xl border-2 border-border text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-elevated transition-all">Cancelar</button>
           <button onClick={save} className="flex-1 py-4 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">Salvar</button>
         </footer>

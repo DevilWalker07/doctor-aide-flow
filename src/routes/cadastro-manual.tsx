@@ -335,7 +335,7 @@ function CadastroManualPage() {
            <div className="animate-spin text-primary"><Activity className="h-8 w-8" /></div>
         </div>
       )}
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="max-w-5xl mx-auto px-4 md:px-6 h-16 md:h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
         <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
           <ChevronLeft className="h-4 w-4" /> VOLTAR
         </button>
@@ -345,7 +345,7 @@ function CadastroManualPage() {
         <div className="w-16" />
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-8 md:space-y-12">
         
         {/* IDENTIFICAÇÃO */}
         <Section title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
@@ -956,7 +956,7 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-elevated border border-border rounded-[3rem] p-8 md:p-12 shadow-sm space-y-6">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[3rem] p-5 md:p-12 shadow-sm space-y-6">
         {children}
       </div>
     </div>

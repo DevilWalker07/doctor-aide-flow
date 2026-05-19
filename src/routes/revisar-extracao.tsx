@@ -63,7 +63,7 @@ const Section = memo(({ id, title, icon, children }: { id: string, title: string
       <div className="h-10 w-10 rounded-xl bg-elevated border border-border flex items-center justify-center text-muted-foreground shadow-sm">{icon}</div>
       <h2 className="text-xs font-black tracking-[0.2em] uppercase text-foreground">{title}</h2>
     </div>
-    <div className="bg-elevated border border-border rounded-[2.5rem] p-8 md:p-10 shadow-sm space-y-8">{children}</div>
+    <div className="bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-10 shadow-sm space-y-6 md:space-y-8">{children}</div>
   </section>
 ));
 
@@ -160,7 +160,7 @@ const AntibioticList = memo(({ items, onChange }: any) => {
         </div>
       </div>
       {items.map((a: any, i: number) => (
-        <div key={a.id} className="bg-subtle border border-border rounded-[2.5rem] p-8 space-y-6">
+        <div key={a.id} className="bg-subtle border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 space-y-5 md:space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
             <div className="flex items-center gap-2">
                <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
@@ -246,7 +246,7 @@ const MedicationList = memo(({ items, onChange }: any) => (
 const LabList = memo(({ items, onChange }: any) => (
   <div className="space-y-8">
     {items.map((l: any, i: number) => (
-      <div key={l.id} className="bg-elevated border border-border rounded-[2rem] p-8 shadow-sm">
+      <div key={l.id} className="bg-elevated border border-border rounded-2xl md:rounded-[2rem] p-5 md:p-8 shadow-sm">
         <div className="flex justify-between items-center border-b border-border pb-4">
           <EditableInput type="date" value={l.data} onChange={(v: any) => { const list = [...items]; list[i] = { ...l, data: v }; onChange(list); }} />
           <button onClick={() => onChange(items.filter((item: any) => item.id !== l.id))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
@@ -412,7 +412,7 @@ function RevisarExtracao() {
   return (
     <div className="min-h-screen bg-subtle">
       <header className="bg-elevated/80 backdrop-blur-xl border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/dashboard" className="h-10 w-10 rounded-xl bg-subtle flex items-center justify-center text-muted-foreground"><X className="h-5 w-5" /></Link>
             <div>
@@ -426,11 +426,11 @@ function RevisarExtracao() {
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-10 flex gap-12">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-10 flex gap-6 md:gap-12">
         <Sidebar onScrollTo={scrollTo} />
-        <main className="flex-1 max-w-3xl space-y-16 pb-40">
+        <main className="flex-1 max-w-3xl space-y-10 md:space-y-16 pb-32 md:pb-40">
           {patient_id && (
-            <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex items-center gap-6">
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl md:rounded-3xl p-5 md:p-8 flex items-start md:items-center gap-4 md:gap-6">
               <div className="h-14 w-14 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0"><Plus className="h-8 w-8" /></div>
               <div>
                  <h3 className="text-sm font-black text-primary uppercase mb-1">MODO: ADICIONAR AO PACIENTE</h3>

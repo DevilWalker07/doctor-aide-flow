@@ -95,7 +95,7 @@ function RoundInteligente() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-subtle">
+    <div className="h-[100dvh] flex overflow-hidden bg-subtle">
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -108,8 +108,8 @@ function RoundInteligente() {
 
       {/* ===== SIDEBAR ICONS (REMOVIDO / INTEGRADO) ===== */}
 
-      {/* ===== PATIENT LIST (CENSO) ===== */}
-      <aside className="w-80 bg-elevated border-r border-border flex flex-col shrink-0 overflow-hidden no-print">
+      {/* ===== PATIENT LIST (CENSO) — desktop only ===== */}
+      <aside className="hidden md:flex w-80 bg-elevated border-r border-border flex-col shrink-0 overflow-hidden no-print">
         <div className="px-6 pt-6 pb-4 border-b border-border bg-subtle">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">CENSO ATUAL</h2>
@@ -161,44 +161,70 @@ function RoundInteligente() {
       </aside>
 
       {/* ===== MAIN CONTENT ===== */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
-        <header className="h-16 bg-elevated border-b border-border px-8 flex items-center justify-between shrink-0 no-print shadow-sm z-10">
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="h-10 w-10 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-subtle transition-all">
+        <header className="bg-elevated border-b border-border px-4 md:px-8 py-3 md:py-0 md:h-16 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 shrink-0 no-print shadow-sm z-10">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+            <Link to="/dashboard" className="h-10 w-10 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-subtle transition-all shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <div className="flex items-center gap-3">
-              <h1 className="text-sm font-black text-foreground tracking-widest uppercase">DOUTOR AJUDA</h1>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <h1 className="text-sm font-black text-foreground tracking-widest uppercase truncate">DOUTOR AJUDA</h1>
               <Badge variant="navy">ROUND {TODAY}</Badge>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
+          <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
+            <button
               onClick={() => setShowImport(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ai text-white text-[10px] font-black uppercase tracking-widest hover:bg-ai transition-all shadow-md shadow-purple-500/20"
+              className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-5 h-10 md:py-2.5 rounded-xl bg-ai text-white text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-md shadow-purple-500/20"
             >
-              <FileOutput className="h-4 w-4" /> IMPORTAR EVOLUÇÕES DE ONTEM
+              <FileOutput className="h-4 w-4" />
+              <span className="hidden sm:inline">IMPORTAR EVOLUÇÕES DE ONTEM</span>
+              <span className="sm:hidden">IMPORTAR</span>
             </button>
-            <button 
+            <button
               onClick={() => setShowMapa(true)}
               disabled={!mapaGerado}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-5 h-10 md:py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
             >
-              <MapIcon className="h-4 w-4" /> MAPA ROUND
+              <MapIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">MAPA ROUND</span>
+              <span className="sm:hidden">MAPA</span>
             </button>
-            <button 
+            <button
               onClick={() => setShowBriefing(true)}
               disabled={!mapaGerado}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-border text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-subtle transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-5 h-10 md:py-2.5 rounded-xl border-2 border-border text-foreground text-[10px] font-black uppercase tracking-widest hover:bg-subtle transition-all disabled:opacity-50"
             >
               <Mic className="h-4 w-4" /> BRIEFING
             </button>
           </div>
         </header>
 
+        {/* Censo mobile: select de paciente — md:hidden */}
+        {mapaGerado && patients.length > 0 && (
+          <div className="md:hidden bg-elevated border-b border-border px-4 py-2 shrink-0 no-print">
+            <label className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground shrink-0">Paciente</span>
+              <select
+                value={selectedId ?? ""}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="flex-1 h-10 px-3 rounded-md border border-border bg-elevated text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">— Escolher leito —</option>
+                {patients.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.leito} · {p.nome.split(" ").slice(0, 2).join(" ")}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{patients.length}</span>
+            </label>
+          </div>
+        )}
+
         {/* Patient Content */}
-        <div className="flex-1 overflow-y-auto p-8 no-print custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 no-print custom-scrollbar">
           {!mapaGerado ? (
             <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto text-center space-y-6">
               <div className="h-24 w-24 rounded-[2.5rem] bg-elevated shadow-2xl flex items-center justify-center text-ai mb-4">
@@ -316,9 +342,9 @@ function RoundInteligente() {
       {/* ===== MODALS ===== */}
       {/* ===== MODAL DE IMPORTAÇÃO ===== */}
       {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 no-print">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 no-print">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" onClick={() => !isProcessing && setShowImport(false)} />
-          <div className="relative w-full max-w-4xl bg-elevated rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-4xl bg-elevated rounded-t-2xl md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[95vh] md:h-auto md:max-h-[90vh] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300">
             <header className="px-10 py-8 border-b border-border flex items-center justify-between bg-subtle">
               <div>
                 <h3 className="text-xl font-black text-foreground uppercase tracking-tight">Importar Evoluções de Ontem</h3>
@@ -419,9 +445,9 @@ function RoundInteligente() {
 
       {/* ===== MODAL DE MAPA ===== */}
       {showMapa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 no-print">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 no-print">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" onClick={() => setShowMapa(false)} />
-          <div className="relative w-full max-w-5xl bg-elevated rounded-[3rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-5xl bg-elevated rounded-t-2xl md:rounded-[3rem] shadow-2xl flex flex-col h-[95vh] md:h-auto md:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300">
             <header className="px-10 py-8 border-b border-border flex items-center justify-between bg-subtle">
               <div>
                 <h3 className="text-xl font-black text-foreground uppercase tracking-tight">Mapa de Passagem de Plantão</h3>
@@ -454,9 +480,9 @@ function RoundInteligente() {
 
       {/* ===== MODAL DE BRIEFING ===== */}
       {showBriefing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 no-print">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-6 no-print">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" onClick={() => setShowBriefing(false)} />
-          <div className="relative w-full max-w-2xl bg-elevated rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-2xl bg-elevated rounded-t-2xl md:rounded-[3rem] shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[90vh] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300">
             <header className="px-10 py-8 border-b border-border flex items-center justify-between bg-subtle">
               <div>
                 <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Briefing de Plantão</h3>
@@ -514,8 +540,8 @@ function Card({ title, icon, accent, badge, children }: {
   title: string; icon: React.ReactNode; accent?: boolean; badge?: string; children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-[2.5rem] border p-8 shadow-sm transition-all duration-300 hover:shadow-md ${accent ? "bg-primary/5 border-primary/30" : "bg-elevated border-border"}`}>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`rounded-2xl md:rounded-[2.5rem] border p-4 md:p-8 shadow-sm transition-all duration-300 hover:shadow-md ${accent ? "bg-primary/5 border-primary/30" : "bg-elevated border-border"}`}>
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div className="flex items-center gap-3">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${accent ? "bg-elevated text-primary" : "bg-subtle text-muted-foreground"}`}>
             {icon}
