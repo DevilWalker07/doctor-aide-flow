@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import BottomNav from "@/components/BottomNav";
 
 function NotFoundComponent() {
   return (
@@ -31,7 +32,10 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <>
-      <Outlet />
+      <div className="md:pb-0 pb-16">
+        <Outlet />
+      </div>
+      <BottomNav />
       <Toaster richColors position="top-right" />
     </>
   );

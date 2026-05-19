@@ -579,8 +579,8 @@ function PatientRow({ patient: p, calculateDValue, onEvoluir, onPrescricao, onAb
           </div>
         </div>
 
-        {/* ATB + Pendências */}
-        <div className="flex-1 grid grid-cols-2 gap-3 min-w-0">
+        {/* ATB + Pendências: stack no mobile, side-by-side no md+ */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 min-w-0">
           <div className="min-w-0">
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
               <Pill className="h-3 w-3" /> Antibióticos
@@ -621,26 +621,26 @@ function PatientRow({ patient: p, calculateDValue, onEvoluir, onPrescricao, onAb
           </div>
         </div>
 
-        {/* Ações */}
-        <div className="flex items-center gap-1 lg:shrink-0">
+        {/* Ações: full-width no mobile, compacto no lg+ */}
+        <div className="flex items-center gap-1.5 lg:shrink-0 -mx-1 lg:mx-0">
           <button
             onClick={onEvoluir}
-            className="h-8 px-3 rounded-md bg-foreground text-background text-[12px] font-medium hover:opacity-90 transition-opacity"
+            className="flex-1 lg:flex-none h-10 lg:h-8 px-3 rounded-md bg-foreground text-background text-[13px] lg:text-[12px] font-medium hover:opacity-90 transition-opacity"
           >
             Evoluir
           </button>
           <button
             onClick={onPrescricao}
-            className="h-8 px-3 rounded-md border border-border bg-elevated text-[12px] font-medium hover:bg-subtle transition-colors"
+            className="flex-1 lg:flex-none h-10 lg:h-8 px-3 rounded-md border border-border bg-elevated text-[13px] lg:text-[12px] font-medium hover:bg-subtle transition-colors"
           >
             Prescrição
           </button>
           <button
             onClick={onAbrir}
-            className="h-8 w-8 rounded-md border border-border bg-elevated text-muted-foreground hover:bg-subtle hover:text-foreground transition-colors flex items-center justify-center"
+            className="h-10 w-10 lg:h-8 lg:w-8 rounded-md border border-border bg-elevated text-muted-foreground hover:bg-subtle hover:text-foreground transition-colors flex items-center justify-center shrink-0"
             aria-label="Ver paciente"
           >
-            <User className="h-3.5 w-3.5" />
+            <User className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
           </button>
         </div>
       </div>

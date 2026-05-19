@@ -317,12 +317,14 @@ function PacienteDetailPage() {
       {/* Premium Header */}
       <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
-        <div className="max-w-5xl mx-auto px-6 py-8">
-           <div className="flex items-center justify-between mb-6">
-              <button onClick={() => nav({ to: "/dashboard" })} className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest">
-                 <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8">
+           <div className="flex items-center justify-between mb-4 md:mb-6 gap-2">
+              <button onClick={() => nav({ to: "/dashboard" })} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest">
+                 <ChevronLeft className="h-4 w-4" />
+                 <span className="hidden sm:inline">VOLTAR AO DASHBOARD</span>
+                 <span className="sm:hidden">VOLTAR</span>
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
                  <ShiftBadge />
                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${gStyle.bg} ${gStyle.text}`} aria-label={`Gravidade ${gStyle.label}`}>
                    {gStyle.label}
@@ -453,7 +455,7 @@ function PacienteDetailPage() {
          </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-6 md:space-y-12">
 
         <ATBAlertBanner patient={{ id: paciente.id, antibioticos: paciente.data?.abx }} />
 
@@ -1020,16 +1022,16 @@ function FinalizeAtbModal({
 function Section({ title, icon, children, action }: { title: string, icon: any, children: any, action?: any }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-6 ml-1">
+      <div className="flex items-center justify-between mb-4 md:mb-6 ml-1">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
+          <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl md:rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
             {icon}
           </div>
           <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
         </div>
         {action}
       </div>
-      <div className="bg-elevated border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[3rem] p-5 md:p-12 shadow-sm">
         {children}
       </div>
     </div>
