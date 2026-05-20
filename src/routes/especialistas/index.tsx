@@ -4,7 +4,7 @@ import { SPECIALISTS } from "@/lib/specialists/types";
 import { SpecialistAvatar } from "@/components/specialists/SpecialistAvatar";
 import ThemeToggle from "@/components/ThemeToggle";
 
-export const Route = createFileRoute("/especialistas")({
+export const Route = createFileRoute("/especialistas/")({
   component: EspecialistasPage,
   head: () => ({ meta: [{ title: "Especialistas — Doutor Ajuda" }] }),
 });
