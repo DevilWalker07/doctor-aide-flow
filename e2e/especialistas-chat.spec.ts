@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockEdgeFunctions, seedLocalUser } from "./fixtures/mock-edge";
+import { mockStreamingEdgeFunctions, seedLocalUser } from "./fixtures/mock-edge";
 
 test.describe("/especialistas — chat livre", () => {
   test.beforeEach(async ({ page }) => {
@@ -22,16 +22,18 @@ test.describe("/especialistas — chat livre", () => {
   });
 
   test("manda mensagem pro Dr. Victor, recebe resposta mocada", async ({ page }) => {
-    await mockEdgeFunctions(page, {
+    await mockStreamingEdgeFunctions(page, {
       "specialist-chat": (body: any) => {
         // Valida payload
         expect(body.specialist_id).toBe("victor");
         expect(Array.isArray(body.messages)).toBe(true);
         expect(body.messages.at(-1).role).toBe("user");
-        return {
-          reply: "Para choque séptico no idoso, iniciaria fluido cristaloide 30 mL/kg em 3h, hemocultura e antibiótico empírico em 1h.",
-          generated_at: new Date().toISOString(),
-        };
+        // Devolve em chunks pra simular streaming real
+        return [
+          "Para choque séptico no idoso, ",
+          "iniciaria fluido cristaloide 30 mL/kg em 3h, ",
+          "hemocultura e antibiótico empírico em 1h.",
+        ];
       },
     });
 
@@ -50,16 +52,16 @@ test.describe("/especialistas — chat livre", () => {
     // Mensagem do user aparece
     await expect(page.getByText(/idoso com pa 80x40/i)).toBeVisible();
 
-    // Resposta da IA aparece
+    // Resposta da IA aparece (streaming completa)
     await expect(page.getByText(/choque séptico no idoso, iniciaria fluido/i)).toBeVisible({ timeout: 10_000 });
 
-    // Botão de copiar aparece na mensagem do assistant
+    // Botão de copiar aparece na mensagem do assistant (só depois do stream terminar)
     await expect(page.getByRole("button", { name: /copiar/i })).toBeVisible();
   });
 
   test("histórico fica persistido em localStorage após enviar mensagem", async ({ page }) => {
-    await mockEdgeFunctions(page, {
-      "specialist-chat": () => ({ reply: "OK, entendi.", generated_at: new Date().toISOString() }),
+    await mockStreamingEdgeFunctions(page, {
+      "specialist-chat": () => "OK, entendi.",
     });
 
     await page.goto("/especialistas/victor");
@@ -67,16 +69,22 @@ test.describe("/especialistas — chat livre", () => {
     await page.getByRole("button", { name: /enviar/i }).click();
     await expect(page.getByText(/ok, entendi\./i)).toBeVisible({ timeout: 10_000 });
 
+    // Aguarda o botão Copiar aparecer pra garantir que o stream terminou
+    // e o setMessages do final já rodou (persist ocorre via useEffect on messages)
+    await expect(page.getByRole("button", { name: /copiar/i })).toBeVisible();
+
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("da_chat_victor") || "[]"));
     expect(saved.length).toBe(2);
     expect(saved[0].role).toBe("user");
     expect(saved[0].content).toContain("Teste de persistência");
     expect(saved[1].role).toBe("assistant");
+    expect(saved[1].content).toContain("OK, entendi");
   });
 
   test("erro do edge function não trava o input (permite re-enviar)", async ({ page }) => {
-    await mockEdgeFunctions(page, {
-      "specialist-chat": () => ({ error: "Timeout da IA" }),
+    await mockStreamingEdgeFunctions(page, {
+      // Mocka retorno HTTP 500 com error body — caminho de erro do streamEdgeFunction
+      "specialist-chat": () => ({ status: 500, body: { error: "Timeout da IA" } }),
     });
 
     await page.goto("/especialistas/ana");
@@ -87,6 +95,6 @@ test.describe("/especialistas — chat livre", () => {
     // Toast de erro
     await expect(page.getByText(/timeout da ia/i)).toBeVisible({ timeout: 10_000 });
     // Texto da mensagem volta pro input pra retry
-    await expect(input).toHaveValue(/pergunta que vai falhar/i);
+    await expect(input).toHaveValue("Pergunta que vai falhar");
   });
 });
