@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, Send, Loader2, Copy, Trash2 } from "lucide-react";
 import { SPECIALISTS, type SpecialistId } from "@/lib/specialists/types";
 import { SpecialistAvatar } from "@/components/specialists/SpecialistAvatar";
-import { invokeEdgeFunction } from "@/lib/edgeFunctions";
+import { streamEdgeFunction } from "@/lib/edgeFunctions";
 import { toast } from "sonner";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -73,32 +73,54 @@ function ChatEspecialistaPage() {
       content: txt,
       created_at: new Date().toISOString(),
     };
+    const assistantId = `a-${Date.now()}`;
+    const assistantStub: ChatMsg = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      created_at: new Date().toISOString(),
+    };
     const next = [...messages, userMsg];
-    setMessages(next);
+    setMessages([...next, assistantStub]);
     setInput("");
     setSending(true);
 
     try {
-      const data = await invokeEdgeFunction<{ reply: string; generated_at: string }>(
+      let accumulated = "";
+      await streamEdgeFunction(
         "specialist-chat",
         {
           specialist_id: specialistId,
-          messages: next.map(m => ({ role: m.role, content: m.content })),
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
         },
-        { timeoutMs: 180_000 },
+        (delta) => {
+          accumulated += delta;
+          // Atualiza a mensagem do assistant com o conteúdo acumulado.
+          // useState callback evita race condition com renders intermediários.
+          setMessages((prev) => {
+            const idx = prev.findIndex((m) => m.id === assistantId);
+            if (idx === -1) return prev;
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], content: accumulated };
+            return copy;
+          });
+        },
       );
 
-      const reply: ChatMsg = {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        content: data.reply || "(resposta vazia)",
-        created_at: data.generated_at || new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, reply]);
+      // Se o stream terminou sem nada, mostra fallback
+      if (!accumulated.trim()) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: "(resposta vazia)" } : m,
+          ),
+        );
+      }
     } catch (e: any) {
       toast.error(e.message || "Falha ao consultar");
-      // remove a mensagem do user pra ele tentar de novo
-      setMessages((prev) => prev.filter(m => m.id !== userMsg.id));
+      // Remove stub do assistant + msg do user pra ele tentar de novo
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== userMsg.id && m.id !== assistantId),
+      );
       setInput(txt);
     } finally {
       setSending(false);
@@ -171,38 +193,49 @@ function ChatEspecialistaPage() {
             </div>
           )}
 
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {messages.map((m, idx) => {
+            const isLastAssistant = m.role === "assistant" && idx === messages.length - 1;
+            const isStreaming = sending && isLastAssistant;
+            const isEmptyStub = isStreaming && m.content.length === 0;
+            return (
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap break-words ${
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-subtle text-foreground rounded-bl-md"
-                }`}
+                key={m.id}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {m.content}
-                {m.role === "assistant" && (
-                  <button
-                    onClick={() => copyMsg(m.content)}
-                    className="block mt-2 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    <Copy className="inline h-3 w-3 mr-1" /> Copiar
-                  </button>
-                )}
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap break-words ${
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-subtle text-foreground rounded-bl-md"
+                  }`}
+                >
+                  {isEmptyStub ? (
+                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> {specialist.nome} está pensando…
+                    </span>
+                  ) : (
+                    <>
+                      {m.content}
+                      {isStreaming && (
+                        <span
+                          className="inline-block w-[2px] h-[14px] align-middle ml-0.5 bg-foreground/60 animate-pulse"
+                          aria-hidden
+                        />
+                      )}
+                    </>
+                  )}
+                  {m.role === "assistant" && !isStreaming && m.content.length > 0 && (
+                    <button
+                      onClick={() => copyMsg(m.content)}
+                      className="block mt-2 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="inline h-3 w-3 mr-1" /> Copiar
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-
-          {sending && (
-            <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 bg-subtle text-muted-foreground text-[14px] inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {specialist.nome} está digitando…
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       </main>
 

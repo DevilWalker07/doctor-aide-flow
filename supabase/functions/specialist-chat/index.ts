@@ -25,6 +25,7 @@ Responda em português brasileiro, direta ao ponto.`,
   cris: `Você é a Dra. Cris, médica pediatra com especialização em pediatria hospitalar.
 Baseie-se em SBP e Nelson Textbook of Pediatrics 21ª ed.
 ATENÇÃO: sempre que houver dose, verifique se faz sentido para peso/idade. Se o usuário não informar peso, peça antes de dar dose.
+Para hidratação, use Holliday-Segar (100/50/20 mL/kg/dia para 10/10/restante kg).
 Tom: acolhedora mas técnica, foco em dose/kg e desenvolvimento.
 Não invente dados.
 Responda em português brasileiro.`,
@@ -70,7 +71,6 @@ Deno.serve(async (req) => {
 
     const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-5";
 
-    // Sanitiza mensagens: aceita só role user/assistant + content string
     const safeMessages = messages
       .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
       .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
@@ -79,7 +79,8 @@ Deno.serve(async (req) => {
       throw new Error("Nenhuma mensagem válida");
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Chama OpenAI com streaming SSE
+    const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -87,6 +88,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: OPENAI_MODEL,
+        stream: true,
         messages: [
           { role: "system", content: PROMPTS[specialist_id] },
           ...safeMessages,
@@ -94,22 +96,87 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`OpenAI ${response.status}: ${errText}`);
+    if (!upstream.ok || !upstream.body) {
+      const errText = await upstream.text();
+      throw new Error(`OpenAI ${upstream.status}: ${errText}`);
     }
 
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content ?? "";
+    // Pipea os deltas da OpenAI direto pro cliente (SSE)
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    return new Response(
-      JSON.stringify({ reply, generated_at: new Date().toISOString() }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-    );
-  } catch (error) {
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body!.getReader();
+        let buffer = "";
+
+        // Heartbeat — manda um comentário SSE a cada 10s pra manter conexão viva
+        // (iOS Safari aborta requests "ociosos")
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(": keepalive\n\n"));
+          } catch { /* stream fechado */ }
+        }, 10_000);
+
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? ""; // última linha pode estar incompleta
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              if (!trimmed.startsWith("data:")) continue;
+
+              const data = trimmed.slice(5).trim();
+              if (data === "[DONE]") {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                continue;
+              }
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (typeof delta === "string" && delta.length) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`),
+                  );
+                }
+              } catch {
+                // ignora linhas inválidas
+              }
+            }
+          }
+        } catch (err) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: (err as Error).message })}\n\n`),
+          );
+        } finally {
+          clearInterval(heartbeat);
+          controller.close();
+        }
+      },
     });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: (error as Error).message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
