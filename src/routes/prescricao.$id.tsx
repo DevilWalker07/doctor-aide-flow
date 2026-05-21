@@ -14,6 +14,7 @@ import { ANTIBIOTICOS_ROTINEIROS, searchAntibioticos, type AntibioticoRotineiro 
 import { cockcroftGault, sugerirDose, classificarTFG } from "@/lib/dose-clearance";
 import { exportTextoMedico, type ExportFormat } from "@/lib/exportEvolucao";
 import ShiftBadge from "@/components/ShiftBadge";
+import ThemeToggle from "@/components/ThemeToggle";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
@@ -279,6 +280,7 @@ function PrescricaoPage() {
               <button onClick={handleCopy} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2">
                  <Copy className="h-3 w-3" /> COPIAR
               </button>
+              <ThemeToggle />
            </div>
         </div>
       </header>

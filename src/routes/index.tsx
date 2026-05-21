@@ -20,6 +20,7 @@ import { X, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 import { storage } from "@/lib/storage";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -187,6 +188,7 @@ function HomePage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle className="h-12 w-12 rounded-2xl bg-elevated border border-border" />
           <Link to="/configuracoes" className="h-12 w-12 rounded-2xl bg-elevated border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
             <Settings2 className="h-5 w-5" />
           </Link>

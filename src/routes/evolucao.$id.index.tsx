@@ -23,6 +23,7 @@ import {
   type EvolutionTemplate,
 } from "@/lib/evolutionTemplates";
 import ShiftBadge from "@/components/ShiftBadge";
+import ThemeToggle from "@/components/ThemeToggle";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -684,6 +685,7 @@ function EvolucaoPage() {
                  onConsult={() => triggerConsult()}
                  variant="inline"
               />
+              <ThemeToggle />
            </div>
         </div>
       </header>

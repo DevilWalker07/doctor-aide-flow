@@ -16,6 +16,7 @@ import SpecialistCard from "@/components/specialists/SpecialistCard";
 import SpecialistDrawer from "@/components/specialists/SpecialistDrawer";
 import { hasConsultForPatient } from "@/lib/specialists/client";
 import ShiftBadge from "@/components/ShiftBadge";
+import ThemeToggle from "@/components/ThemeToggle";
 import ATBAlertBanner from "@/components/atb/ATBAlertBanner";
 
 export const Route = createFileRoute("/paciente/$id")({
@@ -332,6 +333,7 @@ function PacienteDetailPage() {
                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${paciente.status === 'alta_provavel' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary'}`}>
                    {paciente.status === 'alta_provavel' ? 'ALTA PROVÁVEL' : 'INTERNADO'}
                  </span>
+                 <ThemeToggle />
               </div>
            </div>
 
