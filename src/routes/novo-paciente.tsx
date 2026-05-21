@@ -20,7 +20,7 @@ function NovoPacienteTriage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="max-w-5xl mx-auto px-4 md:px-6 h-16 md:h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
         <Link
           to="/dashboard"
           className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
@@ -33,7 +33,7 @@ function NovoPacienteTriage() {
         <div className="w-16" />
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center justify-center">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-12 flex-1 w-full flex flex-col items-center justify-center">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4 uppercase">
             NOVO PACIENTE
@@ -43,11 +43,11 @@ function NovoPacienteTriage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+        <div className="grid md:grid-cols-2 gap-4 md:gap-8 w-full max-w-4xl">
           {/* Admissão Nova */}
           <button
             onClick={() => handleSelect("nova")}
-            className="group relative bg-elevated border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden"
+            className="group relative bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
@@ -71,7 +71,7 @@ function NovoPacienteTriage() {
           {/* Já Internado */}
           <button
             onClick={() => handleSelect("internado")}
-            className="group relative bg-elevated border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden"
+            className="group relative bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             

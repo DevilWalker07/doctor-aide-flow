@@ -103,7 +103,7 @@ function UploadIAPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="max-w-5xl mx-auto px-4 md:px-6 h-16 md:h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
         <Link to={goBackUrl} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
           <ChevronLeft className="h-4 w-4" /> VOLTAR
         </Link>
@@ -113,7 +113,7 @@ function UploadIAPage() {
         <div className="w-16" />
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center">
+      <main className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-12 flex-1 w-full flex flex-col items-center">
         <div className="w-full mb-8 flex gap-2 p-1 rounded-2xl border border-border bg-elevated" role="tablist" aria-label="Modo de upload">
           <button
             onClick={() => switchModo("unico")}
@@ -149,7 +149,7 @@ function UploadIAPage() {
           </p>
         </div>
 
-        <div className="w-full bg-elevated border border-border rounded-[2.5rem] p-10 shadow-xl">
+        <div className="w-full bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-10 shadow-xl">
           <input
             type="file"
             ref={fileInputRef}

@@ -177,7 +177,7 @@ function SettingsPage() {
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
-        <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-6 flex items-center justify-between">
            <Link to="/dashboard" className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
               <ChevronLeft className="h-5 w-5" />
            </Link>
@@ -186,7 +186,7 @@ function SettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-8 md:space-y-12">
          
          {/* 1. PERFIL MÉDICO */}
          <Section title="PERFIL MÉDICO" icon={<User className="h-5 w-5" />}>
@@ -362,7 +362,7 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-elevated border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[3rem] p-5 md:p-12 shadow-sm">
         {children}
       </div>
     </div>

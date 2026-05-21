@@ -11,7 +11,7 @@ function PacienteInternadoTriage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="max-w-5xl mx-auto px-4 md:px-6 h-16 md:h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
         <Link
           to="/novo-paciente"
           className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
@@ -24,7 +24,7 @@ function PacienteInternadoTriage() {
         <div className="w-16" />
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center justify-center">
+      <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 flex-1 w-full flex flex-col items-center justify-center">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4 uppercase">
             PACIENTE JÁ INTERNADO
@@ -34,11 +34,11 @@ function PacienteInternadoTriage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 w-full max-w-6xl mb-8 md:mb-12">
           {/* Foto de Prontuário */}
           <button
             onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "vision" } as any })}
-            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">
@@ -58,7 +58,7 @@ function PacienteInternadoTriage() {
           {/* PDF / DOCX */}
           <button
             onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "docling" } as any })}
-            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">
@@ -78,7 +78,7 @@ function PacienteInternadoTriage() {
           {/* Preencher Manualmente */}
           <button
             onClick={() => nav({ to: "/cadastro-manual", search: { tipo: "internado" } as any })}
-            className="group relative bg-elevated border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-secondary/20 hover:border-foreground/20 overflow-hidden flex flex-col"
+            className="group relative bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-secondary/20 hover:border-foreground/20 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-secondary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-16 w-16 rounded-2xl bg-secondary/50 flex items-center justify-center text-foreground/60 mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm">

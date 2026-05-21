@@ -104,7 +104,7 @@ function IniciarPlantaoPage() {
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-ai/5 rounded-full blur-[100px]" />
       </div>
 
-      <div className="max-w-xl w-full bg-elevated border border-border rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative z-10">
+      <div className="max-w-xl w-full bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 md:p-12 shadow-2xl relative z-10">
         <div className="text-center mb-10">
            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">
               <Stethoscope className="h-7 w-7" />
