@@ -79,53 +79,59 @@ Deno.serve(async (req) => {
       throw new Error("Nenhuma mensagem válida");
     }
 
-    // Chama OpenAI com streaming SSE
-    const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        stream: true,
-        messages: [
-          { role: "system", content: PROMPTS[specialist_id] },
-          ...safeMessages,
-        ],
-      }),
-    });
-
-    if (!upstream.ok || !upstream.body) {
-      const errText = await upstream.text();
-      throw new Error(`OpenAI ${upstream.status}: ${errText}`);
-    }
-
-    // Pipea os deltas da OpenAI direto pro cliente (SSE)
+    // Streaming: flush imediato + heartbeat agressivo pra evitar abort
+    // do iOS Safari enquanto gpt-5 'pensa' antes do primeiro token.
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
     const stream = new ReadableStream({
       async start(controller) {
-        const reader = upstream.body!.getReader();
-        let buffer = "";
+        // 1. FLUSH IMEDIATO — cliente recebe bytes em <100ms, conexão fica viva
+        controller.enqueue(encoder.encode(": connected\n\n"));
 
-        // Heartbeat — manda um comentário SSE a cada 10s pra manter conexão viva
-        // (iOS Safari aborta requests "ociosos")
+        // 2. Heartbeat agressivo (3s) — mantém iOS Safari acordado
         const heartbeat = setInterval(() => {
           try {
             controller.enqueue(encoder.encode(": keepalive\n\n"));
           } catch { /* stream fechado */ }
-        }, 10_000);
+        }, 3_000);
 
         try {
+          // 3. SÓ AGORA chama OpenAI. O cliente já viu bytes, conexão ativa.
+          const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: OPENAI_MODEL,
+              stream: true,
+              messages: [
+                { role: "system", content: PROMPTS[specialist_id] },
+                ...safeMessages,
+              ],
+            }),
+          });
+
+          if (!upstream.ok || !upstream.body) {
+            const errText = await upstream.text();
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ error: `OpenAI ${upstream.status}: ${errText.slice(0, 200)}` })}\n\n`),
+            );
+            return;
+          }
+
+          const reader = upstream.body.getReader();
+          let buffer = "";
+
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
-            buffer = lines.pop() ?? ""; // última linha pode estar incompleta
+            buffer = lines.pop() ?? "";
 
             for (const line of lines) {
               const trimmed = line.trim();
