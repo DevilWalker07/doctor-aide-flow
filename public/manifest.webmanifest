@@ -1,0 +1,41 @@
+{
+  "name": "Doutor Ajuda",
+  "short_name": "Dr. Ajuda",
+  "description": "Assistente clínico inteligente — evolução, prescrição, plantão, especialistas IA",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFBFC",
+  "theme_color": "#4F46E5",
+  "lang": "pt-BR",
+  "categories": ["medical", "productivity", "health"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Extrair laboratório",
+      "short_name": "Lab",
+      "url": "/lab-rapido",
+      "description": "Extração rápida de exames"
+    },
+    {
+      "name": "Falar com especialista",
+      "short_name": "Especialistas",
+      "url": "/especialistas",
+      "description": "Chat livre com IAs especialistas"
+    }
+  ]
+}
