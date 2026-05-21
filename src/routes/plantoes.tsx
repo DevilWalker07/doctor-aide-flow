@@ -204,8 +204,8 @@ function PlantoesPage() {
       </main>
 
       {verPassagem && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setVerPassagem(null)}>
-          <div className="bg-elevated w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4" onClick={() => setVerPassagem(null)}>
+          <div className="bg-elevated w-full max-w-2xl rounded-t-2xl md:rounded-[2.5rem] border-t md:border border-border shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
             <header className="px-8 py-6 border-b border-border bg-secondary/30 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-black uppercase tracking-widest">PASSAGENS DO PLANTÃO</h2>

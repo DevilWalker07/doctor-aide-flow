@@ -923,8 +923,8 @@ function EvolucaoPage() {
       )}
 
       {overwriteChoice === "ask" && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-elevated w-full max-w-md rounded-[2rem] border border-border shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4">
+          <div className="bg-elevated w-full max-w-md rounded-t-2xl md:rounded-[2rem] border-t md:border border-border shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[85vh] flex flex-col">
             <header className="px-8 py-6 border-b border-border bg-secondary/30">
               <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Já existe texto no campo</h2>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Como você quer gerar a nova evolução?</p>
