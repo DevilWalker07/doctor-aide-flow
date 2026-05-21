@@ -112,6 +112,9 @@ export async function mockStreamingEdgeFunctions(
 /**
  * Seta o doctor name no localStorage antes da app carregar.
  * App lê `da_local_user_name`, `da_nome_medico` etc.
+ *
+ * Auth real é bypassado em E2E via VITE_E2E=true (ver __root.tsx) — não
+ * precisa mockar sessão Supabase aqui.
  */
 export async function seedLocalUser(page: Page, name = "TESTE PLAYWRIGHT") {
   await page.addInitScript((n) => {

@@ -1,11 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-// Local sign-out: clears local user data only.
-const useLocalSignOut = () => ({
-  signOut: async (_opts?: { redirectUrl?: string }) => {
-    localStorage.clear();
-    window.location.href = "/";
-  },
-});
+import { signOutAndClear } from "@/lib/auth";
 import { 
   Stethoscope, ArrowRight, Play, Settings2, 
   Activity, ShieldCheck, Clock, Users, AlertTriangle,
@@ -37,7 +31,6 @@ function HomePage() {
   const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const nav = useNavigate();
-  const { signOut } = useLocalSignOut();
 
   useEffect(() => {
     if (!userId) return;
@@ -164,9 +157,7 @@ function HomePage() {
   const handleLogout = async () => {
     try {
       storage.clearSession();
-      await signOut({ redirectUrl: "/login" });
-      toast.success("Sessão encerrada.");
-      nav({ to: "/login" });
+      await signOutAndClear();
     } catch { /* ignore */ }
   };
 

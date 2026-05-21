@@ -74,6 +74,10 @@ jobs:
           # mas o supabase client falha no boot se essas vars estiverem vazias.
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: e2e-mock-anon-key
+          # Bypassa o auth guard nos testes E2E — evita mockar sessão Supabase
+          # (frágil — depende da chave interna do supabase-js). Em prod/dev
+          # esse flag é undefined e o guard funciona normal.
+          VITE_E2E: "true"
 
       - name: Upload Playwright report on failure
         if: failure()

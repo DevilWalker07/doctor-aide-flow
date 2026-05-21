@@ -6,13 +6,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-// Local sign-out: clears local user data only.
-const useLocalSignOut = () => ({
-  signOut: async (_opts?: { redirectUrl?: string }) => {
-    localStorage.clear();
-    window.location.href = "/";
-  },
-});
+import { signOutAndClear } from "@/lib/auth";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
@@ -40,7 +34,6 @@ function SettingsPage() {
   // AI Status
   const [aiStatus, setAiStatus] = useState<"loading" | "connected" | "disconnected">("loading");
   const nav = useNavigate();
-  const { signOut } = useLocalSignOut();
 
   useEffect(() => {
     if (!userId) return;
@@ -177,8 +170,7 @@ function SettingsPage() {
 
   const handleLogout = async () => {
     storage.clearSession();
-    await signOut({ redirectUrl: "/login" });
-    nav({ to: "/login" });
+    await signOutAndClear();
   };
 
   return (
