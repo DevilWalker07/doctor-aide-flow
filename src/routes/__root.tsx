@@ -7,6 +7,12 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 const PUBLIC_ROUTES = ["/login", "/cadastro", "/nova-senha"];
 
+// Rotas que funcionam SEM login (modo convidado):
+// - Lab rápido: extração de exames, não persiste dados
+// - Especialistas: chat livre, histórico só em localStorage do device
+// Dados sensíveis (pacientes, plantões) continuam exigindo login.
+const GUEST_ROUTES = ["/lab-rapido", "/especialistas"];
+
 /**
  * Bypass do auth guard em testes E2E. Setado no CI via VITE_E2E=true
  * pra Playwright poder navegar livremente sem mockar sessão Supabase
@@ -49,16 +55,18 @@ function RootComponent() {
   const nav = useNavigate();
 
   const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isGuest = GUEST_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isOpen = isPublic || isGuest; // rota não exige login
   const effectiveAuth = E2E_BYPASS || isAuthenticated;
 
-  // Guard: redireciona deslogado pra /login (exceto em rotas públicas e em E2E)
+  // Guard: redireciona deslogado pra /login (exceto em rotas abertas e em E2E)
   useEffect(() => {
     if (E2E_BYPASS) return;
     if (!isLoaded) return;
-    if (!isAuthenticated && !isPublic) {
+    if (!isAuthenticated && !isOpen) {
       nav({ to: "/login", replace: true });
     }
-  }, [isLoaded, isAuthenticated, isPublic, nav]);
+  }, [isLoaded, isAuthenticated, isOpen, nav]);
 
   // Loading state durante boot (skip em E2E pra evitar timeout dos testes)
   if (!isLoaded && !E2E_BYPASS) {
@@ -70,7 +78,7 @@ function RootComponent() {
   }
 
   // Bloqueia render em rotas privadas se deslogado (evita flash de conteúdo)
-  if (!effectiveAuth && !isPublic) {
+  if (!effectiveAuth && !isOpen) {
     return <Navigate to="/login" replace />;
   }
 
@@ -79,7 +87,8 @@ function RootComponent() {
       <div className={isPublic ? "" : "md:pb-0 pb-16"}>
         <Outlet />
       </div>
-      {effectiveAuth && !isPublic && <BottomNav />}
+      {/* BottomNav aparece em rotas privadas (logado) E em rotas guest (mesmo deslogado). */}
+      {!isPublic && (effectiveAuth || isGuest) && <BottomNav guest={!effectiveAuth} />}
       <Toaster richColors position="top-right" />
     </>
   );

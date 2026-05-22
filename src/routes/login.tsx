@@ -158,6 +158,18 @@ function LoginPage() {
               Esqueci minha senha
             </Link>
           </div>
+
+          <div className="pt-2 border-t border-border">
+            <p className="text-center text-[12px] text-muted-foreground mb-2">
+              Só quer usar o lab e os especialistas IA?
+            </p>
+            <Link
+              to="/lab-rapido"
+              className="block w-full h-11 rounded-md border border-border bg-elevated text-[13px] font-medium text-foreground hover:bg-subtle transition-colors inline-flex items-center justify-center"
+            >
+              Continuar como convidado
+            </Link>
+          </div>
         </div>
       </main>
     </div>

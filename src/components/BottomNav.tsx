@@ -1,19 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, LayoutGrid, FlaskConical, Stethoscope, Settings2 } from "lucide-react";
+import { Home, LayoutGrid, FlaskConical, Stethoscope, Settings2, LogIn } from "lucide-react";
 
 /**
  * Navegação fixa no rodapé — só aparece em viewports mobile (md:hidden).
  *
- * Esconde automaticamente em rotas onde atrapalha (login/cadastro/chat,
- * que já tem seu próprio input no rodapé).
+ * Tem 2 modos:
+ * - Logado (default): 5 abas — Início, Plantão, Lab, IAs, Ajustes
+ * - Convidado (guest=true): 3 abas — Lab, IAs, Entrar
  *
+ * Esconde em rotas onde atrapalha (chat tem input fixo no rodapé).
  * Inclui safe-area-inset-bottom pro iPhone com home indicator.
  */
 
 const HIDE_ON_PREFIXES = [
-  "/login",
-  "/cadastro",
-  "/nova-senha",
   "/especialistas/", // tela de chat tem input fixo no rodapé
 ];
 
@@ -21,11 +20,10 @@ interface NavItem {
   href: string;
   label: string;
   icon: typeof Home;
-  // matchPrefix: rota ativa se pathname começar com isso (default: igualdade)
   matchPrefix?: boolean;
 }
 
-const ITEMS: NavItem[] = [
+const ITEMS_LOGGED: NavItem[] = [
   { href: "/", label: "Início", icon: Home },
   { href: "/dashboard", label: "Plantão", icon: LayoutGrid },
   { href: "/lab-rapido", label: "Lab", icon: FlaskConical },
@@ -33,10 +31,19 @@ const ITEMS: NavItem[] = [
   { href: "/configuracoes", label: "Ajustes", icon: Settings2 },
 ];
 
-export default function BottomNav() {
+const ITEMS_GUEST: NavItem[] = [
+  { href: "/lab-rapido", label: "Lab", icon: FlaskConical },
+  { href: "/especialistas", label: "IAs", icon: Stethoscope, matchPrefix: true },
+  { href: "/login", label: "Entrar", icon: LogIn },
+];
+
+export default function BottomNav({ guest = false }: { guest?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   if (HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p))) return null;
+
+  const items = guest ? ITEMS_GUEST : ITEMS_LOGGED;
+  const cols = guest ? "grid-cols-3" : "grid-cols-5";
 
   return (
     <nav
@@ -44,8 +51,8 @@ export default function BottomNav() {
       style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
       aria-label="Navegação principal"
     >
-      <ul className="grid grid-cols-5 max-w-md mx-auto">
-        {ITEMS.map((item) => {
+      <ul className={`grid ${cols} max-w-md mx-auto`}>
+        {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchPrefix
             ? pathname.startsWith(item.href)
