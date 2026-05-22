@@ -31,15 +31,34 @@ function CadastroPage() {
     return <Navigate to="/" replace />;
   }
 
+  const [signupSuccess, setSignupSuccess] = useState<null | "confirmed" | "needs_confirmation">(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading || !email.trim() || password.length < 6) return;
     setError(null);
     setLoading(true);
     try {
-      await signUpWithEmail(email, password, name);
-      // Login imediato (sem confirmação de email) — sessão criada, redireciona
-      nav({ to: "/", replace: true });
+      const data = await signUpWithEmail(email, password, name);
+
+      // Supabase tem 2 caminhos:
+      // 1. Se 'Confirm email' está OFF: data.session existe, login imediato
+      // 2. Se 'Confirm email' está ON (default): data.session === null,
+      //    usuário precisa clicar no link do email pra ativar
+      if (data?.session) {
+        nav({ to: "/", replace: true });
+      } else {
+        // Tenta login imediato (caso o email já tenha sido confirmado por
+        // outro motivo, ex: admin confirmou via Dashboard)
+        try {
+          const { signInWithEmail } = await import("@/lib/auth");
+          await signInWithEmail(email, password);
+          nav({ to: "/", replace: true });
+        } catch {
+          // Login falhou — mesmo signup OK, falta confirmar email
+          setSignupSuccess("needs_confirmation");
+        }
+      }
     } catch (err) {
       setError((err as AuthError).message);
     } finally {
@@ -79,6 +98,27 @@ function CadastroPage() {
             </div>
           </div>
 
+          {/* Sucesso com confirmação pendente — substitui o form */}
+          {signupSuccess === "needs_confirmation" ? (
+            <div className="space-y-4">
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-4 text-center space-y-2">
+                <p className="text-sm font-semibold text-foreground">Conta criada! 🎉</p>
+                <p className="text-[13px] text-muted-foreground">
+                  Enviamos um email para <span className="font-medium text-foreground">{email}</span> com o link de confirmação.
+                </p>
+                <p className="text-[12px] text-muted-foreground">
+                  Clique no link do email pra ativar sua conta. Depois é só voltar e fazer login.
+                </p>
+              </div>
+              <Link
+                to="/login"
+                className="block w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center justify-center"
+              >
+                Ir pra tela de login
+              </Link>
+            </div>
+          ) : (
+          <>
           {GOOGLE_OAUTH_ENABLED && (
             <>
               <button
@@ -177,6 +217,8 @@ function CadastroPage() {
               Entrar
             </Link>
           </p>
+          </>
+          )}
         </div>
       </main>
     </div>
