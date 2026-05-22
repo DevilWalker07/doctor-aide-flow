@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Stethoscope, Loader2, Mail, Lock, User, AlertCircle } from "lucide-react";
 import { signUpWithEmail, signInWithGoogle, type AuthError } from "@/lib/auth";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { GOOGLE_OAUTH_ENABLED } from "@/lib/features";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/cadastro")({
@@ -78,21 +79,25 @@ function CadastroPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={googleLoading || loading}
-            className="w-full h-11 rounded-md border border-border bg-elevated text-sm font-medium inline-flex items-center justify-center gap-2.5 hover:bg-subtle transition-colors disabled:opacity-50"
-          >
-            {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleLogo />}
-            Continuar com Google
-          </button>
+          {GOOGLE_OAUTH_ENABLED && (
+            <>
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={googleLoading || loading}
+                className="w-full h-11 rounded-md border border-border bg-elevated text-sm font-medium inline-flex items-center justify-center gap-2.5 hover:bg-subtle transition-colors disabled:opacity-50"
+              >
+                {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleLogo />}
+                Continuar com Google
+              </button>
 
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-muted-foreground uppercase tracking-widest">ou</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[11px] text-muted-foreground uppercase tracking-widest">ou</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>

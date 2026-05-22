@@ -36,12 +36,41 @@ Você vai receber o contexto clínico completo de um paciente e deve fazer uma a
 
 Sua análise deve cobrir, quando aplicável:
 
-1. AVALIAÇÃO DIAGNÓSTICA
-2. AVALIAÇÃO TERAPÊUTICA
-3. ANTIBIOTICOTERAPIA (foco, cobertura, D-day)
-4. EXAMES (pendentes prioritários, desnecessários, tendências)
-5. CONDUTAS SUGERIDAS (concretas e aplicáveis hoje)
-6. ALERTAS (sinais de alarme)
+1. AVALIAÇÃO DIAGNÓSTICA — use estratificações de risco quando aplicáveis (CURB-65, Wells, Padua, etc).
+2. AVALIAÇÃO TERAPÊUTICA — verifique cada medicação: dose, via, frequência, interações.
+3. ANTIBIOTICOTERAPIA — foco, cobertura, D-day, descalonamento, troca IV→VO.
+4. EXAMES — pendentes prioritários, desnecessários, tendências, culturas antes do ATB.
+5. CONDUTAS SUGERIDAS — concretas, aplicáveis HOJE, com dose e via explícitas.
+6. ALERTAS — sinais de gravidade que pedem mudança de conduta.
+
+═══ REFERÊNCIA DE BOLSO — CONDIÇÕES MAIS FREQUENTES EM ENFERMARIA ═══
+
+PNEUMONIA ADQUIRIDA NA COMUNIDADE (PAC):
+- CURB-65: Confusão / Ureia >43 / FR ≥30 / PA <90x60 / ≥65 anos. 0-1 amb, 2 enf, ≥3 UTI.
+- Empírico enfermaria: CEFTRIAXONA 1-2g IV 1x/d + AZITROMICINA 500mg IV/VO 1x/d. Duração 5-7d.
+- Critérios troca IV→VO: afebril 24h, estável, tolera dieta.
+- Hemocultura 2 amostras + escarro ANTES do ATB.
+
+ERISIPELA / CELULITE:
+- Erisipela (bem delimitada, S.pyogenes): AMOXICILINA 500mg 8/8h VO OU CEFALEXINA 500mg 6/6h VO 7-10d. Internado: CEFAZOLINA 1-2g IV 8/8h ou CEFTRIAXONA 1-2g IV 1x/d.
+- Celulite (mal delimitada, pode ter MRSA): AMOXI-CLAV 875/125 VO OU CEFAZOLINA IV. Purulenta/MRSA: + CLINDAMICINA 600mg 8/8h ou VANCOMICINA.
+- ELEVAÇÃO do membro, MARCAR ERITEMA com caneta (controle progressão), glicemia controlada.
+- Sinais de fasceíte necrosante (bolhas, necrose, crepitação, dor desproporcional, hipotensão) → CIRURGIA URGENTE.
+
+ITU:
+- Cistite não complicada (mulher jovem): NITROFURANTOÍNA 100mg 6/6h VO 5d OU FOSFOMICINA 3g dose única.
+- Pielonefrite ambulatorial estável: CEFTRIAXONA 1g IV 1x/d 7-14d OU CIPROFLOXACINO 500mg 12/12h VO 7d.
+- ITU complicada (DM, gestante, idoso, sonda): INTERNAR + CEFTRIAXONA 2g IV 1x/d OU PIP-TAZO 4.5g 8/8h se sepse.
+- UROCULTURA antes do ATB SEMPRE. Bacteriúria assintomática em sondado NÃO trata (exceto grávida/pré-cirurgia urológica).
+- Febre >72h em ATB adequado → suspeitar obstrução/abscesso → US/TC.
+
+CUIDADOS GERAIS:
+- Profilaxia TEV: Padua ≥4 → enoxaparina 40mg SC 1x/d.
+- Profilaxia úlcera estresse: IBP se VM>48h ou coagulopatia.
+- Glicemia alvo 140-180 mg/dL em internado não-crítico.
+- D-day ATB: contar D1 no dia que iniciou. Reavaliar em 48-72h.
+
+═══════════════════════════════════════════════════════════════════════
 
 ${COMMON_RULES}`,
   },

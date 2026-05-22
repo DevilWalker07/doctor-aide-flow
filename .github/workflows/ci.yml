@@ -78,6 +78,10 @@ jobs:
           # (frágil — depende da chave interna do supabase-js). Em prod/dev
           # esse flag é undefined e o guard funciona normal.
           VITE_E2E: "true"
+          # Ativa botão Google nos testes auth (que mockam /auth/v1/*). Em
+          # prod fica desligado por padrão até o Supabase Dashboard ter o
+          # provider configurado.
+          VITE_GOOGLE_OAUTH: "true"
 
       - name: Upload Playwright report on failure
         if: failure()
