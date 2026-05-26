@@ -44,6 +44,83 @@ async function extractOne(payload: {
   return invokeEdgeFunction<any>("lab-extractor", payload, { timeoutMs: 180_000 });
 }
 
+/**
+ * Constrói o texto_formatado a partir do objeto `valores` quando a IA
+ * falha em montá-lo. Usa o mesmo padrão Dr. Luan (-LAB: HB X | HT X | …).
+ *
+ * Fallback de segurança: se algum extractor antigo ou alguma situação
+ * de borda fizer a IA retornar valores mas não preencher texto_formatado,
+ * a UI ainda mostra algo útil em vez de "(sem dados extraídos)".
+ */
+function buildTextoFormatadoFromValores(raw: any): string | null {
+  const v = raw?.valores;
+  if (!v || typeof v !== "object") return null;
+
+  const fmt = (n: any): string | null => {
+    if (n === null || n === undefined || n === "") return null;
+    return String(n);
+  };
+
+  const parts: string[] = [];
+  const push = (key: string, val: string | null) => {
+    if (val !== null) parts.push(`${key} ${val}`);
+  };
+
+  const hb = fmt(v.hb);
+  const ht = fmt(v.ht);
+  const vcm = fmt(v.vcm);
+  const hcm = fmt(v.hcm);
+  const leuco = fmt(v.leucocitos);
+  const seg = fmt(v.segmentados_percent);
+  const bast = fmt(v.bastoes_percent);
+  const lnf = fmt(v.linfocitos_percent);
+  const plq = fmt(v.plaquetas);
+
+  push("HB", hb);
+  push("HT", ht);
+
+  // VCM/HCM se anemia (HB <13) ou se vieram do laudo
+  const hbNum = hb ? parseFloat(hb.replace(",", ".")) : null;
+  const anemia = hbNum !== null && hbNum < 13;
+  if (vcm && (anemia || !hb)) push("VCM", vcm);
+  if (hcm && (anemia || !hb)) push("HCM", hcm);
+
+  if (v.hemacias) parts.push(`HEMACIAS ${v.hemacias}`);
+
+  if (leuco) {
+    const leucoNum = parseFloat(leuco.replace(/[^\d.]/g, ""));
+    const leucocitose = leucoNum > 11000;
+    const leucopenia = leucoNum < 4000;
+    if ((leucocitose || leucopenia) && (seg || bast || lnf)) {
+      const diff: string[] = [];
+      if (seg) diff.push(`${seg}% SEG`);
+      if (bast) diff.push(`${bast}% BAST`);
+      if (lnf) diff.push(`${lnf}% LNF`);
+      parts.push(`LEUCO ${leuco} (às custas de ${diff.join(" / ")})`);
+    } else {
+      parts.push(`LEUCO ${leuco}`);
+    }
+  }
+
+  push("PLQ", plq);
+  push("CR", fmt(v.creatinina));
+  push("UR", fmt(v.ureia));
+  push("NA", fmt(v.sodio));
+  push("K", fmt(v.potassio));
+  push("PCR", fmt(v.pcr));
+  push("LACTATO", fmt(v.lactato));
+  push("TGO", fmt(v.tgo));
+  push("TGP", fmt(v.tgp));
+  push("INR", fmt(v.inr));
+  push("GLI", fmt(v.glicemia));
+
+  if (parts.length === 0) return null;
+
+  const data = raw?.data_exame;
+  const prefix = data ? `-LAB (${data}):` : "-LAB:";
+  return `${prefix} ${parts.join(" | ")}`;
+}
+
 function LabRapidoPage() {
   const nav = useNavigate();
   const [text, setText] = useState("");
@@ -128,10 +205,13 @@ function LabRapidoPage() {
         if (!it) break;
         try {
           const data = await extractOne(it.payload);
+          // Fallback: se a IA não montou texto_formatado mas tem valores, montamos aqui
+          const textoFormatado =
+            data.texto_formatado ?? buildTextoFormatadoFromValores(data);
           const r: LabResult = {
             id: it.id,
             source: it.source,
-            texto_formatado: data.texto_formatado ?? null,
+            texto_formatado: textoFormatado,
             eas_formatado: data.eas_formatado ?? null,
             alertas: data.alertas ?? [],
             raw: data,
