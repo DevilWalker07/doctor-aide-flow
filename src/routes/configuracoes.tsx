@@ -84,11 +84,18 @@ function SettingsPage() {
   const checkHealth = async () => {
     setAiStatus("loading");
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/health`);
-      if (response.ok) setAiStatus("connected");
-      else setAiStatus("disconnected");
-    } catch {
-      setAiStatus("disconnected");
+      // Health check: pinga a edge function evolution-generator com payload
+      // mínimo. Se responde (mesmo que com erro de validação), o stack tá vivo.
+      const { invokeEdgeFunction } = await import("@/lib/edgeFunctions");
+      await invokeEdgeFunction("evolution-generator", { __healthcheck: true }, { timeoutMs: 10_000 });
+      setAiStatus("connected");
+    } catch (err: any) {
+      // Erro de "OpenAI Error" ainda significa que a edge tá viva — só o payload era inválido
+      if (err?.message?.toLowerCase().includes("openai")) {
+        setAiStatus("connected");
+      } else {
+        setAiStatus("disconnected");
+      }
     }
   };
 

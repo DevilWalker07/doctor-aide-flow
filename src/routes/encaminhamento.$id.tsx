@@ -73,23 +73,28 @@ function EncaminhamentoPage() {
     }
     setIsGenerating(true);
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/generate-referral`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patient: paciente,
-          destinations: selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label),
-          specialty: selectedDestinations.includes("especialista") ? specialty : null,
-          specialist_name: specialistName,
-          regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
-          reason: reason,
-          data_plantao: format(new Date(), "dd/MM/yyyy")
-        }),
-      });
+      // Edge function referral-generator (gpt-5, deployed no Supabase).
+      // Substituiu o backend Railway antigo (VITE_CLINICAL_AGENTS_URL/generate-referral)
+      // que não estava configurado em produção e dava 404 silencioso.
+      const { invokeEdgeFunction } = await import("@/lib/edgeFunctions");
+      const destinationLabel = selectedDestinations.length === 1
+        ? DESTINATIONS.find(opt => opt.id === selectedDestinations[0])?.label || "UBS"
+        : selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label).join(", ");
 
-      if (!response.ok) throw new Error("Falha ao gerar encaminhamento");
-      const result = await response.json();
-      setReferralText(result.referral_text || "");
+      const result = await invokeEdgeFunction<{ referral_text?: string }>("referral-generator", {
+        patient: paciente,
+        destination: destinationLabel,
+        destinations: selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label),
+        specialty: selectedDestinations.includes("especialista") ? specialty : null,
+        specialist_name: specialistName,
+        regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
+        reason: reason,
+        data_plantao: format(new Date(), "dd/MM/yyyy"),
+      }, { timeoutMs: 180_000 });
+
+      const text = result.referral_text || "";
+      if (!text.trim()) throw new Error("IA retornou texto vazio. Tente novamente.");
+      setReferralText(text);
       setStep(2);
       toast.success("Texto gerado com sucesso!");
     } catch (error: any) {

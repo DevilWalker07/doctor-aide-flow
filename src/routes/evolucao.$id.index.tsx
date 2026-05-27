@@ -430,28 +430,32 @@ function EvolucaoPage() {
       const plantaoAtivo = storage.getPlantaoAtivo();
       const dataPlantao = plantaoAtivo?.date || format(new Date(), "yyyy-MM-dd");
 
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/api/ai/gerar-evolucao`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patient: paciente,
-          tipo_unidade: tipoUnidade,
-          template: activeTemplate.prompt,
-          template_id: activeTemplate.id,
-          output_style: activeTemplate.outputStyle,
-          raw_notes: rawNotes || undefined,
-          data_plantao: dataPlantao,
-          preferences: {
-            uppercase: true,
-            lab_format: "compact_inline",
-            atb_day_rule: storage.getAtbDayRule()
-          }
-        }),
-      });
+      // Edge function evolution-generator (gpt-5, deployed no Supabase).
+      // Substituiu o backend Railway antigo (VITE_CLINICAL_AGENTS_URL) que
+      // não estava configurado em produção e dava 404 silencioso.
+      const { invokeEdgeFunction } = await import("@/lib/edgeFunctions");
+      const result = await invokeEdgeFunction<{
+        evolution_text?: string;
+        evolutionText?: string;
+        text?: string;
+      }>("evolution-generator", {
+        patient: paciente,
+        tipo_unidade: tipoUnidade,
+        template: activeTemplate.prompt,
+        template_id: activeTemplate.id,
+        output_style: activeTemplate.outputStyle,
+        raw_notes: rawNotes || undefined,
+        data_plantao: dataPlantao,
+        preferences: {
+          uppercase: true,
+          lab_format: "compact_inline",
+          atb_day_rule: storage.getAtbDayRule(),
+        },
+      }, { timeoutMs: 180_000 });
 
-      if (!response.ok) throw new Error("Falha na resposta do servidor");
-      const result = await response.json();
       const generated = result.evolution_text || result.evolutionText || result.text || "";
+      if (!generated.trim()) throw new Error("IA retornou texto vazio. Tente novamente.");
+
       setEvolutionText(prev => {
         const next = mode === "append" && prev.trim() ? `${prev}\n\n${generated}` : generated;
         pushVersion(next, "gerar");
