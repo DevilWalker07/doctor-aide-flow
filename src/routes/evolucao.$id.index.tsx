@@ -714,12 +714,21 @@ function EvolucaoPage() {
         </div>
       </header>
 
-      {rascunhoInfo && (
+      {rascunhoInfo && (() => {
+        // Defensivo: localStorage pode ter payload legado/corrompido sem
+        // savedAt valido. format(parseISO("")) crashava a tela inteira e o
+        // usuario perdia o acesso ao botao "Descartar".
+        const parsed = rascunhoInfo.savedAt ? parseISO(rascunhoInfo.savedAt) : null;
+        const validDate = parsed && isValid(parsed) ? parsed : null;
+        const label = validDate
+          ? `Rascunho não salvo encontrado de ${format(validDate, "dd/MM/yyyy 'às' HH:mm")}`
+          : "Rascunho não salvo encontrado (data desconhecida)";
+        return (
         <div className="bg-amber-50 border-b border-amber-200">
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 text-[11px] font-bold text-amber-900 uppercase tracking-wider">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              Rascunho não salvo encontrado de {format(parseISO(rascunhoInfo.savedAt), "dd/MM/yyyy 'às' HH:mm")}
+              {label}
             </div>
             <div className="flex items-center gap-2">
               <button onClick={restaurarRascunho} className="px-4 py-2 rounded-lg bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all">
@@ -731,7 +740,8 @@ function EvolucaoPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">
          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
