@@ -555,34 +555,54 @@ function EvolucaoPage() {
   const handleSave = async () => {
     if (!evolutionText || !userId) return;
     setIsSaving(true);
+
+    // Diferenciamos "salvou no Supabase (perfeito)" / "salvou só local
+    // (rede caiu, mas dado preservado)" / "TUDO falhou (não navega, evita
+    // perda silenciosa)". Antes o finally navegava em qualquer caso.
+    let savedAt: "server" | "local" | "none" = "none";
     try {
       const shiftId = storage.getShiftId();
       if (shiftId && !shiftId.startsWith("temp_") && !id.startsWith("temp_")) {
         await createEvolution({
           patient_id: id,
           shift_id: shiftId,
-          content: evolutionText
+          content: evolutionText,
         }, userId);
-        toast.success("Evolução salva!");
+        savedAt = "server";
       } else {
         throw new Error("Local fallback");
       }
     } catch (error) {
-      console.warn("Salvando evolução localmente", error);
-      const shiftId = storage.getShiftId() || "unknown";
-      const existing = JSON.parse(localStorage.getItem("da_evolucoes") || "[]");
-      existing.push({
-        patient_id: id,
-        shift_id: shiftId,
-        content: evolutionText,
-        created_at: new Date().toISOString()
-      });
-      localStorage.setItem("da_evolucoes", JSON.stringify(existing));
-      toast.success("Evolução salva localmente!");
+      console.warn("Server save falhou, tentando localStorage", error);
+      try {
+        const shiftId = storage.getShiftId() || "unknown";
+        const existing = JSON.parse(localStorage.getItem("da_evolucoes") || "[]");
+        existing.push({
+          patient_id: id,
+          shift_id: shiftId,
+          content: evolutionText,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem("da_evolucoes", JSON.stringify(existing));
+        savedAt = "local";
+      } catch (e) {
+        console.error("LocalStorage tambem falhou", e);
+        savedAt = "none";
+      }
     } finally {
-      storage.clearEvolRascunho(id);
       setIsSaving(false);
+    }
+
+    if (savedAt === "server") {
+      storage.clearEvolRascunho(id);
+      toast.success("Evolução salva!");
       nav({ to: "/paciente/$id", params: { id } });
+    } else if (savedAt === "local") {
+      // Mantém rascunho como backup extra. Não navega — usuário sabe que
+      // não foi pro servidor e pode tentar de novo quando voltar a rede.
+      toast.warning("Salvo só neste dispositivo (sem rede). Texto preservado.", { duration: 6000 });
+    } else {
+      toast.error("Não foi possível salvar. Copie o texto pra não perder.", { duration: 10000 });
     }
   };
 
@@ -927,8 +947,16 @@ function EvolucaoPage() {
       )}
 
       {overwriteChoice === "ask" && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4">
-          <div className="bg-elevated w-full max-w-md rounded-t-2xl md:rounded-[2rem] border-t md:border border-border shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[85vh] flex flex-col">
+        <div
+          className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4"
+          onClick={() => setOverwriteChoice(null)}
+          onKeyDown={(e) => e.key === "Escape" && setOverwriteChoice(null)}
+          role="presentation"
+        >
+          <div
+            className="bg-elevated w-full max-w-md rounded-t-2xl md:rounded-[2rem] border-t md:border border-border shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             <header className="px-8 py-6 border-b border-border bg-secondary/30">
               <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Já existe texto no campo</h2>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Como você quer gerar a nova evolução?</p>

@@ -512,7 +512,11 @@ function PacienteDetailPage() {
               {paciente.data?.abx?.length > 0 ? (
                 paciente.data.abx.map((atb: any, i: number) => {
                   const isFinalizado = atb.status === "finalizado" || atb.status === "suspenso" || (atb.data_fim && new Date(`${atb.data_fim}T00:00:00`).getTime() <= Date.now());
-                  const dValue = differenceInDays(startOfDay(new Date()), startOfDay(parseISO(atb.d0)));
+                  // Defensivo: parseISO com undefined/string inválida quebra tela inteira.
+                  // ATB pode vir da IA sem data_inicio (importação incompleta).
+                  const parsedStart = atb.d0 ? parseISO(atb.d0) : null;
+                  const validStart = parsedStart && isValid(parsedStart) ? parsedStart : null;
+                  const dValue = validStart ? differenceInDays(startOfDay(new Date()), startOfDay(validStart)) : 0;
                   const dSafe = dValue >= 0 ? dValue : 0;
                   const maxDays = 7;
                   const progressBlocks = 8;
@@ -548,24 +552,25 @@ function PacienteDetailPage() {
                                </button>
                              )}
                              <div>
-                               <div className="text-2xl font-black text-foreground">D{dSafe}</div>
+                               <div className="text-2xl font-black text-foreground">{validStart ? `D${dSafe}` : "D?"}</div>
                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                                  INÍCIO: {format(parseISO(atb.d0), "dd/MM/yyyy")}
-                                  {atb.data_fim && (
-                                    <> · FIM: {format(parseISO(atb.data_fim), "dd/MM/yyyy")}</>
-                                  )}
+                                  INÍCIO: {validStart ? format(validStart, "dd/MM/yyyy") : "—"}
+                                  {atb.data_fim && (() => {
+                                    const fim = parseISO(atb.data_fim);
+                                    return isValid(fim) ? <> · FIM: {format(fim, "dd/MM/yyyy")}</> : null;
+                                  })()}
                                </p>
                              </div>
                           </div>
                        </div>
-                       
+
                        <div className="space-y-2">
                           <div className={`font-mono text-xl tracking-tighter ${colorClass}`}>
                              {blocks} <span className="text-xs font-black text-muted-foreground ml-2">{dSafe}/7 DIAS</span>
                           </div>
                           <div className="flex justify-between text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                             <span>Início: {format(parseISO(atb.d0), "dd/MM/yyyy")}</span>
-                             <span>Término previsto: {format(addDays(parseISO(atb.d0), 7), "dd/MM/yyyy")}</span>
+                             <span>Início: {validStart ? format(validStart, "dd/MM/yyyy") : "data não informada"}</span>
+                             <span>Término previsto: {validStart ? format(addDays(validStart, 7), "dd/MM/yyyy") : "—"}</span>
                           </div>
                        </div>
 
@@ -856,7 +861,11 @@ function PacienteDetailPage() {
       </div>
 
       {/* Floating Action for Mobile */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+      {/* FAB: no mobile fica acima do BottomNav (h-14), no desktop fica colado embaixo */}
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-30 bottom-20 md:bottom-8"
+        style={{ marginBottom: "max(0px, env(safe-area-inset-bottom))" }}
+      >
          <button 
            onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
            className="px-10 py-5 rounded-[2rem] bg-navy text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl flex items-center gap-4 hover:scale-105 transition-all"
@@ -867,8 +876,16 @@ function PacienteDetailPage() {
 
       {/* Modal Ver Completa */}
       {modalEvolucao && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4">
-          <div className="bg-elevated w-full max-w-2xl rounded-t-2xl md:rounded-[2.5rem] border-t md:border border-border shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[85vh]">
+        <div
+          className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4"
+          onClick={() => setModalEvolucao(null)}
+          onKeyDown={(e) => e.key === "Escape" && setModalEvolucao(null)}
+          role="presentation"
+        >
+          <div
+            className="bg-elevated w-full max-w-2xl rounded-t-2xl md:rounded-[2.5rem] border-t md:border border-border shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <header className="px-8 py-6 border-b border-border bg-secondary/30 flex items-center justify-between">
               <div>
                  <h2 className="text-sm font-black text-foreground uppercase tracking-widest mb-1">EVOLUÇÃO MÉDICA</h2>

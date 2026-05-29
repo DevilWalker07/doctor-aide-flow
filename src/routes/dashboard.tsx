@@ -266,14 +266,47 @@ function DashboardPage() {
         }
         text += `-------------------\n`;
       });
-      await createHandoff({ shift_id: shiftId, content: text }, userId);
-      await closeShift(shiftId, userId);
+      // 2 steps independentes — antes se createHandoff falhasse, closeShift
+      // não rodava e plantão ficava preso ativo. Agora salvamos passagem
+      // localmente como backup, e seguimos pro closeShift mesmo se a
+      // passagem no servidor falhar. Estado final = plantão encerrado.
+      let handoffSaved = false;
+      try {
+        await createHandoff({ shift_id: shiftId, content: text }, userId);
+        handoffSaved = true;
+      } catch (err) {
+        console.warn("createHandoff falhou, salvando passagem local", err);
+        try {
+          const archived = JSON.parse(localStorage.getItem("da_handoffs_pendentes") || "[]");
+          archived.push({ shift_id: shiftId, content: text, created_at: new Date().toISOString() });
+          localStorage.setItem("da_handoffs_pendentes", JSON.stringify(archived));
+        } catch { /* sem espaço — ignora */ }
+      }
+
+      try {
+        await closeShift(shiftId, userId);
+      } catch (err) {
+        // Mesmo o close falhando, limpamos sessão local pra desbloquear o
+        // médico. Marca pra retry posterior.
+        console.warn("closeShift falhou — limpando sessão local mesmo assim", err);
+        try {
+          const pending = JSON.parse(localStorage.getItem("da_close_pendentes") || "[]");
+          pending.push({ shift_id: shiftId, at: new Date().toISOString() });
+          localStorage.setItem("da_close_pendentes", JSON.stringify(pending));
+        } catch { /* ignora */ }
+      }
+
       storage.clearSession();
-      toast.success("Plantão encerrado. Dados arquivados.");
+
+      if (handoffSaved) {
+        toast.success("Plantão encerrado. Dados arquivados.");
+      } else {
+        toast.warning("Plantão encerrado (passagem salva local — sincroniza quando voltar a rede).", { duration: 6000 });
+      }
       nav({ to: "/" });
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao encerrar plantão.");
+      toast.error("Erro inesperado ao encerrar plantão. Tente de novo.");
     } finally {
       setIsEnding(false);
       setShowEndModal(false);

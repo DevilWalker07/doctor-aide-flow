@@ -134,8 +134,12 @@ export async function streamEdgeFunction(
           if (parsed.error) throw new Error(parsed.error);
           if (typeof parsed.delta === "string") onDelta(parsed.delta);
         } catch (e: any) {
-          if (e?.message && !e.message.startsWith("Unexpected token")) throw e;
-          // JSON parse error em chunk parcial — ignora
+          // SyntaxError de JSON parse (qualquer variação: "Unexpected token",
+          // "Unexpected end of JSON input", "JSON Parse error", etc) = chunk
+          // SSE incompleto, vai ser completado na próxima leitura. Só propaga
+          // erros DE VERDADE (que não são SyntaxError).
+          if (e instanceof SyntaxError) continue;
+          throw e;
         }
       }
     }
