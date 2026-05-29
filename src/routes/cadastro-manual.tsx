@@ -289,23 +289,23 @@ function CadastroManualPage() {
     }
   };
 
-  const handleAISuggestions = async () => {
-    toast.info("A IA está analisando o caso clínico...");
-    // Mock simulation
-    setTimeout(() => {
-      const suggestions = "1. Vigilância hemodiátrica rigorosa\n2. Reavaliar antibioticoterapia em 48h\n3. Controle de balanço hídrico diário\n4. Fisioterapia motora e respiratória";
-      setForm(f => ({ ...f, condutas: f.condutas + (f.condutas ? "\n" : "") + suggestions }));
-      toast.success("Sugestões de conduta adicionadas!");
-    }, 2000);
+  // Atalhos pras telas standalone que JÁ fazem extração de verdade.
+  // Antes esses dois handlers eram mocks (setTimeout + texto hardcoded),
+  // enganando o usuário. Agora redirecionam pras telas reais com
+  // extração via gpt-5.
+  const handleAISuggestions = () => {
+    toast.info("Use a tela 'Falar com especialista' pra sugestões de conduta.");
+    nav({ to: "/especialistas/$id", params: { id: "victor" } });
   };
 
   const triggerPhotoExtraction = (field: 'laboratorios' | 'medicacoes') => {
-    toast.promise(new Promise(res => setTimeout(res, 3000)), {
-       loading: "Processando imagem...",
-       success: "Dados extraídos com sucesso!",
-       error: "Falha na extração."
-    });
-    // In a real scenario, this would open a file picker and call the documentExtractor
+    if (field === "laboratorios") {
+      toast.info("Use 'Extrair laboratório' — extração real via IA.");
+      nav({ to: "/lab-rapido" });
+    } else {
+      toast.info("Use 'Importar via documento' pra extrair medicações.");
+      nav({ to: "/upload-ia" });
+    }
   };
 
   const addATB = () => {

@@ -13,7 +13,6 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    // inputText: texto colado (legado). fileBase64/fileType/fileName: imagem ou PDF (novo).
     const { inputText, patientContext, fileBase64, fileType, fileName } = body;
 
     if (!inputText && !fileBase64) {
@@ -28,41 +27,56 @@ serve(async (req) => {
     }
 
     const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico DOUTOR AJUDA.
-Retorne exclusivamente JSON puro (sem markdown \`\`\`json ou texto extra).
-Nunca invente valores.
-Se um valor não for encontrado, retorne null.
-Se um valor estiver ilegível ou duvidoso, coloque em valores_duvidosos.
-Preserve SEMPRE a data do exame — formato dd/mm/aa (ex: 18/05/26).
+Retorne exclusivamente JSON puro (sem markdown).
+Nunca invente valores. Se um valor não for encontrado, retorne null.
+Se um valor estiver ilegível ou duvidoso, coloque o nome do campo em valores_duvidosos.
 
-Reconheça sinônimos:
-Hemoglobina/Hb/HGB; Hematócrito/Ht/HCT; VCM; HCM; CHCM; RDW;
-Leucócitos/Leuco/WBC; Bastões/Bast; Segmentados/Seg/Neutrófilos;
-Linfócitos/Lnf/Linfo; Monócitos/Mono; Eosinófilos/Eos; Basófilos/Baso;
-Plaquetas/PLQ/PLT; Creatinina/Cr/Crea; Ureia/Ur; Sódio/Na; Potássio/K;
-Cálcio/Ca; Magnésio/Mg; Fósforo/P; PCR/Proteína C Reativa; Lactato;
-TGO/AST; TGP/ALT; GGT; FA/Fosfatase Alcalina; Bilirrubinas (BT/BD/BI);
-INR; TP; TTPA; Albumina; Glicemia; HbA1c; TSH; T4L; Troponina; CK; CK-MB;
-EAS/piócitos/leucócitos urina/nitrito/hemácias/proteínas.
+DATA DO EXAME:
+- Preserve a data se encontrada, formato dd/mm/aa.
+- Se a imagem/texto NÃO TIVER DATA visível, deixe data_exame como null E use "-LAB:" (sem parênteses) no texto_formatado.
+- NUNCA deixe de gerar texto_formatado por causa de data ausente.
 
-FORMATO DO texto_formatado — REGRA OBRIGATÓRIA (Dr. Luan):
-Prefixo "-LAB (dd/mm/aa):" sempre. Campos separados por " | ". Inclua SOMENTE os parâmetros encontrados.
-Ordem fixa: HB, HT, [VCM, HCM apenas se HB anormal → anemia ou poliglobulia],
-LEUCO [valor] [se leucocitose >11.000 ou leucopenia <4.000: "(às custas de X% SEG / Y% BAST / Z% LNF)" usando o diferencial — pelo menos 3 células],
-PLQ, CR, UR, NA, K, PCR, e demais valores encontrados.
+NOTAÇÃO BRASILEIRA (importante):
+- Vírgula = decimal. "8,5" significa 8.5 (escreva no JSON como 8.5).
+- Notação científica: "2,1.10⁶" = 2.100.000 = 2,1 milhões. Mantenha como 2.1 em valores se for milhões; no texto_formatado escreva o valor por mil/milhões como aparece no laudo.
 
-EXEMPLO:
+SINÔNIMOS (reconheça TODOS):
+Hemoglobina/Hb/HGB; Hematócrito/Ht/HCT; Hemácias/Hc/Eritrócitos/RBC;
+VCM/MCV; HCM/MCH; CHCM/MCHC; RDW; Leucócitos/Leuco/WBC;
+Bastões/Bast; Segmentados/Seg/Neutrófilos; Linfócitos/Lnf;
+Monócitos/Mono; Eosinófilos/Eos; Basófilos/Baso;
+Plaquetas/PLQ/PLT; Creatinina/Cr/Crea; Ureia/Ur;
+Sódio/Na; Potássio/K; Cálcio/Ca; Magnésio/Mg; Fósforo/P;
+PCR/Proteína C Reativa; Lactato;
+TGO/AST; TGP/ALT; GGT; FA/Fosfatase Alcalina;
+Bilirrubinas (BT/BD/BI); INR; TP; TTPA; Albumina;
+Glicemia; HbA1c; TSH; T4L; Troponina; CK; CK-MB;
+EAS/Piócitos/Leucócitos urina/Nitrito.
+
+FORMATO DO texto_formatado (Dr. Luan) — OBRIGATÓRIO:
+- Prefixo: "-LAB (dd/mm/aa):" se tiver data, ou "-LAB:" se não tiver.
+- Campos separados por " | ". Inclua SOMENTE os parâmetros encontrados.
+- Ordem fixa: HB, HT, VCM, HCM (se Hb anormal), LEUCO (com diferencial se leucocitose/leucopenia), PLQ, CR, UR, NA, K, PCR.
+
+VCM/HCM: SEMPRE incluir se anemia (Hb <12 mulher / <13 homem) OU poliglobulia.
+DIFERENCIAL: incluir em pelo menos 3 células se LEUCO >11000 ou <4000, OU bastonetose isolada (Bast >7%).
+
+EXEMPLO COM DATA:
 -LAB (18/05/26): HB 10 | HT 33 | VCM 78 | HCM 25 | LEUCO 14.500 (às custas de 80% SEG / 4% BAST / 12% LNF) | PLQ 220.000 | CR 1.4 | UR 60 | NA 138 | K 4.2 | PCR 35
 
-EXEMPLO SEM ANEMIA E SEM LEUCOCITOSE:
--LAB (18/05/26): HB 13.5 | HT 41 | LEUCO 7.800 | PLQ 200.000 | CR 0.9 | UR 32 | NA 140 | K 4.0 | PCR 5
+EXEMPLO SEM DATA:
+-LAB: HB 8.5 | HT 24 | VCM 112 | HCM 26 | HEMACIAS 2.1 MI
+
+ALERTAS:
+- "anemia (Hb X)" / "anemia macrocítica (Hb X, VCM Y)" se VCM >100 / "anemia microcítica" se VCM <80
+- "leucocitose" / "leucopenia" / "plaquetopenia" / "plaquetose"
+- "piora renal (Cr X)" se Cr >1.3
+- "hiponatremia" / "hipopotassemia" / "hiperpotassemia"
 
 Se houver EAS:
 EAS (dd/mm/aa): X PIÓCITOS/CAMPO | NITRITO POSITIVO/NEGATIVO | HEMÁCIAS X | PROTEÍNAS X
 
-REGRAS DE ANORMALIDADE:
-- Anemia: HB <12 (mulher) ou <13 (homem) → incluir VCM e HCM.
-- Leucocitose: LEUCO >11.000. Leucopenia: <4.000. Em ambos casos, incluir diferencial percentual.
-- Bastonetose: BAST >7% → SEMPRE incluir mesmo sem leucocitose.
+REGRA DE OURO: Mesmo que encontre APENAS 1 valor, gere o texto_formatado. NUNCA retorne texto_formatado=null se houver pelo menos 1 valor extraído.
 
 JSON de resposta:
 {
@@ -70,6 +84,7 @@ JSON de resposta:
   "tipo_exame": [],
   "valores": {
     "hb": null, "ht": null, "vcm": null, "hcm": null, "chcm": null, "rdw": null,
+    "hemacias": null,
     "leucocitos": null,
     "bastoes_percent": null, "segmentados_percent": null, "linfocitos_percent": null,
     "monocitos_percent": null, "eosinofilos_percent": null, "basofilos_percent": null,
@@ -92,51 +107,74 @@ JSON de resposta:
 }
 `;
 
-    // Monta mensagem do user — texto E/OU imagem/PDF
-    const userContent: any[] = [];
     const ctx = patientContext ? `Contexto do paciente: ${JSON.stringify(patientContext)}\n\n` : "";
+    const isPdf = fileBase64 && fileType === "application/pdf";
 
-    if (inputText) {
-      userContent.push({
-        type: "text",
-        text: `${ctx}Texto do laboratório:\n${inputText}`,
-      });
-    }
+    let openaiUrl: string;
+    let openaiPayload: any;
 
-    if (fileBase64 && fileType) {
-      const dataUrl = `data:${fileType};base64,${fileBase64}`;
-      if (fileType.startsWith("image/")) {
-        userContent.push({ type: "image_url", image_url: { url: dataUrl } });
-        if (!inputText) {
-          userContent.push({
-            type: "text",
-            text: `${ctx}Extraia os valores do exame da imagem (arquivo: ${fileName ?? "imagem"}).`,
-          });
-        }
-      } else if (fileType === "application/pdf") {
-        // gpt-5 chat/completions suporta input_file via Responses API; aqui no Chat
-        // Completions o jeito mais simples é descrever — vamos usar a Responses API.
-        userContent.push({
+    if (isPdf) {
+      // PDF: usa Responses API com input_file (gpt-5 nativo, OCR + extração).
+      // Antes anexávamos só o nome do arquivo no texto — a IA inventava
+      // valores ou retornava vazio. Agora o PDF é REALMENTE processado.
+      openaiUrl = "https://api.openai.com/v1/responses";
+      const content = [
+        {
+          type: "input_text",
+          text: `${ctx}Extraia os valores do laboratório deste PDF (arquivo: ${fileName ?? "laudo.pdf"}). Lembre: SEMPRE gere texto_formatado mesmo sem data — use "-LAB:" se não tiver data.`,
+        },
+        {
+          type: "input_file",
+          filename: fileName ?? "laudo.pdf",
+          file_data: `data:application/pdf;base64,${fileBase64}`,
+        },
+      ];
+      openaiPayload = {
+        model: OPENAI_MODEL,
+        input: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content },
+        ],
+        text: { format: { type: "json_object" } },
+      };
+    } else if (fileBase64 && fileType && fileType.startsWith("image/")) {
+      // Imagem: chat completions com image_url (multimodal padrão)
+      openaiUrl = "https://api.openai.com/v1/chat/completions";
+      const userContent = [
+        { type: "image_url", image_url: { url: `data:${fileType};base64,${fileBase64}` } },
+        {
           type: "text",
-          text: `${ctx}PDF anexado (${fileName ?? "documento.pdf"}). Extraia os valores do laboratório.`,
-        });
-      }
+          text: `${ctx}Extraia os valores do exame da imagem (arquivo: ${fileName ?? "imagem"}). Lembre: SEMPRE gere texto_formatado mesmo sem data — use "-LAB:" se não tiver data.${inputText ? `\n\nTexto adicional:\n${inputText}` : ""}`,
+        },
+      ];
+      openaiPayload = {
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        response_format: { type: "json_object" },
+      };
+    } else {
+      // Texto puro
+      openaiUrl = "https://api.openai.com/v1/chat/completions";
+      openaiPayload = {
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `${ctx}Texto do laboratório:\n${inputText}` },
+        ],
+        response_format: { type: "json_object" },
+      };
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(openaiUrl, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent.length === 1 && userContent[0].type === "text" ? userContent[0].text : userContent },
-        ],
-        response_format: { type: "json_object" },
-      }),
+      body: JSON.stringify(openaiPayload),
     });
 
     if (!response.ok) {
@@ -144,9 +182,22 @@ JSON de resposta:
     }
 
     const data = await response.json();
-    let content = data.choices[0].message.content.trim();
+
+    // Responses API e Chat Completions API tem shapes diferentes
+    let content: string;
+    if (isPdf) {
+      content = data.output_text
+        ?? data.output?.flatMap((o: any) => o.content ?? []).map((c: any) => c.text ?? "").join("\n")
+        ?? "{}";
+    } else {
+      content = data.choices?.[0]?.message?.content ?? "{}";
+    }
+
+    content = content.trim();
     if (content.startsWith("```json")) {
       content = content.replace(/^```json/, "").replace(/```$/, "").trim();
+    } else if (content.startsWith("```")) {
+      content = content.replace(/^```/, "").replace(/```$/, "").trim();
     }
 
     const parsedJson = JSON.parse(content);
