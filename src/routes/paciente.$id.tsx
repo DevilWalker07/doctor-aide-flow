@@ -18,6 +18,8 @@ import { hasConsultForPatient } from "@/lib/specialists/client";
 import ShiftBadge from "@/components/ShiftBadge";
 import ThemeToggle from "@/components/ThemeToggle";
 import ATBAlertBanner from "@/components/atb/ATBAlertBanner";
+import ClinicalWatchdog from "@/components/watchdog/ClinicalWatchdog";
+import type { PrescriptionItem } from "@/lib/clinical-protocols/types";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
@@ -456,6 +458,44 @@ function PacienteDetailPage() {
             </button>
          </div>
       </div>
+
+      {/* Vigia Clínico — detecta hipoNa/hiperK/PNM/ITU/erisipela e sugere
+          condutas com cálculo por peso/TFG. PoC com hiponatremia grave. */}
+      <ClinicalWatchdog
+        patient={paciente}
+        onAddProblem={async (entry) => {
+          const novosDiagnosticos = [...(paciente.diagnoses || []), entry];
+          const updated = { ...paciente, diagnoses: novosDiagnosticos };
+          setPaciente(updated);
+          if (userId && !id.startsWith("temp_")) {
+            try {
+              await updatePatient(id, { problem_list: novosDiagnosticos } as any, userId);
+            } catch (e) {
+              console.warn("Salvou só local", e);
+            }
+          }
+          try {
+            const local = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
+            const idx = local.findIndex((p: any) => p.id === id);
+            if (idx >= 0) {
+              local[idx] = {
+                ...local[idx],
+                problem_list: novosDiagnosticos,
+                lista_de_problemas: novosDiagnosticos.map((t: string) => ({ id: Math.random().toString(36).slice(2), text: t })),
+              };
+              localStorage.setItem("da_pacientes", JSON.stringify(local));
+            }
+          } catch { /* ignore */ }
+        }}
+        onApplyPrescription={(items: PrescriptionItem[]) => {
+          const encoded = encodeURIComponent(JSON.stringify(items));
+          nav({
+            to: "/prescricao/$id",
+            params: { id },
+            search: { vigia_items: encoded } as any,
+          });
+        }}
+      />
 
       <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-6 md:space-y-12">
 

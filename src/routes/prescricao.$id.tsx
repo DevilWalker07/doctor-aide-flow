@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft, Copy, Save, Pill, Activity,
@@ -20,6 +20,10 @@ import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    // Itens vindos do Vigia Clínico (encoded JSON de PrescriptionItem[])
+    vigia_items: typeof search.vigia_items === "string" ? search.vigia_items : undefined,
+  }),
   head: () => ({ meta: [{ title: "Gerar Prescrição — DOUTOR AJUDA" }] }),
 });
 
@@ -112,6 +116,56 @@ function PrescricaoPage() {
     const savedTipo = storage.getTipo();
     if (savedTipo) setTipoUnidade(savedTipo);
   }, [id, userId]);
+
+  // Consome itens do Vigia Clínico (chega via search param vigia_items)
+  const { vigia_items: vigiaItemsRaw } = useSearch({ from: "/prescricao/$id" });
+  const [vigiaApplied, setVigiaApplied] = useState(false);
+  useEffect(() => {
+    if (!vigiaItemsRaw || vigiaApplied) return;
+    try {
+      const items = JSON.parse(decodeURIComponent(vigiaItemsRaw)) as Array<{ section: string; text: string }>;
+      const sumario: string[] = [];
+      for (const item of items) {
+        const t = item.text;
+        switch (item.section) {
+          case "cuidados":
+            setCuidados((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Cuidados");
+            break;
+          case "hidratacao":
+            setHidratacao({ active: true, tipo: t, volume: "", velocidade: "" });
+            sumario.push("Hidratação");
+            break;
+          case "sintomaticos":
+            setSintomaticos((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Sintomáticos");
+            break;
+          case "profilaxias":
+            setProfilaxias((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Profilaxias");
+            break;
+          case "exames":
+            setExames((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Exames");
+            break;
+          case "pendencias":
+            setPendencias((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Pendências");
+            break;
+          case "medicacoes":
+            setMedicacoes((prev) => [...prev, { id: Math.random().toString(36).slice(2), text: t }]);
+            sumario.push("Medicações");
+            break;
+        }
+      }
+      const unicos = [...new Set(sumario)];
+      toast.success(`Vigia inseriu ${items.length} item(s) em: ${unicos.join(", ")}.`, { duration: 6000 });
+      setVigiaApplied(true);
+    } catch (e) {
+      console.warn("Vigia items inválidos", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vigiaItemsRaw]);
 
   const handleCopy = () => {
     const dataPlantao = format(new Date(), "dd/MM/yyyy");
