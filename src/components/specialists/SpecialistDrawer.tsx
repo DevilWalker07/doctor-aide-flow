@@ -13,8 +13,8 @@ interface Props {
 }
 
 const PRIORITY_STYLES: Record<SuggestionPriority, { label: string; bg: string; text: string }> = {
-  alta: { label: "ALTA", bg: "bg-red-100", text: "text-red-700" },
-  media: { label: "MÉDIA", bg: "bg-amber-100", text: "text-amber-700" },
+  alta: { label: "ALTA", bg: "bg-red-100", text: "text-red-700 dark:text-red-400" },
+  media: { label: "MÉDIA", bg: "bg-amber-100", text: "text-amber-700 dark:text-amber-300" },
   baixa: { label: "BAIXA", bg: "bg-subtle", text: "text-foreground/80" },
 };
 
@@ -78,8 +78,8 @@ export default function SpecialistDrawer({ open, onClose, specialist, consult, i
           )}
 
           {!isLoading && consult?.sections.map((sec, i) => (
-            <div key={i} className={`p-4 rounded-2xl border ${sec.alert ? "bg-amber-50 border-amber-200" : "bg-secondary/30 border-border"}`}>
-              <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2 ${sec.alert ? "text-amber-700" : "text-foreground"}`}>
+            <div key={i} className={`p-4 rounded-2xl border ${sec.alert ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30" : "bg-secondary/30 border-border"}`}>
+              <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2 ${sec.alert ? "text-amber-700 dark:text-amber-300" : "text-foreground"}`}>
                 {sec.alert && <AlertTriangle className="h-3.5 w-3.5" />}
                 {sec.title}
               </h3>

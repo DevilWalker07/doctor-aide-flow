@@ -183,12 +183,12 @@ function PassagemMassaPage() {
         )}
 
         {job.errors && job.errors.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-amber-900 mb-2">
+          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-900 dark:text-amber-300 mb-2">
               {job.errors.length} arquivo(s) com erro
             </p>
             {job.errors.slice(0, 5).map((e, i) => (
-              <p key={i} className="text-[10px] font-bold text-amber-900">• {e.file_name}: {e.error}</p>
+              <p key={i} className="text-[10px] font-bold text-amber-900 dark:text-amber-300">• {e.file_name}: {e.error}</p>
             ))}
           </div>
         )}
@@ -233,7 +233,7 @@ function PassagemMassaPage() {
                     {p.alertas_pendencias && p.alertas_pendencias.length > 0 && (
                       <ul className="mt-3 space-y-1">
                         {p.alertas_pendencias.map((a, ai) => (
-                          <li key={ai} className="text-[10px] font-bold text-amber-700 flex items-center gap-1">
+                          <li key={ai} className="text-[10px] font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3" /> {a}
                           </li>
                         ))}

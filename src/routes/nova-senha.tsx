@@ -91,7 +91,7 @@ function RequestForm() {
 
   if (sent) {
     return (
-      <div className="flex items-start gap-2 p-4 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+      <div className="flex items-start gap-2 p-4 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 dark:text-emerald-400">
         <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
         <div>
           <p className="text-[13px] font-medium">Email enviado!</p>

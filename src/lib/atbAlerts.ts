@@ -123,7 +123,7 @@ export function getATBsWithAlert(patient: PatientForATBAlert): ATBWithAlert[] {
 }
 
 export const ATB_ALERT_STYLES: Record<AlertLevel, { bg: string; text: string; label: string; border: string }> = {
-  ok: { bg: "bg-emerald-50", text: "text-emerald-700", label: "OK", border: "border-emerald-200" },
-  yellow: { bg: "bg-amber-100", text: "text-amber-700", label: "REVISAR EM BREVE", border: "border-amber-300" },
-  red: { bg: "bg-red-100", text: "text-red-700", label: "REAVALIAR JÁ", border: "border-red-300" },
+  ok: { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-400", label: "OK", border: "border-emerald-200 dark:border-emerald-500/30" },
+  yellow: { bg: "bg-amber-100", text: "text-amber-700 dark:text-amber-300", label: "REVISAR EM BREVE", border: "border-amber-300 dark:border-amber-500/40" },
+  red: { bg: "bg-red-100", text: "text-red-700 dark:text-red-400", label: "REAVALIAR JÁ", border: "border-red-300" },
 };

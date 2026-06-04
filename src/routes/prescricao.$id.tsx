@@ -419,9 +419,9 @@ function PrescricaoPage() {
                         <button onClick={() => setAntibioticos(antibioticos.filter((_, i) => i !== idx))} className="p-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                      </div>
                      {a.ajuste_alerta && (
-                        <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg">
                            <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0 mt-0.5" />
-                           <p className="text-[10px] font-bold text-amber-900 uppercase">{a.ajuste_alerta}</p>
+                           <p className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase">{a.ajuste_alerta}</p>
                         </div>
                      )}
                   </div>

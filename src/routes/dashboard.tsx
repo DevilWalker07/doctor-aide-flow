@@ -68,7 +68,7 @@ const GRAV_BAR: Record<Gravidade, string> = {
 
 const ATB_PILL: Record<AlertLevel, string> = {
   ok: "bg-accent text-accent-foreground",
-  yellow: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  yellow: "bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:text-amber-300",
   red: "bg-destructive/15 text-destructive",
 };
 

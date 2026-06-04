@@ -724,9 +724,9 @@ function EvolucaoPage() {
           ? `Rascunho não salvo encontrado de ${format(validDate, "dd/MM/yyyy 'às' HH:mm")}`
           : "Rascunho não salvo encontrado (data desconhecida)";
         return (
-        <div className="bg-amber-50 border-b border-amber-200">
+        <div className="bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/30">
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-[11px] font-bold text-amber-900 uppercase tracking-wider">
+            <div className="flex items-center gap-3 text-[11px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               {label}
             </div>
@@ -734,7 +734,7 @@ function EvolucaoPage() {
               <button onClick={restaurarRascunho} className="px-4 py-2 rounded-lg bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all">
                 Restaurar
               </button>
-              <button onClick={descartarRascunho} className="px-4 py-2 rounded-lg border border-amber-300 text-amber-900 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all">
+              <button onClick={descartarRascunho} className="px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-500/40 text-amber-900 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all">
                 Descartar
               </button>
             </div>
@@ -786,7 +786,7 @@ function EvolucaoPage() {
                         <div className="space-y-2">
                            {paciente.pendingIssues?.length > 0 ? (
                               paciente.pendingIssues.map((p: string, i: number) => (
-                                 <div key={i} className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-900 uppercase">
+                                 <div key={i} className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase">
                                     <AlertTriangle className="h-3 w-3 text-amber-500" /> {p}
                                  </div>
                               ))

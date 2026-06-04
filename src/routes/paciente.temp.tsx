@@ -59,7 +59,7 @@ function PacienteTempPage() {
                 <div className="space-y-3">
                    {paciente.pendencias && paciente.pendencias.length > 0 ? (
                       paciente.pendencias.map((p: any) => (
-                        <div key={p.id} className="flex gap-3 items-center bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 text-xs font-bold text-amber-700 uppercase tracking-tight">
+                        <div key={p.id} className="flex gap-3 items-center bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-tight">
                            <Clock className="h-3.5 w-3.5" /> {p.text}
                         </div>
                       ))

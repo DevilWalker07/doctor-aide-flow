@@ -510,9 +510,9 @@ function RevisarExtracao() {
             <Section id="alertas" title="ALERTAS DA IA" icon={<AlertCircle className="h-5 w-5 text-red-500" />}>
               <div className="space-y-4">
                 {data.alertas.map((alerta: string, i: number) => (
-                  <div key={i} className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4">
+                  <div key={i} className="p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl flex items-start gap-4">
                     <Info className="h-5 w-5 text-amber-500" />
-                    <p className="text-xs font-bold uppercase text-amber-900">{alerta}</p>
+                    <p className="text-xs font-bold uppercase text-amber-900 dark:text-amber-300">{alerta}</p>
                   </div>
                 ))}
               </div>
