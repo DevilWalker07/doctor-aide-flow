@@ -1,4 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { extractText } from "../_shared/fileToText.ts";
+
+/**
+ * lab-extractor v9 — agora com pre-extração de texto sem IA.
+ *
+ * Fluxo:
+ *   1. Se fileBase64 + fileType: tenta extractText() (unpdf/mammoth/sheetjs)
+ *      que usa cache SHA-256. Se conseguir texto, manda pro gpt-5 como TEXTO
+ *      (input barato).
+ *   2. Se for imagem (JPG/PNG/HEIC), usa vision do gpt-5 (caminho atual).
+ *   3. Se for PDF que unpdf não conseguiu (scanneado), fallback pra
+ *      Responses API com input_file (vision interno).
+ *   4. Texto puro vai direto pro chat completions.
+ *
+ * Economia esperada: PDF/docx/xlsx ~10x mais barato (texto vs image_url).
+ *
+ * IMPORTANTE: o deploy via MCP precisa do fileToText.ts incluído como
+ * segundo arquivo (mesmo dir). O import "../_shared/" funciona local mas
+ * é substituído por "./fileToText.ts" no payload do deploy. Ver
+ * supabase/functions/_shared/fileToText.ts pra fonte de verdade.
+ */
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,9 +28,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const body = await req.json();
@@ -21,10 +40,7 @@ serve(async (req) => {
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-5";
-
-    if (!OPENAI_API_KEY) {
-      throw new Error("Missing OPENAI_API_KEY secret");
-    }
+    if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY secret");
 
     const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico DOUTOR AJUDA.
 Retorne exclusivamente JSON puro (sem markdown).
@@ -33,130 +49,98 @@ Se um valor estiver ilegível ou duvidoso, coloque o nome do campo em valores_du
 
 DATA DO EXAME:
 - Preserve a data se encontrada, formato dd/mm/aa.
-- Se a imagem/texto NÃO TIVER DATA visível, deixe data_exame como null E use "-LAB:" (sem parênteses) no texto_formatado.
+- Se a imagem/texto NÃO TIVER DATA visível, deixe data_exame como null E use "-LAB:" no texto_formatado.
 - NUNCA deixe de gerar texto_formatado por causa de data ausente.
 
-NOTAÇÃO BRASILEIRA (importante):
-- Vírgula = decimal. "8,5" significa 8.5 (escreva no JSON como 8.5).
-- Notação científica: "2,1.10⁶" = 2.100.000 = 2,1 milhões. Mantenha como 2.1 em valores se for milhões; no texto_formatado escreva o valor por mil/milhões como aparece no laudo.
+NOTAÇÃO BRASILEIRA: vírgula = decimal. Notação científica "2,1.10⁶" = 2.100.000.
 
-SINÔNIMOS (reconheça TODOS):
-Hemoglobina/Hb/HGB; Hematócrito/Ht/HCT; Hemácias/Hc/Eritrócitos/RBC;
-VCM/MCV; HCM/MCH; CHCM/MCHC; RDW; Leucócitos/Leuco/WBC;
-Bastões/Bast; Segmentados/Seg/Neutrófilos; Linfócitos/Lnf;
-Monócitos/Mono; Eosinófilos/Eos; Basófilos/Baso;
-Plaquetas/PLQ/PLT; Creatinina/Cr/Crea; Ureia/Ur;
-Sódio/Na; Potássio/K; Cálcio/Ca; Magnésio/Mg; Fósforo/P;
-PCR/Proteína C Reativa; Lactato;
-TGO/AST; TGP/ALT; GGT; FA/Fosfatase Alcalina;
-Bilirrubinas (BT/BD/BI); INR; TP; TTPA; Albumina;
-Glicemia; HbA1c; TSH; T4L; Troponina; CK; CK-MB;
-EAS/Piócitos/Leucócitos urina/Nitrito.
+SINÔNIMOS: Hb/HGB/Hemoglobina; Ht/HCT/Hematócrito; Hc/Hemácias/Eritrócitos;
+VCM/MCV; HCM/MCH; CHCM/MCHC; RDW; Leuco/WBC; Bastões/Bast; Seg/Neutrófilos;
+Lnf/Linfócitos; Mono; Eos; Baso; PLQ/PLT/Plaquetas; Cr/Crea/Creatinina; Ur/Ureia;
+Na/Sódio; K/Potássio; Ca; Mg; P; PCR; Lactato; TGO/AST; TGP/ALT; GGT; FA;
+BT/BD/BI; INR; TP; TTPA; Albumina; Glicemia; HbA1c; TSH; T4L; Troponina; CK; CK-MB;
+EAS/Piócitos/Nitrito.
 
-FORMATO DO texto_formatado (Dr. Luan) — OBRIGATÓRIO:
-- Prefixo: "-LAB (dd/mm/aa):" se tiver data, ou "-LAB:" se não tiver.
-- Campos separados por " | ". Inclua SOMENTE os parâmetros encontrados.
-- Ordem fixa: HB, HT, VCM, HCM (se Hb anormal), LEUCO (com diferencial se leucocitose/leucopenia), PLQ, CR, UR, NA, K, PCR.
+FORMATO texto_formatado (Dr. Luan): "-LAB (dd/mm/aa):" se tiver data, senão "-LAB:". Campos por " | ".
+Ordem: HB, HT, VCM/HCM se anemia, LEUCO (com diferencial se >11k ou <4k), PLQ, CR, UR, NA, K, PCR.
 
-VCM/HCM: SEMPRE incluir se anemia (Hb <12 mulher / <13 homem) OU poliglobulia.
-DIFERENCIAL: incluir em pelo menos 3 células se LEUCO >11000 ou <4000, OU bastonetose isolada (Bast >7%).
-
-EXEMPLO COM DATA:
+EXEMPLOS:
 -LAB (18/05/26): HB 10 | HT 33 | VCM 78 | HCM 25 | LEUCO 14.500 (às custas de 80% SEG / 4% BAST / 12% LNF) | PLQ 220.000 | CR 1.4 | UR 60 | NA 138 | K 4.2 | PCR 35
+-LAB: HB 8.5 | HT 24 | VCM 112 | HCM 26
 
-EXEMPLO SEM DATA:
--LAB: HB 8.5 | HT 24 | VCM 112 | HCM 26 | HEMACIAS 2.1 MI
+ALERTAS: "anemia (Hb X)" / "macrocítica" se VCM >100 / "microcítica" se VCM <80 /
+"leucocitose" / "plaquetopenia" / "piora renal (Cr X)" / "hiponatremia" / "hiperpotassemia".
 
-ALERTAS:
-- "anemia (Hb X)" / "anemia macrocítica (Hb X, VCM Y)" se VCM >100 / "anemia microcítica" se VCM <80
-- "leucocitose" / "leucopenia" / "plaquetopenia" / "plaquetose"
-- "piora renal (Cr X)" se Cr >1.3
-- "hiponatremia" / "hipopotassemia" / "hiperpotassemia"
+REGRA DE OURO: SEMPRE gere texto_formatado mesmo com 1 valor.
 
-Se houver EAS:
-EAS (dd/mm/aa): X PIÓCITOS/CAMPO | NITRITO POSITIVO/NEGATIVO | HEMÁCIAS X | PROTEÍNAS X
-
-REGRA DE OURO: Mesmo que encontre APENAS 1 valor, gere o texto_formatado. NUNCA retorne texto_formatado=null se houver pelo menos 1 valor extraído.
-
-JSON de resposta:
-{
-  "data_exame": "dd/mm/aa ou null",
-  "tipo_exame": [],
-  "valores": {
-    "hb": null, "ht": null, "vcm": null, "hcm": null, "chcm": null, "rdw": null,
-    "hemacias": null,
-    "leucocitos": null,
-    "bastoes_percent": null, "segmentados_percent": null, "linfocitos_percent": null,
-    "monocitos_percent": null, "eosinofilos_percent": null, "basofilos_percent": null,
-    "plaquetas": null,
-    "creatinina": null, "ureia": null,
-    "sodio": null, "potassio": null, "calcio": null, "magnesio": null, "fosforo": null,
-    "pcr": null, "lactato": null,
-    "tgo": null, "tgp": null, "ggt": null, "fa": null,
-    "bilirrubina_total": null, "bilirrubina_direta": null, "bilirrubina_indireta": null,
-    "inr": null, "tp": null, "ttpa": null,
-    "albumina": null, "glicemia": null, "hba1c": null,
-    "tsh": null, "t4l": null, "troponina": null, "ck": null, "ck_mb": null,
-    "eas_piocitos": null, "eas_nitrito": null, "eas_hemacias": null, "eas_proteinas": null
-  },
-  "texto_formatado": null,
-  "eas_formatado": null,
-  "alertas": [],
-  "valores_duvidosos": [],
-  "campos_nao_encontrados": []
-}
-`;
+JSON: { data_exame, tipo_exame:[], valores:{hb,ht,vcm,hcm,chcm,rdw,hemacias,leucocitos,bastoes_percent,segmentados_percent,linfocitos_percent,monocitos_percent,eosinofilos_percent,basofilos_percent,plaquetas,creatinina,ureia,sodio,potassio,calcio,magnesio,fosforo,pcr,lactato,tgo,tgp,ggt,fa,bilirrubina_total,bilirrubina_direta,bilirrubina_indireta,inr,tp,ttpa,albumina,glicemia,hba1c,tsh,t4l,troponina,ck,ck_mb,eas_piocitos,eas_nitrito,eas_hemacias,eas_proteinas}, texto_formatado, eas_formatado, alertas:[], valores_duvidosos:[], campos_nao_encontrados:[] }`;
 
     const ctx = patientContext ? `Contexto do paciente: ${JSON.stringify(patientContext)}\n\n` : "";
-    const isPdf = fileBase64 && fileType === "application/pdf";
+
+    // 1. Pre-extração sem IA (unpdf/mammoth/sheetjs + cache)
+    let preExtracted: string | null = null;
+    let preExtractedSource = "";
+    if (fileBase64 && fileType) {
+      try {
+        const result = await extractText({ fileBase64, fileType, fileName });
+        if (result) {
+          preExtracted = result.text;
+          preExtractedSource = result.cached ? "cache" : result.extractor;
+          console.log(`[lab-extractor] ${preExtractedSource}: ${preExtracted.length} chars, ${fileName ?? fileType}`);
+        }
+      } catch (e) {
+        console.warn("Pre-extract falhou, fallback vision", e);
+      }
+    }
 
     let openaiUrl: string;
     let openaiPayload: any;
 
-    if (isPdf) {
-      // PDF: usa Responses API com input_file (gpt-5 nativo, OCR + extração).
-      // Antes anexávamos só o nome do arquivo no texto — a IA inventava
-      // valores ou retornava vazio. Agora o PDF é REALMENTE processado.
-      openaiUrl = "https://api.openai.com/v1/responses";
-      const content = [
-        {
-          type: "input_text",
-          text: `${ctx}Extraia os valores do laboratório deste PDF (arquivo: ${fileName ?? "laudo.pdf"}). Lembre: SEMPRE gere texto_formatado mesmo sem data — use "-LAB:" se não tiver data.`,
-        },
-        {
-          type: "input_file",
-          filename: fileName ?? "laudo.pdf",
-          file_data: `data:application/pdf;base64,${fileBase64}`,
-        },
-      ];
-      openaiPayload = {
-        model: OPENAI_MODEL,
-        input: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content },
-        ],
-        text: { format: { type: "json_object" } },
-      };
-    } else if (fileBase64 && fileType && fileType.startsWith("image/")) {
-      // Imagem: chat completions com image_url (multimodal padrão)
+    if (preExtracted) {
       openaiUrl = "https://api.openai.com/v1/chat/completions";
-      const userContent = [
-        { type: "image_url", image_url: { url: `data:${fileType};base64,${fileBase64}` } },
-        {
-          type: "text",
-          text: `${ctx}Extraia os valores do exame da imagem (arquivo: ${fileName ?? "imagem"}). Lembre: SEMPRE gere texto_formatado mesmo sem data — use "-LAB:" se não tiver data.${inputText ? `\n\nTexto adicional:\n${inputText}` : ""}`,
-        },
-      ];
+      const combinedText = inputText ? `${preExtracted}\n\n--- TEXTO ADICIONAL ---\n${inputText}` : preExtracted;
       openaiPayload = {
         model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
+          { role: "user", content: `${ctx}Texto do laboratório (extraído de ${fileName ?? fileType}):\n${combinedText}` },
         ],
         response_format: { type: "json_object" },
       };
+    } else if (fileBase64 && fileType && fileType.startsWith("image/")) {
+      openaiUrl = "https://api.openai.com/v1/chat/completions";
+      openaiPayload = {
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${fileType};base64,${fileBase64}` } },
+              { type: "text", text: `${ctx}Extraia os valores do exame da imagem. SEMPRE gere texto_formatado.${inputText ? `\n\nTexto adicional:\n${inputText}` : ""}` },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+      };
+    } else if (fileBase64 && fileType === "application/pdf") {
+      // PDF scanneado (unpdf retornou null): Responses API com input_file
+      openaiUrl = "https://api.openai.com/v1/responses";
+      openaiPayload = {
+        model: OPENAI_MODEL,
+        input: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: `${ctx}Extraia valores do PDF ${fileName ?? "laudo.pdf"}. SEMPRE gere texto_formatado.` },
+              { type: "input_file", filename: fileName ?? "laudo.pdf", file_data: `data:application/pdf;base64,${fileBase64}` },
+            ],
+          },
+        ],
+        text: { format: { type: "json_object" } },
+      };
     } else {
-      // Texto puro
       openaiUrl = "https://api.openai.com/v1/chat/completions";
       openaiPayload = {
         model: OPENAI_MODEL,
@@ -170,22 +154,16 @@ JSON de resposta:
 
     const response = await fetch(openaiUrl, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify(openaiPayload),
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI Error: ${await response.text()}`);
-    }
-
+    if (!response.ok) throw new Error(`OpenAI Error: ${await response.text()}`);
     const data = await response.json();
 
-    // Responses API e Chat Completions API tem shapes diferentes
+    const isResponsesApi = openaiUrl.includes("/v1/responses");
     let content: string;
-    if (isPdf) {
+    if (isResponsesApi) {
       content = data.output_text
         ?? data.output?.flatMap((o: any) => o.content ?? []).map((c: any) => c.text ?? "").join("\n")
         ?? "{}";
@@ -194,15 +172,13 @@ JSON de resposta:
     }
 
     content = content.trim();
-    if (content.startsWith("```json")) {
-      content = content.replace(/^```json/, "").replace(/```$/, "").trim();
-    } else if (content.startsWith("```")) {
-      content = content.replace(/^```/, "").replace(/```$/, "").trim();
-    }
+    if (content.startsWith("```json")) content = content.replace(/^```json/, "").replace(/```$/, "").trim();
+    else if (content.startsWith("```")) content = content.replace(/^```/, "").replace(/```$/, "").trim();
 
-    const parsedJson = JSON.parse(content);
+    const parsed = JSON.parse(content);
+    if (preExtractedSource) parsed._extractor = preExtractedSource;
 
-    return new Response(JSON.stringify(parsedJson), {
+    return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
@@ -213,3 +189,5 @@ JSON de resposta:
     });
   }
 });
+</content>
+</invoke>
