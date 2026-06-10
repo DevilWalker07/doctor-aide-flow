@@ -18,7 +18,7 @@ export const Route = createFileRoute("/upload-ia")({
       modo: (search.modo as string) === "lote" ? "lote" : "unico",
     };
   },
-  head: () => ({ meta: [{ title: "Upload IA — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Upload IA — PLANTONISTA" }] }),
 });
 
 function UploadIAPage() {

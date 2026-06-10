@@ -3,7 +3,7 @@ import { UserPlus, FileUp, ChevronLeft, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/admissao-nova")({
   component: AdmissaoNovaTriage,
-  head: () => ({ meta: [{ title: "Admissão Nova — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Admissão Nova — PLANTONISTA" }] }),
 });
 
 function AdmissaoNovaTriage() {

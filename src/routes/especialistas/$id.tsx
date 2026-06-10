@@ -9,7 +9,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/especialistas/$id")({
   component: ChatEspecialistaPage,
-  head: () => ({ meta: [{ title: "Chat com especialista — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Chat com especialista — Plantonista" }] }),
 });
 
 interface ChatMsg {

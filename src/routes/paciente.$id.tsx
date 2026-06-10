@@ -23,7 +23,7 @@ import type { PrescriptionItem } from "@/lib/clinical-protocols/types";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
-  head: () => ({ meta: [{ title: "Prontuário do Paciente — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Prontuário do Paciente — PLANTONISTA" }] }),
 });
 
 function PacienteDetailPage() {

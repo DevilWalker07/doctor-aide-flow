@@ -42,7 +42,7 @@ serve(async (req) => {
     const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-5";
     if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY secret");
 
-    const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico DOUTOR AJUDA.
+    const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico PLANTONISTA.
 Retorne exclusivamente JSON puro (sem markdown).
 Nunca invente valores. Se um valor não for encontrado, retorne null.
 Se um valor estiver ilegível ou duvidoso, coloque o nome do campo em valores_duvidosos.

@@ -6,7 +6,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/especialistas/")({
   component: EspecialistasPage,
-  head: () => ({ meta: [{ title: "Especialistas — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Especialistas — Plantonista" }] }),
 });
 
 function EspecialistasPage() {

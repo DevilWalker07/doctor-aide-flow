@@ -7,7 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/nova-senha")({
   component: NovaSenhaPage,
-  head: () => ({ meta: [{ title: "Nova senha — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Nova senha — Plantonista" }] }),
 });
 
 function NovaSenhaPage() {

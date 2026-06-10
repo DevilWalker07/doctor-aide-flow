@@ -11,7 +11,7 @@ type Tab = "ativos" | "arquivados" | "novo";
 
 export const Route = createFileRoute("/plantoes")({
   component: PlantoesPage,
-  head: () => ({ meta: [{ title: "Plantões — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Plantões — PLANTONISTA" }] }),
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } => {
     const raw = search.tab;
     if (raw === "ativos" || raw === "arquivados" || raw === "novo") return { tab: raw };

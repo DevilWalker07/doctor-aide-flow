@@ -24,7 +24,7 @@ export const Route = createFileRoute("/prescricao/$id")({
     // Itens vindos do Vigia Clínico (encoded JSON de PrescriptionItem[])
     vigia_items: typeof search.vigia_items === "string" ? search.vigia_items : undefined,
   }),
-  head: () => ({ meta: [{ title: "Gerar Prescrição — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Prescrição — PLANTONISTA" }] }),
 });
 
 const DIET_OPTIONS = ["Geral", "Hipossódica", "Hipolipídica", "Hipoglicídica", "Pastosa", "Líquida", "Zero via oral", "Sonda"];

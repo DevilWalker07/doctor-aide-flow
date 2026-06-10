@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/processando/$jobId")({
   component: ProcessandoRoute,
-  head: () => ({ meta: [{ title: "Processando Documento — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Processando Documento — PLANTONISTA" }] }),
 });
 
 const STEPS = [

@@ -7,7 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/lab-rapido")({
   component: LabRapidoPage,
-  head: () => ({ meta: [{ title: "Extrair laboratório — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Extrair laboratório — Plantonista" }] }),
 });
 
 interface LabResult {

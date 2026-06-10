@@ -20,7 +20,7 @@ export const Route = createFileRoute("/revisar-extracao")({
       patient_id: search.patient_id as string | undefined,
     };
   },
-  head: () => ({ meta: [{ title: "Revisar Extração — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Revisar Extração — PLANTONISTA" }] }),
 });
 
 // ─── Styles ──────────────────────────────────────────────────────────────────

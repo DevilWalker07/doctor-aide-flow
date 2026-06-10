@@ -42,7 +42,7 @@ export function Checklist({ items, onNavigate }: { items: ChecklistItem[]; onNav
         <div className="mt-8 pt-6 border-t border-white/10 flex gap-3">
           <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">DICA DO DOUTOR AJUDA</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5">DICA DO PLANTONISTA</p>
             <p className="text-xs font-medium leading-relaxed text-white/70">
               Quanto mais campos você preencher, melhor será a análise comparativa e a evolução padrão-ouro.
             </p>

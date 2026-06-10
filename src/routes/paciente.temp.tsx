@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/paciente/temp")({
   component: PacienteTempPage,
-  head: () => ({ meta: [{ title: "Visualização Temporária — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Visualização Temporária — PLANTONISTA" }] }),
 });
 
 function PacienteTempPage() {

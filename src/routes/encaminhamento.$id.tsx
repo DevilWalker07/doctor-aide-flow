@@ -13,7 +13,7 @@ import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
   component: EncaminhamentoPage,
-  head: () => ({ meta: [{ title: "Gerar Encaminhamento — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Encaminhamento — PLANTONISTA" }] }),
 });
 
 const DESTINATIONS = [

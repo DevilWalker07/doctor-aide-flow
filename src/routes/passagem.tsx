@@ -11,7 +11,7 @@ import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/passagem")({
   component: PassagemPage,
-  head: () => ({ meta: [{ title: "Passagem de Plantão — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Passagem de Plantão — PLANTONISTA" }] }),
 });
 
 function PassagemPage() {

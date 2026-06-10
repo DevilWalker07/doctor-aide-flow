@@ -8,7 +8,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/passagem-massa/$bulkJobId")({
   component: PassagemMassaPage,
-  head: () => ({ meta: [{ title: "Passagem de Plantão — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Passagem de Plantão — PLANTONISTA" }] }),
 });
 
 const POLL_INTERVAL_MS = 2500;

@@ -381,7 +381,7 @@ export async function getEvolutionsByPatient(patientId: string): Promise<Evoluti
 
 export async function saveEvolution(evolutionOrPatientId: Evolution | string, evolutionText?: string): Promise<Evolution> {
   const evolution: Evolution = typeof evolutionOrPatientId === "string"
-    ? { id: id("evolution"), patientId: evolutionOrPatientId, text: evolutionText || "", generatedBy: "DOUTOR AJUDA", createdAt: new Date().toISOString(), date: new Date().toISOString().slice(0, 10) }
+    ? { id: id("evolution"), patientId: evolutionOrPatientId, text: evolutionText || "", generatedBy: "PLANTONISTA", createdAt: new Date().toISOString(), date: new Date().toISOString().slice(0, 10) }
     : { ...evolutionOrPatientId, id: evolutionOrPatientId.id || id("evolution"), createdAt: evolutionOrPatientId.createdAt || new Date().toISOString() };
 
   const all = readJson<Record<string, Evolution[]>>(KEYS.evolutions, {});

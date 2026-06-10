@@ -20,7 +20,7 @@ serve(async (req) => {
       throw new Error("Missing OPENAI_API_KEY secret");
     }
 
-    const systemPrompt = `Você é o gerador de evolução médica do DOUTOR AJUDA.
+    const systemPrompt = `Você é o gerador de evolução médica do PLANTONISTA.
 Gere uma evolução médica em português brasileiro, técnica, objetiva, em CAIXA ALTA.
 Nunca invente dados.
 Se dado ausente, use "NÃO REFERIDO".

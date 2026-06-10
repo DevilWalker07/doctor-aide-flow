@@ -28,7 +28,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/evolucao/$id/")({
   component: EvolucaoPage,
-  head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Evolução Clínica — PLANTONISTA" }] }),
 });
 
 type Version = {

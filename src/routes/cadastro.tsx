@@ -8,7 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroPage,
-  head: () => ({ meta: [{ title: "Criar conta — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Criar conta — Plantonista" }] }),
 });
 
 function CadastroPage() {

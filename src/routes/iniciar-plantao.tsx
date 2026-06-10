@@ -10,7 +10,7 @@ import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
-  head: () => ({ meta: [{ title: "Iniciar Plantão — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Iniciar Plantão — PLANTONISTA" }] }),
 });
 
 function IniciarPlantaoPage() {

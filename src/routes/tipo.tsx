@@ -7,7 +7,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/tipo")({
   component: TipoPage,
-  head: () => ({ meta: [{ title: "Onde você está hoje? — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Onde você está hoje? — PLANTONISTA" }] }),
 });
 
 const sectors = [

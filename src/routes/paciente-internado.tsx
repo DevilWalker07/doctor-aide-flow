@@ -3,7 +3,7 @@ import { Camera, FileText, UserPlus, ChevronLeft, ArrowRight, Info } from "lucid
 
 export const Route = createFileRoute("/paciente-internado")({
   component: PacienteInternadoTriage,
-  head: () => ({ meta: [{ title: "Paciente Internado — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Paciente Internado — PLANTONISTA" }] }),
 });
 
 function PacienteInternadoTriage() {

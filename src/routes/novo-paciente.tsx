@@ -3,7 +3,7 @@ import { Plus, BedDouble, X, ArrowRight, ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/novo-paciente")({
   component: NovoPacienteTriage,
-  head: () => ({ meta: [{ title: "Novo Paciente — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Novo Paciente — PLANTONISTA" }] }),
 });
 
 function NovoPacienteTriage() {

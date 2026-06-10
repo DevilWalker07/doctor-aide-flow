@@ -16,7 +16,7 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/configuracoes")({
   component: SettingsPage,
-  head: () => ({ meta: [{ title: "Configurações — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Configurações — PLANTONISTA" }] }),
 });
 
 function SettingsPage() {
@@ -345,7 +345,7 @@ function SettingsPage() {
                   <span className="text-2xl font-black text-white italic">DA</span>
                </div>
                <div>
-                  <h3 className="text-lg font-black text-foreground tracking-tight">DOUTOR AJUDA — FASE 2</h3>
+                  <h3 className="text-lg font-black text-foreground tracking-tight">PLANTONISTA — FASE 2</h3>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ASSISTENTE CLÍNICO INTELIGENTE · VERSÃO 2.0</p>
                </div>
                <div className="flex justify-center gap-6 pt-4">

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/cadastro-manual")({
     };
   },
   component: CadastroManualPage,
-  head: () => ({ meta: [{ title: "Cadastro Manual — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Cadastro Manual — PLANTONISTA" }] }),
 });
 
 const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo", "Etilismo", "Neoplasia", "Obesidade", "Hipotireoidismo", "DLP", "AVE Prévio"];

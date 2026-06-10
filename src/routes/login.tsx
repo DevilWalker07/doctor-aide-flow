@@ -8,7 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
-  head: () => ({ meta: [{ title: "Entrar — Doutor Ajuda" }] }),
+  head: () => ({ meta: [{ title: "Entrar — Plantonista" }] }),
 });
 
 function LoginPage() {
@@ -71,7 +71,7 @@ function LoginPage() {
               <Stethoscope className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Doutor Ajuda</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Plantonista</h1>
               <p className="text-[13px] text-muted-foreground mt-1">Entre na sua conta médica</p>
             </div>
           </div>

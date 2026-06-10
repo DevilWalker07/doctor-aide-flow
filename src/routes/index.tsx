@@ -18,7 +18,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
-  head: () => ({ meta: [{ title: "Doutor Ajuda — Seu Assistente Clínico" }] }),
+  head: () => ({ meta: [{ title: "Plantonista — Seu Assistente Clínico" }] }),
 });
 
 function HomePage() {
@@ -174,7 +174,7 @@ function HomePage() {
             <Stethoscope className="h-6 w-6" />
           </div>
           <div>
-            <span className="block font-black tracking-tight text-foreground text-xl leading-none">DOUTOR AJUDA</span>
+            <span className="block font-black tracking-tight text-foreground text-xl leading-none">PLANTONISTA</span>
             <span className="text-[9px] font-black tracking-[0.3em] uppercase text-muted-foreground mt-1">SISTEMA MÉDICO INTELIGENTE</span>
           </div>
         </div>

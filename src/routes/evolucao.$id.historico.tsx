@@ -8,7 +8,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/evolucao/$id/historico")({
   component: HistoricoEvolucoesPage,
-  head: () => ({ meta: [{ title: "Histórico de Evoluções — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Histórico de Evoluções — PLANTONISTA" }] }),
 });
 
 function HistoricoEvolucoesPage() {

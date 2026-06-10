@@ -1,6 +1,6 @@
 {
-  "name": "Doutor Ajuda",
-  "short_name": "Dr. Ajuda",
+  "name": "Plantonista",
+  "short_name": "Plantonista",
   "description": "Assistente clínico inteligente — evolução, prescrição, plantão, especialistas IA",
   "start_url": "/",
   "scope": "/",
