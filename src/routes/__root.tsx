@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import BottomNav from "@/components/BottomNav";
+import ErrorPage from "@/components/ErrorPage";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 const PUBLIC_ROUTES = ["/login", "/cadastro", "/nova-senha"];
@@ -47,6 +48,7 @@ function NotFoundComponent() {
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
+  errorComponent: ({ error, reset }) => <ErrorPage error={error} reset={reset} />,
 });
 
 function RootComponent() {
