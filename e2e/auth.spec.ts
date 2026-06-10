@@ -79,7 +79,7 @@ test.describe("/login — fluxo de entrada", () => {
   test("renderiza com email, senha e botão Google", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(page.getByRole("heading", { name: /doutor ajuda/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /plantonista/i })).toBeVisible();
     await expect(page.getByPlaceholder(/seu@email/i)).toBeVisible();
     await expect(page.getByPlaceholder(/••••••••/)).toBeVisible();
     await expect(page.getByRole("button", { name: /continuar com google/i })).toBeVisible();

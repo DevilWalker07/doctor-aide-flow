@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { getPatientById, createReferral } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
   component: EncaminhamentoPage,
@@ -149,7 +150,10 @@ function EncaminhamentoPage() {
                  <ChevronLeft className="h-5 w-5" />
               </button>
               <div>
-                 <h1 className="text-xl font-black text-foreground tracking-tight uppercase">ENCAMINHAMENTO</h1>
+                 <div className="flex items-center gap-2 mb-1">
+                   <h1 className="text-xl font-black text-foreground tracking-tight uppercase">ENCAMINHAMENTO</h1>
+                   <ShiftBadge silent />
+                 </div>
                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{paciente.name} · LEITO {paciente.bed}</p>
               </div>
            </div>

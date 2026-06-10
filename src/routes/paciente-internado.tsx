@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Camera, FileText, UserPlus, ChevronLeft, ArrowRight, Info } from "lucide-react";
+import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/paciente-internado")({
   component: PacienteInternadoTriage,
@@ -21,7 +22,7 @@ function PacienteInternadoTriage() {
         <span className="text-xs font-extrabold tracking-[0.2em] uppercase text-primary">
           PACIENTE JÁ INTERNADO
         </span>
-        <div className="w-16" />
+        <ShiftBadge silent />
       </header>
 
       <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 flex-1 w-full flex flex-col items-center justify-center">
