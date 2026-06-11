@@ -24,6 +24,8 @@ import {
 } from "@/lib/evolutionTemplates";
 import ShiftBadge from "@/components/ShiftBadge";
 import ThemeToggle from "@/components/ThemeToggle";
+import ATBAlertBanner from "@/components/atb/ATBAlertBanner";
+import { getATBsWithAlert } from "@/lib/atbAlerts";
 
 
 export const Route = createFileRoute("/evolucao/$id/")({
@@ -554,6 +556,24 @@ function EvolucaoPage() {
 
   const handleSave = async () => {
     if (!evolutionText || !userId) return;
+
+    // F1: bloqueia salvamento se houver ATB D7+ sem reavaliação registrada
+    // E sem menção a "reavalia" no texto da evolução. Médico precisa
+    // explicitamente reavaliar — clica "Registrar reavaliação" no banner
+    // ou descreve no texto.
+    const atbAlertas = getATBsWithAlert({ id, antibioticos: paciente?.data?.abx });
+    const vermelhos = atbAlertas.filter((a) => a.level === "red");
+    if (vermelhos.length > 0) {
+      const mencionaReavaliacao = /reavalia/i.test(evolutionText);
+      if (!mencionaReavaliacao) {
+        const nomes = vermelhos.map((a) => `${a.nome} (D${a.dia})`).join(", ");
+        toast.error(`Reavaliação obrigatória: ${nomes}. Registre no banner ou descreva no texto.`, {
+          duration: 8000,
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     // Diferenciamos "salvou no Supabase (perfeito)" / "salvou só local
@@ -744,6 +764,7 @@ function EvolucaoPage() {
       })()}
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-12">
+         <ATBAlertBanner patient={{ id, antibioticos: paciente.data?.abx }} />
          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
             
             {/* PAINEL LATERAL */}
