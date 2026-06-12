@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/processando/$jobId")({
   component: ProcessandoRoute,
-  head: () => ({ meta: [{ title: "Processando Documento — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Processando Documento — PLANTONISTA" }] }),
 });
 
 const STEPS = [
@@ -87,7 +87,7 @@ function ProcessandoRoute() {
         }
 
         // Only schedule next poll if we're still processing
-        if (pollingRef.current && job.status !== "done" && job.status !== "error") {
+        if (pollingRef.current && job.status !== "done") {
           timeoutId = setTimeout(poll, 3000);
         }
       } catch (err: any) {
@@ -143,7 +143,7 @@ function ProcessandoRoute() {
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-ai/5 rounded-full blur-[120px]" />
 
-      <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative z-10">
+      <div className="max-w-xl w-full bg-elevated border border-border rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative z-10">
         <div className="text-center mb-10">
           <h1 className="text-xs font-extrabold tracking-[0.3em] uppercase text-ai mb-4">PROCESSANDO DOCUMENTO</h1>
           <div className="flex items-center justify-center gap-3 bg-secondary/50 py-3 px-6 rounded-2xl border border-border w-fit mx-auto mb-4">

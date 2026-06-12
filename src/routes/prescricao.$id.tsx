@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  ChevronLeft, Copy, Save, Pill, Activity, 
-  AlertTriangle, Check, Plus, Trash2, Edit3, 
+import {
+  ChevronLeft, Copy, Save, Pill, Activity,
+  AlertTriangle, Check, Plus, Trash2, Edit3, Download, Loader2,
   Info, HeartPulse, Wind, FlaskConical, ArrowRight
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -10,12 +10,21 @@ import { toast } from "sonner";
 import { getPatientById, createPrescription } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
+import { ANTIBIOTICOS_ROTINEIROS, searchAntibioticos, type AntibioticoRotineiro } from "@/lib/antibioticos-rotineiros";
+import { cockcroftGault, sugerirDose, classificarTFG } from "@/lib/dose-clearance";
+import { exportTextoMedico, type ExportFormat } from "@/lib/exportEvolucao";
+import ShiftBadge from "@/components/ShiftBadge";
+import ThemeToggle from "@/components/ThemeToggle";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
-  head: () => ({ meta: [{ title: "Gerar Prescrição — DOUTOR AJUDA" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    // Itens vindos do Vigia Clínico (encoded JSON de PrescriptionItem[])
+    vigia_items: typeof search.vigia_items === "string" ? search.vigia_items : undefined,
+  }),
+  head: () => ({ meta: [{ title: "Gerar Prescrição — PLANTONISTA" }] }),
 });
 
 const DIET_OPTIONS = ["Geral", "Hipossódica", "Hipolipídica", "Hipoglicídica", "Pastosa", "Líquida", "Zero via oral", "Sonda"];
@@ -66,6 +75,20 @@ function PrescricaoPage() {
   const [dvas, setDvas] = useState<any[]>([]);
   const [sedacao, setSedacao] = useState<any[]>([]);
 
+  // Ajuste de dose por clearance
+  const [peso, setPeso] = useState<string>("");
+  const [creatinina, setCreatinina] = useState<string>("");
+  const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
+
+  const tfg = useMemo(() => {
+    return cockcroftGault({
+      idade: parseInt(paciente?.age || paciente?.idade) || null,
+      peso: parseFloat(peso) || null,
+      creatinina: parseFloat(creatinina) || null,
+      sexo: paciente?.sex || paciente?.sexo || null,
+    });
+  }, [paciente, peso, creatinina]);
+
   useEffect(() => {
     if (!userId) return;
     async function load() {
@@ -93,6 +116,56 @@ function PrescricaoPage() {
     const savedTipo = storage.getTipo();
     if (savedTipo) setTipoUnidade(savedTipo);
   }, [id, userId]);
+
+  // Consome itens do Vigia Clínico (chega via search param vigia_items)
+  const { vigia_items: vigiaItemsRaw } = useSearch({ from: "/prescricao/$id" });
+  const [vigiaApplied, setVigiaApplied] = useState(false);
+  useEffect(() => {
+    if (!vigiaItemsRaw || vigiaApplied) return;
+    try {
+      const items = JSON.parse(decodeURIComponent(vigiaItemsRaw)) as Array<{ section: string; text: string }>;
+      const sumario: string[] = [];
+      for (const item of items) {
+        const t = item.text;
+        switch (item.section) {
+          case "cuidados":
+            setCuidados((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Cuidados");
+            break;
+          case "hidratacao":
+            setHidratacao({ active: true, tipo: t, volume: "", velocidade: "" });
+            sumario.push("Hidratação");
+            break;
+          case "sintomaticos":
+            setSintomaticos((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Sintomáticos");
+            break;
+          case "profilaxias":
+            setProfilaxias((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Profilaxias");
+            break;
+          case "exames":
+            setExames((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Exames");
+            break;
+          case "pendencias":
+            setPendencias((prev) => (prev.includes(t) ? prev : [...prev, t]));
+            sumario.push("Pendências");
+            break;
+          case "medicacoes":
+            setMedicacoes((prev) => [...prev, { id: Math.random().toString(36).slice(2), text: t }]);
+            sumario.push("Medicações");
+            break;
+        }
+      }
+      const unicos = [...new Set(sumario)];
+      toast.success(`Vigia inseriu ${items.length} item(s) em: ${unicos.join(", ")}.`, { duration: 6000 });
+      setVigiaApplied(true);
+    } catch (e) {
+      console.warn("Vigia items inválidos", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vigiaItemsRaw]);
 
   const handleCopy = () => {
     const dataPlantao = format(new Date(), "dd/MM/yyyy");
@@ -169,34 +242,104 @@ function PrescricaoPage() {
     }
   };
 
+  const handleExport = async (fmt: ExportFormat) => {
+    if (!paciente) return;
+    setIsExporting(fmt);
+    try {
+      const dataPlantao = format(new Date(), "dd/MM/yyyy");
+      let text = "";
+      text += `1. DIETA: ${dieta || "—"}${dietaComplemento ? ` (${dietaComplemento})` : ""}\n\n`;
+      if (cuidados.length) text += `2. CUIDADOS GERAIS:\n${cuidados.map(c => `   - ${c}`).join("\n")}\n\n`;
+      if (vitalsFreq || vitalsParams.length) text += `3. SINAIS VITAIS: ${vitalsFreq}${vitalsParams.length ? ` + ${vitalsParams.join(", ")}` : ""}\n\n`;
+      if (medicacoes.filter(m => m.text).length) text += `4. MEDICAÇÕES CONTÍNUAS:\n${medicacoes.filter(m => m.text).map(m => `   - ${m.text}`).join("\n")}\n\n`;
+      if (antibioticos.length) text += `5. ANTIBIÓTICOS:\n${antibioticos.map(a => `   - ${a.nome} ${a.dose} ${a.via} ${a.frequencia}`).join("\n")}\n\n`;
+      if (sintomaticos.length) text += `6. SINTOMÁTICOS:\n${sintomaticos.map(s => `   - ${s}`).join("\n")}\n\n`;
+      if (profilaxias.length) text += `7. PROFILAXIAS:\n${profilaxias.map(p => `   - ${p}`).join("\n")}\n\n`;
+      if (hidratacao.active) text += `8. HIDRATAÇÃO: ${hidratacao.tipo} ${hidratacao.volume}ml (${hidratacao.velocidade}ml/h)\n\n`;
+      if (exames.length) text += `9. EXAMES SOLICITADOS:\n${exames.map(e => `   - ${e}`).join("\n")}\n\n`;
+      if (pendencias.length) text += `10. PENDÊNCIAS:\n${pendencias.map(p => `    - ${p}`).join("\n")}\n\n`;
+      if (tipoUnidade === "uti" && dvas.length) text += `11. DROGAS VASOATIVAS:\n${dvas.map(d => `    - ${d.text}`).join("\n")}\n\n`;
+      if (tipoUnidade === "uti" && sedacao.length) text += `12. SEDAÇÃO / ANALGESIA:\n${sedacao.map(s => `    - ${s.text}`).join("\n")}\n\n`;
+
+      await exportTextoMedico({
+        text,
+        format: fmt,
+        filename_hint: `prescricao_${(paciente.name || paciente.nome || "paciente").toString().replace(/\s+/g, "_")}_${format(new Date(), "yyyy-MM-dd")}`,
+        header: {
+          hospital: storage.getHospitalPadrao() || "",
+          medico: storage.getNomeMedico() || "",
+          crm: storage.getCRM() || "",
+          paciente: paciente.name || paciente.nome || "",
+          leito: paciente.bed || paciente.leito || "",
+          data: dataPlantao,
+          tipo: "PRESCRIÇÃO MÉDICA",
+        },
+      });
+      toast.success(`Arquivo ${fmt.toUpperCase()} baixado.`);
+    } catch (err: any) {
+      toast.error(`Falha ao exportar ${fmt.toUpperCase()}: ${err.message}`);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const addAtbFromRotineiro = (atb: AntibioticoRotineiro) => {
+    const sugestao = tfg != null ? sugerirDose(atb.nome, tfg, parseFloat(peso) || null) : null;
+    setAntibioticos(prev => [...prev, {
+      nome: atb.nome,
+      dose: sugestao?.dose || atb.dose,
+      via: sugestao?.via || atb.via,
+      frequencia: sugestao?.frequencia || atb.frequencia,
+      data_inicio: new Date().toISOString().slice(0, 10),
+      ajuste_formula: sugestao?.formula,
+      ajuste_alerta: sugestao?.alerta,
+    }]);
+  };
+
   if (!paciente) return null;
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+           <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => nav({ to: "/paciente/$id", params: { id } })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all shrink-0">
                  <ChevronLeft className="h-5 w-5" />
               </button>
-              <div>
-                 <h1 className="text-xl font-black text-foreground tracking-tight uppercase">PRESCRIÇÃO MÉDICA</h1>
-                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}</p>
+              <div className="min-w-0 flex-1">
+                 <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <h1 className="text-base md:text-xl font-black text-foreground tracking-tight uppercase truncate">PRESCRIÇÃO MÉDICA</h1>
+                    <ShiftBadge silent />
+                 </div>
+                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] truncate">{paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}</p>
               </div>
            </div>
-           <div className="flex items-center gap-3">
+           <div className="flex items-center gap-1.5 md:gap-3 flex-wrap">
+              <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-elevated" role="group" aria-label="Exportar prescrição">
+                {(["docx", "pdf", "txt"] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => handleExport(fmt)}
+                    disabled={isExporting !== null}
+                    className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isExporting === fmt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} {fmt.toUpperCase()}
+                  </button>
+                ))}
+              </div>
               <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
                  <Save className="h-3 w-3" /> {isSaving ? "SALVANDO..." : "SALVAR"}
               </button>
               <button onClick={handleCopy} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2">
                  <Copy className="h-3 w-3" /> COPIAR
               </button>
+              <ThemeToggle />
            </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-6 md:space-y-8">
          
          {/* 1. DIETA */}
          <Section title="1. DIETA" icon={<Activity className="h-4 w-4" />}>
@@ -262,17 +405,84 @@ function PrescricaoPage() {
 
          {/* 5. ANTIBIÓTICOS */}
          <Section title="5. ANTIBIÓTICOS" icon={<FlaskConical className="h-4 w-4" />}>
+            {/* Peso + Creatinina para ajuste */}
+            <div className="mb-6 p-4 bg-secondary/30 border border-border rounded-2xl">
+               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">AJUSTE POR FUNÇÃO RENAL (OPCIONAL)</p>
+               <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                     type="number"
+                     value={peso}
+                     onChange={(e) => setPeso(e.target.value)}
+                     placeholder="PESO (kg)"
+                     className={inputCls}
+                     aria-label="Peso em kg"
+                  />
+                  <input
+                     type="number"
+                     step="0.1"
+                     value={creatinina}
+                     onChange={(e) => setCreatinina(e.target.value)}
+                     placeholder="CREATININA (mg/dL)"
+                     className={inputCls}
+                     aria-label="Creatinina em mg/dL"
+                  />
+                  <div className="flex items-center justify-center bg-elevated border border-border rounded-xl px-4">
+                     {tfg != null ? (
+                        <div className="text-center">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">TFGe (CG)</p>
+                           <p className={`text-lg font-black ${classificarTFG(tfg).color}`}>{tfg} mL/min</p>
+                           <p className={`text-[9px] font-black uppercase ${classificarTFG(tfg).color}`}>{classificarTFG(tfg).label}</p>
+                        </div>
+                     ) : (
+                        <p className="text-[10px] text-muted-foreground italic text-center">Preencha peso, creatinina e idade do paciente.</p>
+                     )}
+                  </div>
+               </div>
+            </div>
+
+            {/* Chips rotineiros */}
+            <div className="bg-ai/5 border border-ai/20 rounded-2xl p-4 mb-6">
+               <p className="text-[10px] font-black uppercase tracking-widest text-ai mb-3">
+                  ADICIONAR ROTINEIRO {tfg != null && "(dose ajustada por TFGe)"}
+               </p>
+               <div className="flex flex-wrap gap-2">
+                  {ANTIBIOTICOS_ROTINEIROS.map((atb) => (
+                     <button
+                        key={atb.nome}
+                        type="button"
+                        onClick={() => addAtbFromRotineiro(atb)}
+                        className="px-3 py-1.5 rounded-lg bg-elevated border border-ai/30 text-ai text-[10px] font-black uppercase tracking-wider hover:bg-ai hover:text-white transition-all"
+                        title={`${atb.dose} ${atb.via} ${atb.frequencia}`}
+                     >
+                        + {atb.nome.replace("PIPERACILINA + TAZOBACTAM", "PIP-TAZO").replace("AMOXICILINA + CLAVULANATO", "AMOXI-CLAV")}
+                     </button>
+                  ))}
+               </div>
+            </div>
+
             <div className="space-y-3">
                {antibioticos.map((a, idx) => (
-                  <div key={idx} className="flex gap-2 items-center p-4 bg-ai/5 border border-ai/20 rounded-2xl">
-                     <div className="flex-1">
-                        <p className="text-xs font-black text-ai uppercase tracking-tight">{a.nome} {a.dose} {a.via} {a.frequencia}</p>
+                  <div key={idx} className="p-4 bg-ai/5 border border-ai/20 rounded-2xl space-y-3">
+                     <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                           <p className="text-xs font-black text-ai uppercase tracking-tight">{a.nome} · {a.dose} · {a.via} · {a.frequencia}</p>
+                           {a.ajuste_formula && (
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Ajustado: {a.ajuste_formula}</p>
+                           )}
+                        </div>
+                        <button onClick={() => setAntibioticos(antibioticos.filter((_, i) => i !== idx))} className="p-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                      </div>
-                     <button className="p-2 text-muted-foreground hover:text-primary"><Edit3 className="h-4 w-4" /></button>
-                     <button onClick={() => setAntibioticos(antibioticos.filter((_, i) => i !== idx))} className="p-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                     {a.ajuste_alerta && (
+                        <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                           <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0 mt-0.5" />
+                           <p className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase">{a.ajuste_alerta}</p>
+                        </div>
+                     )}
                   </div>
                ))}
-               <button className="w-full py-4 border-2 border-dashed border-ai/30 rounded-xl text-[10px] font-bold text-ai uppercase">+ ADICIONAR ATB</button>
+               {antibioticos.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground italic text-center py-4">Nenhum antibiótico prescrito. Clique em um rotineiro acima.</p>
+               )}
             </div>
          </Section>
 
@@ -407,7 +617,7 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.2em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[2rem] p-8 shadow-sm">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-sm">
         {children}
       </div>
     </div>
@@ -418,7 +628,7 @@ function Chip({ label, selected, onClick }: { label: string, selected: boolean, 
   return (
     <button 
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${selected ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${selected ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-elevated text-muted-foreground border-border hover:border-primary/40"}`}
     >
       {label}
     </button>
@@ -446,4 +656,4 @@ function EditableList({ items, onChange }: { items: string[], onChange: (items: 
   );
 }
 
-const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";

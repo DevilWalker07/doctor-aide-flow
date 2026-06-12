@@ -6,13 +6,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-// Local sign-out: clears local user data only.
-const useLocalSignOut = () => ({
-  signOut: async (_opts?: { redirectUrl?: string }) => {
-    localStorage.clear();
-    window.location.href = "/";
-  },
-});
+import { signOutAndClear } from "@/lib/auth";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
 import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
@@ -22,7 +16,7 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/configuracoes")({
   component: SettingsPage,
-  head: () => ({ meta: [{ title: "Configurações — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Configurações — PLANTONISTA" }] }),
 });
 
 function SettingsPage() {
@@ -40,7 +34,6 @@ function SettingsPage() {
   // AI Status
   const [aiStatus, setAiStatus] = useState<"loading" | "connected" | "disconnected">("loading");
   const nav = useNavigate();
-  const { signOut } = useLocalSignOut();
 
   useEffect(() => {
     if (!userId) return;
@@ -91,11 +84,18 @@ function SettingsPage() {
   const checkHealth = async () => {
     setAiStatus("loading");
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/health`);
-      if (response.ok) setAiStatus("connected");
-      else setAiStatus("disconnected");
-    } catch {
-      setAiStatus("disconnected");
+      // Health check: pinga a edge function evolution-generator com payload
+      // mínimo. Se responde (mesmo que com erro de validação), o stack tá vivo.
+      const { invokeEdgeFunction } = await import("@/lib/edgeFunctions");
+      await invokeEdgeFunction("evolution-generator", { __healthcheck: true }, { timeoutMs: 10_000 });
+      setAiStatus("connected");
+    } catch (err: any) {
+      // Erro de "OpenAI Error" ainda significa que a edge tá viva — só o payload era inválido
+      if (err?.message?.toLowerCase().includes("openai")) {
+        setAiStatus("connected");
+      } else {
+        setAiStatus("disconnected");
+      }
     }
   };
 
@@ -177,15 +177,14 @@ function SettingsPage() {
 
   const handleLogout = async () => {
     storage.clearSession();
-    await signOut({ redirectUrl: "/login" });
-    nav({ to: "/login" });
+    await signOutAndClear();
   };
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
-        <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 md:py-6 flex items-center justify-between">
            <Link to="/dashboard" className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all">
               <ChevronLeft className="h-5 w-5" />
            </Link>
@@ -194,7 +193,7 @@ function SettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-8 md:space-y-12">
          
          {/* 1. PERFIL MÉDICO */}
          <Section title="PERFIL MÉDICO" icon={<User className="h-5 w-5" />}>
@@ -234,7 +233,7 @@ function SettingsPage() {
                         <button 
                            key={opt.id} 
                            onClick={() => setAtbDayRule(opt.id)}
-                           className={`p-6 rounded-[2rem] border text-left transition-all ${atbDayRule === opt.id ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-white border-border hover:border-primary/40'}`}
+                           className={`p-6 rounded-[2rem] border text-left transition-all ${atbDayRule === opt.id ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-elevated border-border hover:border-primary/40'}`}
                         >
                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">{opt.label}</p>
                            <p className="text-[9px] text-muted-foreground font-bold">{opt.desc}</p>
@@ -247,13 +246,38 @@ function SettingsPage() {
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ALERTA DE CICLO PROLONGADO</label>
                   <div className="flex items-center gap-4">
                      <span className="text-xs font-bold text-foreground">NOTIFICAR SE ATB HÁ MAIS DE</span>
-                     <input 
-                        type="number" 
-                        value={atbAlertDays} 
+                     <input
+                        type="number"
+                        value={atbAlertDays}
                         onChange={e => setAtbAlertDays(e.target.value)}
-                        className="w-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 text-center font-black" 
+                        className="w-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 text-center font-black"
                      />
                      <span className="text-xs font-bold text-foreground">DIAS</span>
+                  </div>
+               </div>
+
+               <div className="space-y-3 p-5 rounded-2xl border border-border bg-secondary/20">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">NÍVEIS DE ALERTA POR D-DAY</label>
+                  <p className="text-[10px] text-muted-foreground italic">Quando ATB atinge "dia amarelo" → atenção; ao atingir "dia vermelho" → crítico.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-amber-700">AMARELO A PARTIR DE D</span>
+                        <input
+                           type="number" min="1" max="30"
+                           defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_amarelo") || "5", 10))}
+                           onChange={e => localStorage.setItem("da_atb_dia_amarelo", e.target.value || "5")}
+                           className="w-16 bg-elevated border border-amber-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                        />
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-red-700">VERMELHO A PARTIR DE D</span>
+                        <input
+                           type="number" min="1" max="30"
+                           defaultValue={String(parseInt(localStorage.getItem("da_atb_dia_vermelho") || "7", 10))}
+                           onChange={e => localStorage.setItem("da_atb_dia_vermelho", e.target.value || "7")}
+                           className="w-16 bg-elevated border border-red-300 rounded-lg px-3 py-1.5 text-center font-black text-sm"
+                        />
+                     </div>
                   </div>
                </div>
             </div>
@@ -266,7 +290,7 @@ function SettingsPage() {
          <Section title="BACKEND DE IA" icon={<Globe className="h-5 w-5" />}>
             <div className="flex items-center justify-between p-6 bg-secondary/30 rounded-[2rem] border border-border">
                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center border border-border shadow-sm">
+                  <div className="h-10 w-10 rounded-2xl bg-elevated flex items-center justify-center border border-border shadow-sm">
                      <RefreshCw className={`h-5 w-5 text-primary ${aiStatus === 'loading' ? 'animate-spin' : ''}`} />
                   </div>
                   <div>
@@ -288,7 +312,7 @@ function SettingsPage() {
                      </div>
                   </div>
                </div>
-               <button onClick={checkHealth} className="px-6 py-2.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest bg-white hover:bg-secondary transition-all">
+               <button onClick={checkHealth} className="px-6 py-2.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest bg-elevated hover:bg-secondary transition-all">
                   TESTAR CONEXÃO
                </button>
             </div>
@@ -321,7 +345,7 @@ function SettingsPage() {
                   <span className="text-2xl font-black text-white italic">DA</span>
                </div>
                <div>
-                  <h3 className="text-lg font-black text-foreground tracking-tight">DOUTOR AJUDA — FASE 2</h3>
+                  <h3 className="text-lg font-black text-foreground tracking-tight">PLANTONISTA — FASE 2</h3>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ASSISTENTE CLÍNICO INTELIGENTE · VERSÃO 2.0</p>
                </div>
                <div className="flex justify-center gap-6 pt-4">
@@ -345,11 +369,11 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[3rem] p-5 md:p-12 shadow-sm">
         {children}
       </div>
     </div>
   );
 }
 
-const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";

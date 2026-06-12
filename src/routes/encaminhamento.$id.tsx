@@ -10,10 +10,11 @@ import { toast } from "sonner";
 import { getPatientById, createReferral } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import ShiftBadge from "@/components/ShiftBadge";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
   component: EncaminhamentoPage,
-  head: () => ({ meta: [{ title: "Gerar Encaminhamento — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Encaminhamento — PLANTONISTA" }] }),
 });
 
 const DESTINATIONS = [
@@ -56,7 +57,7 @@ function EncaminhamentoPage() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
         const p = await getPatientById(id, userId!);
-        setPaciente({ name: p.name, bed: p.bed, ...p });
+        setPaciente({ ...p, name: p.name, bed: p.bed });
       } catch (err) {
         const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
         const p = existing.find((x: any) => x.id === id);
@@ -73,23 +74,28 @@ function EncaminhamentoPage() {
     }
     setIsGenerating(true);
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/generate-referral`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patient: paciente,
-          destinations: selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label),
-          specialty: selectedDestinations.includes("especialista") ? specialty : null,
-          specialist_name: specialistName,
-          regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
-          reason: reason,
-          data_plantao: format(new Date(), "dd/MM/yyyy")
-        }),
-      });
+      // Edge function referral-generator (gpt-5, deployed no Supabase).
+      // Substituiu o backend Railway antigo (VITE_CLINICAL_AGENTS_URL/generate-referral)
+      // que não estava configurado em produção e dava 404 silencioso.
+      const { invokeEdgeFunction } = await import("@/lib/edgeFunctions");
+      const destinationLabel = selectedDestinations.length === 1
+        ? DESTINATIONS.find(opt => opt.id === selectedDestinations[0])?.label || "UBS"
+        : selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label).join(", ");
 
-      if (!response.ok) throw new Error("Falha ao gerar encaminhamento");
-      const result = await response.json();
-      setReferralText(result.referral_text || "");
+      const result = await invokeEdgeFunction<{ referral_text?: string }>("referral-generator", {
+        patient: paciente,
+        destination: destinationLabel,
+        destinations: selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label),
+        specialty: selectedDestinations.includes("especialista") ? specialty : null,
+        specialist_name: specialistName,
+        regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
+        reason: reason,
+        data_plantao: format(new Date(), "dd/MM/yyyy"),
+      }, { timeoutMs: 180_000 });
+
+      const text = result.referral_text || "";
+      if (!text.trim()) throw new Error("IA retornou texto vazio. Tente novamente.");
+      setReferralText(text);
       setStep(2);
       toast.success("Texto gerado com sucesso!");
     } catch (error: any) {
@@ -136,7 +142,7 @@ function EncaminhamentoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-elevated border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
            <div className="flex items-center gap-4">
@@ -144,7 +150,10 @@ function EncaminhamentoPage() {
                  <ChevronLeft className="h-5 w-5" />
               </button>
               <div>
-                 <h1 className="text-xl font-black text-foreground tracking-tight uppercase">ENCAMINHAMENTO</h1>
+                 <div className="flex items-center gap-2 mb-1">
+                   <h1 className="text-xl font-black text-foreground tracking-tight uppercase">ENCAMINHAMENTO</h1>
+                   <ShiftBadge silent />
+                 </div>
                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{paciente.name} · LEITO {paciente.bed}</p>
               </div>
            </div>
@@ -167,7 +176,7 @@ function EncaminhamentoPage() {
               <Section title="DESTINO DO ENCAMINHAMENTO" icon={<Building2 className="h-5 w-5" />}>
                  <div className="grid sm:grid-cols-2 gap-3">
                     {DESTINATIONS.map(dest => (
-                       <label key={dest.id} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${selectedDestinations.includes(dest.id) ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-white border-border hover:border-primary/40'}`}>
+                       <label key={dest.id} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${selectedDestinations.includes(dest.id) ? 'bg-primary/5 border-primary ring-1 ring-primary' : 'bg-elevated border-border hover:border-primary/40'}`}>
                           <input 
                             type="checkbox" 
                             className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
@@ -258,7 +267,7 @@ function EncaminhamentoPage() {
 
 function Section({ title, icon, children }: { title: string, icon: any, children: any }) {
   return (
-    <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
+    <div className="bg-elevated border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
       <div className="flex items-center gap-3 mb-8">
         <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
           {icon}
@@ -272,5 +281,5 @@ function Section({ title, icon, children }: { title: string, icon: any, children
   );
 }
 
-const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
-const textareaCls = "w-full bg-secondary/30 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white leading-relaxed transition-all uppercase";
+const inputCls = "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";
+const textareaCls = "w-full bg-secondary/30 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated leading-relaxed transition-all uppercase";

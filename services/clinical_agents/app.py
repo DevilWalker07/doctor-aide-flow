@@ -16,6 +16,7 @@ load_dotenv()
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from PIL import Image, ImageOps
 import pillow_heif
@@ -107,7 +108,7 @@ def update_job(job_id: str, status: str, stage: str,
         data["error"] = error
     save_job(job_id, data)
 
-async def process_document_background(job_id: str, file_bytes: bytes, filename: str, content_type: str):
+async def process_document_background(job_id: str, file_bytes: bytes, filename: str, content_type: str, model_override: Optional[str] = None):
     ext = os.path.splitext(filename)[1].lower()
     try:
         update_job(job_id, "processing", "Identificando tipo de arquivo...")
@@ -227,34 +228,103 @@ async def process_document_background(job_id: str, file_bytes: bytes, filename: 
 
         # ETAPA 3 — JSON CLÍNICO PADRONIZADO alignment
         prompt = f"""
-Você é um assistente médico sênior especialista em extração de dados clínicos.
-Seu objetivo é extrair o máximo de informações estruturadas do documento médico abaixo.
+Você é um médico assistente sênior treinado para extrair, de forma EXAUSTIVA e
+PRECISA, todos os dados clínicos relevantes de um documento médico (admissão,
+evolução, prescrição, sumário, transferência, etc).
 
-CONTEXTO ADICIONAL:
+CONTEXTO:
 - Nome do arquivo: {filename}
-- Data atual: {datetime.now().strftime("%Y-%m-%d")}
+- Data de hoje: {datetime.now().strftime("%Y-%m-%d")}
 
-CONTEÚDO DO DOCUMENTO:
+DOCUMENTO COMPLETO:
+\"\"\"
 {extracted_text}
+\"\"\"
 
-INSTRUÇÕES DE SAÍDA:
-Retorne ESTRITAMENTE um objeto JSON puro com as seguintes chaves:
-- nome, idade, sexo (M/F/NI), leito, setor
-- data_admissao (YYYY-MM-DD), data_documento (YYYY-MM-DD), motivo_admissao, hda
-- lista_de_problemas (array de strings)
-- antibioticos (array de objetos com: nome, dose, via, frequencia, data_inicio)
-- medicacoes (array de strings)
-- laboratorios (array de objetos com: data, texto_compacto, valores)
-- exame_fisico (objeto detalhado com: geral, acv, ar, abdome, neuro, extremidades, pele)
-- condutas (array de strings)
-- pendencias (array de strings)
-- alertas (array de strings: riscos, alergias, dados críticos)
-- campos_incertos (array de strings com campos que você não localizou com clareza)
+PROTOCOLO DE EXTRAÇÃO (siga em ordem):
+1. LEIA o documento INTEIRO antes de começar. Não extraia campo a campo isoladamente.
+2. Para CADA seção do documento (identificação, HDA, antecedentes, medicações,
+   exame físico, exames, conduta, pendências, evolução), identifique a qual chave
+   do JSON ela pertence e extraia TUDO o que estiver presente.
+3. Se uma informação aparece em mais de um lugar, consolide. Não duplique.
+4. Se houver datas em formatos brasileiros ("15/05/2026"), converta para ISO ("2026-05-15").
+5. Para listas (problemas, ATB, medicações, pendências) extraia CADA item separadamente,
+   não junte vários numa mesma string.
+6. NUNCA invente. Se não encontrou, use null para escalares ou [] para listas e
+   adicione o campo em `campos_incertos`.
 
-REGRAS CLÍNICAS:
-1. Se o nome não estiver no texto, tente inferir do nome do arquivo (ex: "L01-JOAO-SILVA.pdf" -> JOAO SILVA).
-2. Não invente dados. Use null se não encontrar.
-3. Priorize clareza e precisão médica.
+ATENÇÃO ESPECIAL — campos onde modelos costumam falhar:
+- IDADE: procure por "X anos", "X a", data de nascimento (calcule), "idoso de X".
+- SEXO: procure pronomes ("o paciente", "a paciente"), "sexo M/F", "masc/fem".
+- PROBLEMAS ATIVOS vs RESOLVIDOS: ATIVOS é o problem list em curso; RESOLVIDOS
+  são condições que já foram tratadas (geralmente em "antecedentes" ou em
+  "problemas resolvidos"). Separe.
+- ANTECEDENTES PATOLÓGICOS: comorbidades crônicas (HAS, DM, DRC, ICC, neoplasia).
+  Vão em `antecedentes_patologicos`, NÃO em `problemas_ativos`.
+- MEDICAÇÕES DE USO CONTÍNUO (domiciliares, prévias) → `medicacoes_uso_continuo`.
+- PRESCRIÇÃO ATUAL DA INTERNAÇÃO → `prescricao_internacao`.
+- ANTIBIÓTICOS: extraia COM data_inicio, dose, via, frequência. Se não há data,
+  use null e marque em campos_incertos.
+  NORMALIZE o nome para esta lista canônica quando reconhecer o ATB:
+  CEFTRIAXONA, PIPERACILINA + TAZOBACTAM, VANCOMICINA, MEROPENEM,
+  AMOXICILINA + CLAVULANATO, AZITROMICINA, CLINDAMICINA, METRONIDAZOL,
+  CIPROFLOXACINO, LEVOFLOXACINO, CEFEPIME, POLIMIXINA B, OXACILINA, GENTAMICINA.
+  Apelidos comuns (PIPTAZO, PIP-TAZO, TAZOCIN, ROCEFIN, VANCO, MERO, CLAVULIN,
+  CIPRO, LEVO, CLINDA, METRO, FLAGYL, GENTA) devem ser convertidos para a
+  forma canônica acima.
+- EXAMES DE IMAGEM (TC, RM, RX, USG, ECO) vão em `exames_imagem`, NÃO em laboratorios.
+- LABORATÓRIOS: extraia em texto compacto inline (ex: "HB 11 | LEUCO 9.500 | PCR 35").
+- EXAME FÍSICO: preencha cada sistema separadamente (geral/acv/ar/abdome/neuro/extremidades/pele).
+
+ESQUEMA JSON OBRIGATÓRIO (retorne APENAS este objeto, sem markdown, sem comentários):
+
+{{
+  "nome": "string ou null",
+  "idade": "number ou null",
+  "sexo": "M | F | NI",
+  "leito": "string ou null",
+  "setor": "string ou null",
+  "data_admissao": "YYYY-MM-DD ou null",
+  "data_documento": "YYYY-MM-DD ou null",
+  "motivo_admissao": "string ou null",
+  "hda": "string completa ou null",
+  "antecedentes_patologicos": ["string", "..."],
+  "medicacoes_uso_continuo": ["string", "..."],
+  "alergias": ["string", "..."],
+  "problemas_ativos": ["string", "..."],
+  "problemas_resolvidos": ["string", "..."],
+  "lista_de_problemas": ["string", "..."],
+  "prescricao_internacao": ["string", "..."],
+  "medicacoes": ["string", "..."],
+  "antibioticos": [
+    {{ "nome": "string", "dose": "string", "via": "string", "frequencia": "string", "data_inicio": "YYYY-MM-DD ou null" }}
+  ],
+  "laboratorios": [
+    {{ "data": "YYYY-MM-DD", "texto_compacto": "HB 11 | LEUCO 9.500 | ...", "valores": {{}} }}
+  ],
+  "exames_imagem": [
+    {{ "data": "YYYY-MM-DD ou null", "modalidade": "TC/RM/RX/USG/ECO", "descricao": "string", "laudo": "string ou null" }}
+  ],
+  "exame_fisico_detalhado": {{
+    "geral": "string ou null",
+    "acv": "string ou null",
+    "ar": "string ou null",
+    "abdome": "string ou null",
+    "neuro": "string ou null",
+    "extremidades": "string ou null",
+    "pele": "string ou null"
+  }},
+  "condutas": ["string", "..."],
+  "pendencias": ["string", "..."],
+  "alertas": ["string", "..."],
+  "campos_incertos": ["string", "..."]
+}}
+
+REGRAS FINAIS:
+- `lista_de_problemas` deve conter problemas_ativos + problemas_resolvidos (compatibilidade).
+- Se o nome não estiver no texto, infira do arquivo (ex: "L01-JOAO-SILVA.pdf" → "JOAO SILVA").
+- Cite SEMPRE em `campos_incertos` aqueles cuja extração foi por inferência ou está duvidosa.
+- Antes de finalizar, REVISE mentalmente: "deixei algum dado de fora?". Se sim, inclua.
 """
 
         messages = [
@@ -272,19 +342,26 @@ REGRAS CLÍNICAS:
                 "content": f"{prompt}\n\nDocumento:\n{extracted_text}"
             })
 
-        # ETAPA 2 — PERFORMANCE: Use gpt-4o-mini for speed as requested
-        model_name = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-        if "4.1" in model_name:
+        # Extração clínica precisa do modelo completo (gpt-4o), não da versão mini.
+        # gpt-4o-mini perde nuances clínicas e omite campos em documentos longos.
+        # Se OPENAI_MODEL apontar para um modelo inválido (ex: "gpt-4.1-mini"),
+        # cai para gpt-4o (não para gpt-4o-mini).
+        # Default em gpt-4o-mini (mais barato). Para ativar gpt-4o full,
+        # basta setar OPENAI_MODEL=gpt-4o nas env vars do Railway.
+        VALID_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4-turbo", "gpt-4o-mini"}
+        model_name = model_override or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        if model_name not in VALID_MODELS:
+            print(f"[extracao] modelo='{model_name}' inválido, usando gpt-4o-mini.")
             model_name = "gpt-4o-mini"
-        
+
         response = None
         for tentativa in range(3):
             try:
                 response = await client.chat.completions.create(
                     model=model_name,
                     messages=messages,
-                    temperature=0.1,
-                    max_tokens=4000,
+                    temperature=0.0,
+                    max_tokens=16000,
                     response_format={ "type": "json_object" }
                 )
                 break
@@ -310,6 +387,468 @@ REGRAS CLÍNICAS:
         print(traceback.format_exc())
         update_job(job_id, "error", "Erro na extração", error=str(e))
 
+# --- BULK EXTRACTION (passagem de plantão a partir de múltiplos documentos) ---
+
+MAX_BULK_FILES = 20
+
+bulk_jobs_memory: Dict[str, dict] = {}
+
+
+def _save_bulk_job(job_id: str, data: dict):
+    bulk_jobs_memory[job_id] = data
+
+
+def _get_bulk_job(job_id: str) -> Optional[dict]:
+    return bulk_jobs_memory.get(job_id)
+
+
+def _update_bulk_job(job_id: str, **fields):
+    job = bulk_jobs_memory.get(job_id)
+    if not job:
+        return
+    job.update(fields)
+    job["updated_at"] = datetime.now().isoformat()
+
+
+async def _generate_passagem_consolidada(patients: List[dict]) -> dict:
+    """
+    Recebe a lista de JSONs clínicos já extraídos (por gpt-4o-mini) e usa o
+    gpt-4o full numa única chamada para ranquear gravidade, sugerir altas e
+    montar a passagem de plantão consolidada.
+    """
+    if not patients:
+        return {"resumo": "", "ranking": [], "alertas_globais": []}
+
+    # Resumo mínimo por paciente para caber no contexto sem mandar TUDO.
+    compact = []
+    for p in patients:
+        compact.append({
+            "fileName": p.get("fileName"),
+            "nome": p.get("nome"),
+            "idade": p.get("idade"),
+            "sexo": p.get("sexo"),
+            "leito": p.get("leito"),
+            "setor": p.get("setor"),
+            "data_admissao": p.get("data_admissao"),
+            "motivo_admissao": p.get("motivo_admissao"),
+            "problemas_ativos": p.get("problemas_ativos") or p.get("lista_de_problemas") or [],
+            "antibioticos": p.get("antibioticos") or [],
+            "laboratorios": (p.get("laboratorios") or [])[:2],
+            "exame_fisico": p.get("exame_fisico_detalhado") or {},
+            "pendencias": p.get("pendencias") or [],
+            "alertas": p.get("alertas") or [],
+        })
+
+    prompt = f"""
+Você é um médico sênior responsável por preparar a PASSAGEM DE PLANTÃO para
+o colega que está chegando. Recebeu abaixo os dados de {len(patients)} pacientes
+já extraídos. Sua tarefa:
+
+1) RANQUEAR todos por GRAVIDADE clínica:
+   - "critico": VM, DVA, choque, sepse grave, instabilidade hemodinâmica
+   - "grave": ATB IV ativo recente, dispneia, instabilidade, exame físico alterado
+   - "moderado": estável mas em investigação ativa
+   - "leve": estável, possível alta
+
+2) Para cada paciente, indicar:
+   - dias_de_internacao (a partir de data_admissao)
+   - dias_de_antibiotico (D{{N}} a partir do ATB mais antigo ativo)
+   - resumo_uma_linha (motivo + estado atual)
+   - criterios_gravidade_atendidos: lista do que justifica a classificação
+   - sugere_alta (boolean) e por_que_alta (se aplicável)
+   - alertas_pendencias: pendências críticas a observar
+
+3) Escrever uma passagem_texto consolidada e legível em PT-BR, em CAIXA ALTA,
+   listando os pacientes da MAIOR PRA MENOR gravidade, com este formato por paciente:
+       LEITO X — NOME (IDADEa SEXO) — D{{INTERNAÇÃO}}
+       MOTIVO: ...
+       ATB: ... D{{DIA}}
+       LAB: ...
+       PENDÊNCIAS: ...
+       ALERTAS: ...
+
+DADOS DOS PACIENTES:
+{json.dumps(compact, ensure_ascii=False, indent=2)}
+
+DATA DE HOJE: {datetime.now().strftime("%Y-%m-%d")}
+
+REGRAS:
+- Não invente dados. Se faltar, escreva "NÃO REFERIDO".
+- Use SOMENTE os dados fornecidos acima.
+- Antes de finalizar, garanta que TODOS os {len(patients)} pacientes aparecem no ranking.
+
+RETORNE APENAS UM JSON com este schema:
+{{
+  "ranking": [
+    {{
+      "fileName": "string",
+      "leito": "string",
+      "nome": "string",
+      "gravidade": "critico | grave | moderado | leve",
+      "dias_de_internacao": "number ou null",
+      "dias_de_antibiotico": "number ou null",
+      "resumo_uma_linha": "string",
+      "criterios_gravidade_atendidos": ["..."],
+      "sugere_alta": false,
+      "por_que_alta": "string ou null",
+      "alertas_pendencias": ["..."]
+    }}
+  ],
+  "passagem_texto": "string completa em caixa alta",
+  "alertas_globais": ["alertas para o plantão como um todo"],
+  "contagem": {{"critico": 0, "grave": 0, "moderado": 0, "leve": 0}}
+}}
+"""
+
+    # Default em gpt-4o-mini para evitar custo extra enquanto OPENAI_ANALYSIS_MODEL
+    # não estiver configurado. Para usar gpt-4o full na análise consolidada,
+    # setar OPENAI_ANALYSIS_MODEL=gpt-4o no Railway.
+    VALID_ANALYSIS_MODELS = {"gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4o-mini"}
+    analysis_model = os.environ.get("OPENAI_ANALYSIS_MODEL", "gpt-4o-mini")
+    if analysis_model not in VALID_ANALYSIS_MODELS:
+        analysis_model = "gpt-4o-mini"
+
+    response = await client.chat.completions.create(
+        model=analysis_model,
+        messages=[
+            {"role": "system", "content": "Você é um médico sênior. Retorne apenas JSON válido."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        max_tokens=8000,
+        response_format={"type": "json_object"},
+    )
+    raw = response.choices[0].message.content
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"error": "Falha ao parsear JSON da análise", "raw": raw}
+
+
+async def process_bulk_background(bulk_job_id: str, files_data: List[tuple]):
+    """
+    files_data: lista de tuplas (file_bytes, filename, content_type).
+    Cria N sub-jobs reusando process_document_background e roda em paralelo,
+    depois consolida a passagem com gpt-4o.
+    """
+    try:
+        sub_job_ids: List[str] = []
+        for _, filename, _ct in files_data:
+            sj = str(uuid.uuid4())
+            save_job(sj, {
+                "status": "queued",
+                "stage": "Aguardando",
+                "file_name": filename,
+                "result": None,
+                "error": None,
+            })
+            sub_job_ids.append(sj)
+
+        _update_bulk_job(
+            bulk_job_id,
+            status="processing",
+            stage=f"Extraindo {len(sub_job_ids)} documentos em paralelo...",
+            sub_jobs=sub_job_ids,
+            total=len(sub_job_ids),
+        )
+
+        # Roda todas as extrações em paralelo, FORÇANDO gpt-4o-mini por arquivo
+        # para custo baixo. A análise consolidada usa gpt-4o full (1 chamada).
+        bulk_extract_model = os.environ.get("OPENAI_BULK_MODEL", "gpt-4o-mini")
+        tasks = [
+            process_document_background(sj, b, fn, ct, model_override=bulk_extract_model)
+            for sj, (b, fn, ct) in zip(sub_job_ids, files_data)
+        ]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        patients: List[dict] = []
+        errors: List[dict] = []
+        for sj in sub_job_ids:
+            j = get_job(sj)
+            if j and j.get("status") == "done" and j.get("result"):
+                patients.append(j["result"])
+            else:
+                errors.append({
+                    "sub_job_id": sj,
+                    "file_name": (j or {}).get("file_name"),
+                    "error": (j or {}).get("error") or "Falha desconhecida",
+                })
+
+        _update_bulk_job(
+            bulk_job_id,
+            stage=f"Gerando passagem consolidada de {len(patients)} pacientes...",
+            extracted_count=len(patients),
+            error_count=len(errors),
+        )
+
+        passagem = {}
+        if patients:
+            try:
+                passagem = await _generate_passagem_consolidada(patients)
+            except Exception as e:
+                passagem = {"error": f"Falha na análise consolidada: {e}"}
+
+        _update_bulk_job(
+            bulk_job_id,
+            status="done",
+            stage="Concluído",
+            patients=patients,
+            passagem=passagem,
+            errors=errors,
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        _update_bulk_job(bulk_job_id, status="error", error=str(e))
+
+
+@app.post("/extract-bulk")
+@app.post("/api/extract/bulk")
+async def extract_bulk(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+    if len(files) > MAX_BULK_FILES:
+        raise HTTPException(status_code=400, detail=f"Máximo de {MAX_BULK_FILES} arquivos por lote.")
+
+    files_data = []
+    for f in files:
+        files_data.append((await f.read(), f.filename, f.content_type))
+
+    bulk_job_id = str(uuid.uuid4())
+    _save_bulk_job(bulk_job_id, {
+        "status": "queued",
+        "stage": "Lote recebido",
+        "total": len(files_data),
+        "file_names": [fn for _, fn, _ in files_data],
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "sub_jobs": [],
+        "patients": [],
+        "passagem": None,
+        "errors": [],
+    })
+
+    background_tasks.add_task(process_bulk_background, bulk_job_id, files_data)
+    return {"bulk_job_id": bulk_job_id, "status": "queued", "total": len(files_data)}
+
+
+@app.get("/extract-bulk/job/{bulk_job_id}")
+@app.get("/api/extract/bulk/job/{bulk_job_id}")
+async def get_bulk_job_status(bulk_job_id: str):
+    job = _get_bulk_job(bulk_job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    # Inclui progresso real consultando sub-jobs.
+    sub_ids = job.get("sub_jobs") or []
+    progress = {"done": 0, "error": 0, "processing": 0, "queued": 0}
+    sub_status = []
+    for sj in sub_ids:
+        s = get_job(sj)
+        if not s:
+            continue
+        st = s.get("status", "queued")
+        progress[st] = progress.get(st, 0) + 1
+        sub_status.append({
+            "sub_job_id": sj,
+            "file_name": s.get("file_name"),
+            "status": st,
+            "stage": s.get("stage"),
+        })
+
+    return {**job, "progress": progress, "sub_status": sub_status}
+
+
+# --- DOCUMENT EXPORT (DOCX / PDF / TXT) ---
+
+class ExportRequest(BaseModel):
+    text: str
+    format: str  # "docx" | "pdf" | "txt"
+    header: Optional[Dict[str, Any]] = None  # {hospital, medico, crm, paciente, leito, data, tipo}
+    filename_hint: Optional[str] = None
+
+
+def _safe_filename(s: str) -> str:
+    if not s:
+        return "evolucao"
+    keep = "".join(c if c.isalnum() or c in "-_" else "_" for c in s)
+    return keep.strip("_") or "evolucao"
+
+
+def _build_docx_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    from docx import Document
+    from docx.shared import Pt, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Cm(2)
+    section.bottom_margin = Cm(2)
+    section.left_margin = Cm(2)
+    section.right_margin = Cm(2)
+
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    if hospital or medico:
+        h = doc.add_paragraph()
+        h.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run_left = h.add_run(hospital)
+        run_left.bold = True
+        h.add_run("\t" * 6)
+        right = f"{medico}" + (f" — CRM {crm}" if crm else "")
+        h.add_run(right)
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title.add_run(tipo.upper())
+    title_run.bold = True
+    title_run.font.size = Pt(14)
+
+    meta = doc.add_paragraph()
+    meta_text = []
+    if paciente: meta_text.append(f"PACIENTE: {paciente}")
+    if leito: meta_text.append(f"LEITO: {leito}")
+    if data: meta_text.append(f"DATA: {data}")
+    meta.add_run(" · ".join(meta_text)).bold = True
+
+    doc.add_paragraph("─" * 80)
+
+    for raw_line in text.split("\n"):
+        p = doc.add_paragraph(raw_line)
+        for run in p.runs:
+            run.font.size = Pt(11)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+def _build_pdf_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.colors import HexColor
+
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=2 * cm, rightMargin=2 * cm,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        title=tipo,
+    )
+    styles = getSampleStyleSheet()
+    body = ParagraphStyle("body", parent=styles["BodyText"], fontName="Helvetica",
+                          fontSize=10, leading=13, alignment=TA_LEFT)
+    head_style = ParagraphStyle("head", parent=styles["Normal"], fontSize=9,
+                                textColor=HexColor("#555"))
+    title_style = ParagraphStyle("title", parent=styles["Heading1"], fontSize=13,
+                                 alignment=TA_CENTER, spaceAfter=8)
+    meta_style = ParagraphStyle("meta", parent=styles["Normal"], fontSize=10,
+                                alignment=TA_CENTER, spaceAfter=12)
+
+    flow = []
+    if hospital or medico:
+        right = (medico or "") + (f" — CRM {crm}" if crm else "")
+        flow.append(Paragraph(f"<b>{hospital}</b>" + (f"&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;{right}" if right else ""), head_style))
+        flow.append(Spacer(1, 8))
+
+    flow.append(Paragraph(tipo.upper(), title_style))
+    meta_bits = []
+    if paciente: meta_bits.append(f"<b>PACIENTE:</b> {paciente}")
+    if leito: meta_bits.append(f"<b>LEITO:</b> {leito}")
+    if data: meta_bits.append(f"<b>DATA:</b> {data}")
+    if meta_bits:
+        flow.append(Paragraph(" &middot; ".join(meta_bits), meta_style))
+    flow.append(Paragraph("─" * 90, head_style))
+    flow.append(Spacer(1, 8))
+
+    for raw_line in text.split("\n"):
+        safe = raw_line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if not safe.strip():
+            flow.append(Spacer(1, 6))
+        else:
+            flow.append(Paragraph(safe, body))
+
+    doc.build(flow)
+    return buf.getvalue()
+
+
+def _build_txt_bytes(text: str, header: Dict[str, Any]) -> bytes:
+    hospital = header.get("hospital") or ""
+    medico = header.get("medico") or ""
+    crm = header.get("crm") or ""
+    paciente = header.get("paciente") or ""
+    leito = header.get("leito") or ""
+    data = header.get("data") or datetime.now().strftime("%d/%m/%Y")
+    tipo = header.get("tipo") or "EVOLUÇÃO MÉDICA"
+
+    lines = []
+    if hospital or medico:
+        right = (medico or "") + (f" — CRM {crm}" if crm else "")
+        lines.append(f"{hospital}    {right}".strip())
+        lines.append("")
+    lines.append(tipo.upper())
+    meta = []
+    if paciente: meta.append(f"PACIENTE: {paciente}")
+    if leito: meta.append(f"LEITO: {leito}")
+    if data: meta.append(f"DATA: {data}")
+    if meta:
+        lines.append("  ·  ".join(meta))
+    lines.append("─" * 80)
+    lines.append("")
+    lines.append(text)
+    return ("\n".join(lines)).encode("utf-8")
+
+
+@app.post("/export-evolucao")
+@app.post("/api/export/evolucao")
+async def export_evolucao(req: ExportRequest):
+    fmt = (req.format or "").lower().strip()
+    if fmt not in {"docx", "pdf", "txt"}:
+        raise HTTPException(status_code=400, detail="Formato deve ser docx, pdf ou txt.")
+    if not req.text or not req.text.strip():
+        raise HTTPException(status_code=400, detail="Texto vazio.")
+
+    header = req.header or {}
+    base = _safe_filename(req.filename_hint or header.get("paciente") or "evolucao")
+    filename = f"{base}.{fmt}"
+
+    try:
+        if fmt == "docx":
+            data = _build_docx_bytes(req.text, header)
+            media = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif fmt == "pdf":
+            data = _build_pdf_bytes(req.text, header)
+            media = "application/pdf"
+        else:
+            data = _build_txt_bytes(req.text, header)
+            media = "text/plain; charset=utf-8"
+    except Exception as e:
+        print(f"Erro ao gerar {fmt}: {e}")
+        raise HTTPException(status_code=500, detail=f"Falha ao gerar {fmt}: {e}")
+
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # --- AI ENDPOINTS FOR EVOLUTION / PRESCRIPTION ---
 
 class EvolutionRequest(BaseModel):
@@ -318,29 +857,60 @@ class EvolutionRequest(BaseModel):
     template: str
     data_plantao: str
     preferences: Optional[Dict[str, Any]] = None
+    template_id: Optional[str] = None
+    output_style: Optional[str] = None  # "sections" | "continuous" | "soap" | "list"
+    raw_notes: Optional[str] = None     # anotações brutas do médico (opcional)
 
 @app.post("/api/ai/gerar-evolucao")
 async def gerar_evolucao(req: EvolutionRequest):
     if not openai_key:
         raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
-    
+
+    raw_block = (req.raw_notes or "").strip()
+    has_raw = bool(raw_block)
+
     try:
-        # Prompt build
-        prompt = f"""
-Você é um médico assistente sênior. Sua tarefa é gerar uma EVOLUÇÃO MÉDICA impecável baseada nos dados do paciente e no template fornecido.
+        if has_raw:
+            prompt = f"""Você é um médico assistente sênior reestruturando anotações brutas em uma evolução médica.
+
+DADOS DO PACIENTE (contexto adicional):
+{json.dumps(req.patient, indent=2, ensure_ascii=False)}
+
+DATA DO PLANTÃO: {req.data_plantao}
+TIPO DE UNIDADE: {req.tipo_unidade}
+MODELO ESCOLHIDO: {req.template_id or "default"}
+
+INSTRUÇÕES DE FORMATAÇÃO (template):
+{req.template}
+
+ANOTAÇÕES BRUTAS DO MÉDICO (FONTE PRIMÁRIA — priorize estas informações):
+\"\"\"
+{raw_block}
+\"\"\"
+
+REGRAS:
+1. Use as ANOTAÇÕES BRUTAS como fonte PRIMÁRIA de dados clínicos.
+2. Use os dados do paciente apenas para complementar (identificação, ATBs já cadastrados, etc).
+3. Siga EXATAMENTE o formato do template.
+4. Não invente dados. Se algo não foi mencionado, omita silenciosamente.
+5. Preserve valores numéricos exatos (lab, parâmetros VM, doses).
+"""
+        else:
+            prompt = f"""Você é um médico assistente sênior. Sua tarefa é gerar uma EVOLUÇÃO MÉDICA impecável baseada nos dados do paciente e no template fornecido.
 
 DADOS DO PACIENTE:
 {json.dumps(req.patient, indent=2, ensure_ascii=False)}
 
 DATA DO PLANTÃO: {req.data_plantao}
 TIPO DE UNIDADE: {req.tipo_unidade}
+MODELO ESCOLHIDO: {req.template_id or "default"}
 
 TEMPLATE OBRIGATÓRIO:
 {req.template}
 
 REGRAS:
 1. Siga EXATAMENTE o template. Substitua os campos entre [colchetes] pelos dados reais.
-2. Se não houver dado para um campo, use "SEM ALTERAÇÕES", "NADA A DECLARAR" ou remova o campo conforme o bom senso médico.
+2. Se não houver dado para um campo, omita silenciosamente — NÃO invente.
 3. Use terminologia médica técnica e precisa.
 4. Mantenha o texto em CAIXA ALTA se solicitado nas preferências.
 5. Seja conciso e focado em dados relevantes.
@@ -365,6 +935,194 @@ REGRAS:
 
     except Exception as e:
         print(f"Erro ao gerar evolução: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RefineEvolutionRequest(BaseModel):
+    current_text: str
+    instruction: str
+    tipo_unidade: Optional[str] = None
+    preferences: Optional[Dict[str, Any]] = None
+
+
+@app.post("/api/ai/refinar-evolucao")
+async def refinar_evolucao(req: RefineEvolutionRequest):
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
+    if not req.current_text.strip():
+        raise HTTPException(status_code=400, detail="Texto atual vazio.")
+    if not req.instruction.strip():
+        raise HTTPException(status_code=400, detail="Instrução vazia.")
+
+    pref = req.preferences or {}
+    uppercase = bool(pref.get("uppercase"))
+
+    system_msg = (
+        "Você edita evoluções médicas conforme instruções precisas. "
+        "Retorne SOMENTE o texto final, sem comentários, sem markdown, sem cabeçalhos extra."
+    )
+    if uppercase:
+        system_msg += " Use SEMPRE CAIXA ALTA."
+
+    user_prompt = f"""Edite o texto abaixo conforme a instrução, preservando estrutura,
+terminologia médica e qualquer informação que a instrução não mande remover.
+Não invente dados clínicos novos — apenas reorganize, encurte, expanda ou corrija o
+que está presente, segundo a instrução.
+
+INSTRUÇÃO:
+{req.instruction.strip()}
+
+TEXTO ATUAL:
+\"\"\"
+{req.current_text}
+\"\"\"
+
+Retorne APENAS o texto editado."""
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.0,
+            max_tokens=16000,
+        )
+        text = response.choices[0].message.content or ""
+        text = text.strip()
+        if uppercase:
+            text = text.upper()
+        return {"evolution_text": text}
+    except Exception as e:
+        print(f"Erro ao refinar evolução: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- SPECIALISTS (Pareceres consultivos de especialistas virtuais) ---
+
+SPECIALIST_PROMPTS: Dict[str, Dict[str, str]] = {
+    "victor": {
+        "nome": "Dr. Victor",
+        "system": (
+            "Você é o Dr. Victor, médico internista com 20 anos de experiência em "
+            "enfermaria de clínica médica. Análise crítica baseada em Harrison's, AMB, "
+            "PCDT/MS e UpToDate. Cubra: avaliação diagnóstica, terapêutica, "
+            "antibioticoterapia (com D-day), exames, condutas sugeridas e alertas."
+        ),
+    },
+    "ana": {
+        "nome": "Dra. Ana",
+        "system": (
+            "Você é a Dra. Ana, médica intensivista. Análise baseada em Surviving "
+            "Sepsis Campaign, AMIB e ventilação mecânica protetora. Cubra: "
+            "neurológico (RASS), CV (DVA, PAM, lactato), respiratório (parâmetros VM, "
+            "P/F), renal/metabólico, infeccioso (D-day), nutrição, profilaxias (TEV, "
+            "úlcera, VAP bundle). Preserve todos os valores numéricos exatos."
+        ),
+    },
+    "cris": {
+        "nome": "Dra. Cris",
+        "system": (
+            "Você é a Dra. Cris, médica pediatra. Análise baseada em SBP e Nelson "
+            "Textbook 21ª ed. ATENÇÃO ESPECIAL: verificar PESO; se ausente, "
+            "primeira sugestão deve ser 'Solicitar pesagem' com prioridade alta. "
+            "Cruzar TODA dose com dose/kg/dia. Usar valores de referência pediátricos."
+        ),
+    },
+    "bruno": {
+        "nome": "Dr. Bruno",
+        "system": (
+            "Você é o Dr. Bruno, médico emergencista (UPA/PS). Análise rápida e "
+            "objetiva: estratificação de risco (Manchester/NEWS2), condutas "
+            "imediatas, exames emergenciais, prescrição, destino do paciente "
+            "(alta/observação/internação/transferência). Baseado em ATLS, ACLS, SBEM."
+        ),
+    },
+    "lucia": {
+        "nome": "Dra. Lúcia",
+        "system": (
+            "Você é a Dra. Lúcia, médica de família. Visão longitudinal centrada na "
+            "pessoa. Baseado em Cadernos AB/MS, WONCA, PCDT. Cubra: avaliação clínica, "
+            "prescrição (polifarmácia, genéricos SUS), prevenção/rastreamento, "
+            "encaminhamentos, plano de seguimento longitudinal."
+        ),
+    },
+}
+
+SPECIALIST_COMMON_TAIL = """
+
+REGRAS ABSOLUTAS:
+- NUNCA invente dados que não estejam no contexto fornecido.
+- Se um dado importante estiver ausente, marque como "DADO AUSENTE" na análise.
+- Toda sugestão é CONSULTIVA — o médico decide.
+- Cite a base de evidência (diretriz, livro, protocolo).
+- Não repita dados crus do contexto — agregue ANÁLISE crítica.
+- Seja objetivo. O médico está no plantão.
+
+FORMATO DE RESPOSTA OBRIGATÓRIO — JSON puro, sem markdown:
+{
+  "sections": [
+    {"title": "AVALIAÇÃO DIAGNÓSTICA", "content": "análise...", "alert": false}
+  ],
+  "suggestions": [
+    {"id": "s1", "text": "ação concreta", "priority": "alta"}
+  ],
+  "references": ["Harrison's 21ª", "Diretriz AMB 2024"]
+}
+
+priority deve ser exatamente: "alta" | "media" | "baixa".
+"""
+
+
+class SpecialistConsultRequest(BaseModel):
+    specialist_id: str
+    clinical_context: str
+    unit_type: Optional[str] = None
+
+
+@app.post("/specialists/consult")
+@app.post("/api/specialists/consult")
+async def specialists_consult(req: SpecialistConsultRequest):
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key não configurada.")
+    sid = req.specialist_id
+    if sid not in SPECIALIST_PROMPTS:
+        raise HTTPException(status_code=400, detail=f"Especialista inválido: {sid}")
+    if not req.clinical_context.strip():
+        raise HTTPException(status_code=400, detail="Contexto clínico vazio.")
+
+    spec = SPECIALIST_PROMPTS[sid]
+    system_msg = spec["system"] + SPECIALIST_COMMON_TAIL
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": req.clinical_context},
+            ],
+            temperature=0.1,
+            max_tokens=4000,
+            response_format={"type": "json_object"},
+        )
+        raw = response.choices[0].message.content or "{}"
+        data = json.loads(raw)
+        sections = data.get("sections") or []
+        suggestions = data.get("suggestions") or []
+        references = data.get("references") or []
+        return {
+            "specialist": spec["nome"],
+            "specialist_id": sid,
+            "generated_at": datetime.now().isoformat(),
+            "sections": sections,
+            "suggestions": suggestions,
+            "references": references,
+        }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"IA retornou JSON inválido: {e}")
+    except Exception as e:
+        print(f"Erro no parecer do especialista {sid}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -48,7 +48,7 @@ O texto misturado segue abaixo:
 
 ${text}`;
 
-    const model = Deno.env.get("OPENAI_MODEL") || "gpt-3.5-turbo-1106";
+    const model = Deno.env.get("OPENAI_MODEL") || "gpt-5";
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

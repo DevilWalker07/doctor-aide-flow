@@ -1,57 +1,90 @@
-// Local-only mock user. Replaces Clerk integration.
-// Generates a stable user id stored in localStorage so all data persists.
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
-const USER_ID_KEY = "da_local_user_id";
-const USER_NAME_KEY = "da_local_user_name";
-
-function generateUUID(): string {
-  // RFC4122 v4 fallback for environments without crypto.randomUUID
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    try {
-      return crypto.randomUUID();
-    } catch {
-      // fall through
-    }
-  }
-  // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+interface AuthState {
+  user: User | null;
+  isLoaded: boolean;
 }
 
-function getOrCreateLocalUserId(): string {
-  if (typeof window === "undefined") return "00000000-0000-4000-8000-000000000000";
-  try {
-    let id = localStorage.getItem(USER_ID_KEY);
-    if (!id) {
-      id = generateUUID();
-      localStorage.setItem(USER_ID_KEY, id);
-    }
-    return id;
-  } catch {
-    return "00000000-0000-4000-8000-000000000000";
-  }
+/**
+ * Bypass pra testes E2E (VITE_E2E=true). Lê o userId/name do localStorage
+ * em vez do Supabase. Evita ter que mockar sessão Supabase nos testes,
+ * que é frágil — depende da chave interna do supabase-js.
+ *
+ * Em produção e dev, VITE_E2E é undefined e o caminho normal (Supabase
+ * Auth real) roda. Esse branch nunca executa em runtime de usuário real.
+ */
+const E2E_BYPASS = import.meta.env.VITE_E2E === "true";
+
+function readE2EUser(): User | null {
+  if (typeof window === "undefined") return null;
+  const id = localStorage.getItem("da_local_user_id");
+  if (!id) return null;
+  const name = localStorage.getItem("da_local_user_name") || "Doutor";
+  return {
+    id,
+    aud: "authenticated",
+    role: "authenticated",
+    email: "e2e@test.local",
+    user_metadata: { name },
+    app_metadata: {},
+    created_at: new Date().toISOString(),
+  } as User;
 }
 
-function getLocalUserName(): string {
-  if (typeof window === "undefined") return "Doutor";
-  try {
-    return localStorage.getItem(USER_NAME_KEY) || "Doutor";
-  } catch {
-    return "Doutor";
-  }
-}
-
+/**
+ * Hook de sessão Supabase. Retorna o usuário logado e o status de load.
+ *
+ * Auth real: lê de supabase.auth.getSession() e ouve onAuthStateChange
+ * pra sincronizar login/logout em todas as tabs.
+ *
+ * - userId: null se não autenticado (consumidores devem aguardar isLoaded
+ *   antes de tomar decisão de fetch)
+ * - userEmail / userName: derivados do user.user_metadata
+ * - isLoaded: false durante o boot até o getSession resolver
+ * - isAuthenticated: true se há sessão ativa
+ */
 export function useSupabaseUser() {
-  const userId = getOrCreateLocalUserId();
-  const userName = getLocalUserName();
+  const [state, setState] = useState<AuthState>(() => {
+    if (E2E_BYPASS) {
+      return { user: readE2EUser(), isLoaded: true };
+    }
+    return { user: null, isLoaded: false };
+  });
+
+  useEffect(() => {
+    if (E2E_BYPASS) return; // pula Supabase Auth em E2E
+
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setState({ user: data.session?.user ?? null, isLoaded: true });
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState({ user: session?.user ?? null, isLoaded: true });
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const user = state.user;
+  const userName =
+    (user?.user_metadata?.name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "Doutor";
 
   return {
-    userId,
-    userEmail: null as string | null,
+    userId: user?.id ?? null,
+    userEmail: user?.email ?? null,
     userName,
-    isLoaded: true,
+    isLoaded: state.isLoaded,
+    isAuthenticated: !!user,
   };
 }

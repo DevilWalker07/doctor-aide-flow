@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/paciente/temp")({
   component: PacienteTempPage,
-  head: () => ({ meta: [{ title: "Visualização Temporária — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Visualização Temporária — PLANTONISTA" }] }),
 });
 
 function PacienteTempPage() {
@@ -29,7 +29,7 @@ function PacienteTempPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
-        <div className="bg-white border border-border rounded-[3rem] p-10 shadow-xl">
+        <div className="bg-elevated border border-border rounded-[3rem] p-10 shadow-xl">
           <div className="flex items-center gap-6 mb-10 border-b border-border pb-8">
             <div className="h-20 w-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
               <User className="h-10 w-10" />
@@ -59,7 +59,7 @@ function PacienteTempPage() {
                 <div className="space-y-3">
                    {paciente.pendencias && paciente.pendencias.length > 0 ? (
                       paciente.pendencias.map((p: any) => (
-                        <div key={p.id} className="flex gap-3 items-center bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 text-xs font-bold text-amber-700 uppercase tracking-tight">
+                        <div key={p.id} className="flex gap-3 items-center bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-tight">
                            <Clock className="h-3.5 w-3.5" /> {p.text}
                         </div>
                       ))

@@ -1,5 +1,27 @@
-import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, useRouterState, useNavigate, Navigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import BottomNav from "@/components/BottomNav";
+import ErrorPage from "@/components/ErrorPage";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+
+const PUBLIC_ROUTES = ["/login", "/cadastro", "/nova-senha"];
+
+// Rotas que funcionam SEM login (modo convidado):
+// - Lab rápido: extração de exames, não persiste dados
+// - Especialistas: chat livre, histórico só em localStorage do device
+// Dados sensíveis (pacientes, plantões) continuam exigindo login.
+const GUEST_ROUTES = ["/lab-rapido", "/especialistas"];
+
+/**
+ * Bypass do auth guard em testes E2E. Setado no CI via VITE_E2E=true
+ * pra Playwright poder navegar livremente sem mockar sessão Supabase
+ * (que é frágil — depende da chave interna do supabase-js).
+ *
+ * Em produção e dev este flag é undefined, então o guard funciona normal.
+ */
+const E2E_BYPASS = import.meta.env.VITE_E2E === "true";
 
 function NotFoundComponent() {
   return (
@@ -26,12 +48,49 @@ function NotFoundComponent() {
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
+  errorComponent: ({ error, reset }) => <ErrorPage error={error} reset={reset} />,
 });
 
 function RootComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAuthenticated, isLoaded } = useSupabaseUser();
+  const nav = useNavigate();
+
+  const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isGuest = GUEST_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isOpen = isPublic || isGuest; // rota não exige login
+  const effectiveAuth = E2E_BYPASS || isAuthenticated;
+
+  // Guard: redireciona deslogado pra /login (exceto em rotas abertas e em E2E)
+  useEffect(() => {
+    if (E2E_BYPASS) return;
+    if (!isLoaded) return;
+    if (!isAuthenticated && !isOpen) {
+      nav({ to: "/login", replace: true });
+    }
+  }, [isLoaded, isAuthenticated, isOpen, nav]);
+
+  // Loading state durante boot (skip em E2E pra evitar timeout dos testes)
+  if (!isLoaded && !E2E_BYPASS) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Bloqueia render em rotas privadas se deslogado (evita flash de conteúdo)
+  if (!effectiveAuth && !isOpen) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <>
-      <Outlet />
+      <div className={isPublic ? "" : "md:pb-0 pb-16"}>
+        <Outlet />
+      </div>
+      {/* BottomNav aparece em rotas privadas (logado) E em rotas guest (mesmo deslogado). */}
+      {!isPublic && (effectiveAuth || isGuest) && <BottomNav guest={!effectiveAuth} />}
       <Toaster richColors position="top-right" />
     </>
   );

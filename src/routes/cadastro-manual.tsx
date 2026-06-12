@@ -23,7 +23,7 @@ export const Route = createFileRoute("/cadastro-manual")({
     };
   },
   component: CadastroManualPage,
-  head: () => ({ meta: [{ title: "Cadastro Manual — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Cadastro Manual — PLANTONISTA" }] }),
 });
 
 const PREDEFINED_COMORBIDITIES = ["HAS", "DM2", "ICC", "DPOC", "IRC", "Tabagismo", "Etilismo", "Neoplasia", "Obesidade", "Hipotireoidismo", "DLP", "AVE Prévio"];
@@ -289,23 +289,23 @@ function CadastroManualPage() {
     }
   };
 
-  const handleAISuggestions = async () => {
-    toast.info("A IA está analisando o caso clínico...");
-    // Mock simulation
-    setTimeout(() => {
-      const suggestions = "1. Vigilância hemodiátrica rigorosa\n2. Reavaliar antibioticoterapia em 48h\n3. Controle de balanço hídrico diário\n4. Fisioterapia motora e respiratória";
-      setForm(f => ({ ...f, condutas: f.condutas + (f.condutas ? "\n" : "") + suggestions }));
-      toast.success("Sugestões de conduta adicionadas!");
-    }, 2000);
+  // Atalhos pras telas standalone que JÁ fazem extração de verdade.
+  // Antes esses dois handlers eram mocks (setTimeout + texto hardcoded),
+  // enganando o usuário. Agora redirecionam pras telas reais com
+  // extração via gpt-5.
+  const handleAISuggestions = () => {
+    toast.info("Use a tela 'Falar com especialista' pra sugestões de conduta.");
+    nav({ to: "/especialistas/$id", params: { id: "victor" } });
   };
 
   const triggerPhotoExtraction = (field: 'laboratorios' | 'medicacoes') => {
-    toast.promise(new Promise(res => setTimeout(res, 3000)), {
-       loading: "Processando imagem...",
-       success: "Dados extraídos com sucesso!",
-       error: "Falha na extração."
-    });
-    // In a real scenario, this would open a file picker and call the documentExtractor
+    if (field === "laboratorios") {
+      toast.info("Use 'Extrair laboratório' — extração real via IA.");
+      nav({ to: "/lab-rapido" });
+    } else {
+      toast.info("Use 'Importar via documento' pra extrair medicações.");
+      nav({ to: "/upload-ia" });
+    }
   };
 
   const addATB = () => {
@@ -335,7 +335,7 @@ function CadastroManualPage() {
            <div className="animate-spin text-primary"><Activity className="h-8 w-8" /></div>
         </div>
       )}
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="max-w-5xl mx-auto px-4 md:px-6 h-16 md:h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
         <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
           <ChevronLeft className="h-4 w-4" /> VOLTAR
         </button>
@@ -345,7 +345,7 @@ function CadastroManualPage() {
         <div className="w-16" />
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-8 md:space-y-12">
         
         {/* IDENTIFICAÇÃO */}
         <Section title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
@@ -372,7 +372,7 @@ function CadastroManualPage() {
                   <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">SEXO</label>
                   <div className="flex bg-secondary/50 rounded-xl p-1 h-[50px]">
                     {["F", "M"].map(s => (
-                      <button key={s} onClick={() => setForm({...form, sexo: s as any})} className={`flex-1 rounded-lg text-xs font-bold transition-all ${form.sexo === s ? "bg-white text-primary shadow-sm" : "text-muted-foreground"}`}>
+                      <button key={s} onClick={() => setForm({...form, sexo: s as any})} className={`flex-1 rounded-lg text-xs font-bold transition-all ${form.sexo === s ? "bg-elevated text-primary shadow-sm" : "text-muted-foreground"}`}>
                         {s === "F" ? "FEM" : "MASC"}
                       </button>
                     ))}
@@ -445,7 +445,7 @@ function CadastroManualPage() {
                 <button 
                   key={c} 
                   onClick={() => toggleComorbidity(c)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${form.comorbidades.includes(c) ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${form.comorbidades.includes(c) ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-elevated text-muted-foreground border-border hover:border-primary/40"}`}
                 >
                   {c}
                 </button>
@@ -549,7 +549,7 @@ function CadastroManualPage() {
                    <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                          <label className="text-[9px] font-bold text-muted-foreground uppercase">VIA</label>
-                         <div className="flex bg-white rounded-xl p-1 border border-border">
+                         <div className="flex bg-elevated rounded-xl p-1 border border-border">
                             {["EV", "VO", "IM", "SC", "Inalatória"].map(v => (
                               <button key={v} onClick={() => {
                                 const newList = [...form.antibioticos];
@@ -585,7 +585,7 @@ function CadastroManualPage() {
         {/* MEDICAÇÕES */}
         <Section title="MEDICAÇÕES EM USO" icon={<Pill className="h-5 w-5" />}>
            <div className="flex justify-between items-center mb-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">LISTA DE PRESCRIÇÃO</p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">LISTA DE PRESCRIÇÃO</p>
               <button 
                 onClick={() => triggerPhotoExtraction('medicacoes')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-ai/10 text-ai text-[10px] font-black uppercase tracking-widest border border-ai/20 hover:bg-ai/20 transition-all"
@@ -597,13 +597,13 @@ function CadastroManualPage() {
            <div className="space-y-6">
               {PREDEFINED_MEDS.map(group => (
                 <div key={group.label} className="space-y-2">
-                   <p className="text-[9px] font-bold text-slate-400 ml-1">{group.label}</p>
+                   <p className="text-[9px] font-bold text-muted-foreground ml-1">{group.label}</p>
                    <div className="flex flex-wrap gap-2">
                       {group.items.map(item => (
                         <button 
                           key={item} 
                           onClick={() => setForm(f => ({...f, medicacoes: [...f.medicacoes, { id: Math.random().toString(), text: item.toUpperCase() }]}))}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 bg-white hover:border-primary/40 hover:bg-slate-50"
+                          className="px-3 py-1.5 rounded-lg border border-border text-[10px] font-bold text-foreground/80 bg-elevated hover:border-primary/40 hover:bg-subtle"
                         >
                           + {item}
                         </button>
@@ -613,7 +613,7 @@ function CadastroManualPage() {
               ))}
            </div>
 
-           <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
+           <div className="space-y-3 pt-6 border-t border-border mt-6">
               {form.medicacoes.map(m => (
                 <div key={m.id} className="flex gap-2">
                   <ControlledInput 
@@ -636,7 +636,7 @@ function CadastroManualPage() {
         {/* LABORATÓRIOS */}
         <Section title="LABORATÓRIOS" icon={<Activity className="h-5 w-5" />}>
            <div className="flex justify-between items-center mb-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RESULTADOS E EVOLUÇÃO</p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">RESULTADOS E EVOLUÇÃO</p>
               <button 
                 onClick={() => triggerPhotoExtraction('laboratorios')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary/20 transition-all"
@@ -698,13 +698,13 @@ function CadastroManualPage() {
                 { key: 'pele', label: 'PELE / MUCOSAS' },
               ].map(field => (
                 <div key={field.key} className="space-y-3">
-                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+                   <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">{field.label}</label>
                    <div className="flex flex-wrap gap-2 mb-2">
                       {(PREDEFINED_PHYSICAL as any)[field.key]?.map((phrase: string) => (
                         <button 
                           key={phrase} 
                           onClick={() => setForm({...form, exame_fisico: {...form.exame_fisico, [field.key]: phrase.toUpperCase()}})}
-                          className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-500 bg-slate-50/50 hover:border-primary/30 transition-all"
+                          className="px-3 py-1.5 rounded-lg border border-border text-[9px] font-bold text-muted-foreground bg-subtle/50 hover:border-primary/30 transition-all"
                         >
                           + {phrase.split(',')[0]}...
                         </button>
@@ -725,19 +725,19 @@ function CadastroManualPage() {
         {tipoEvolucao === 'uti' && (
           <Section title="CAMPOS UTI" icon={<Wind className="h-5 w-5" />}>
              <div className="space-y-10">
-                <div className="flex items-center justify-between bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                <div className="flex items-center justify-between bg-subtle p-6 rounded-3xl border border-border">
                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                      <div className="h-12 w-12 rounded-2xl bg-elevated flex items-center justify-center text-primary shadow-sm border border-border">
                         <Wind className="h-6 w-6" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 block mb-0.5">VENTILAÇÃO MECÂNICA</span>
-                        <p className="text-[9px] font-bold text-slate-400">Marque se o paciente está entubado ou em VNI</p>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground block mb-0.5">VENTILAÇÃO MECÂNICA</span>
+                        <p className="text-[9px] font-bold text-muted-foreground">Marque se o paciente está entubado ou em VNI</p>
                       </div>
                    </div>
-                   <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm">
-                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: false}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${!form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}>NÃO</button>
-                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: true}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}>SIM</button>
+                   <div className="flex bg-elevated rounded-xl p-1.5 border border-border shadow-sm">
+                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: false}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${!form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground"}`}>NÃO</button>
+                      <button onClick={() => setForm({...form, uti: {...form.uti, vm: true}})} className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground"}`}>SIM</button>
                    </div>
                 </div>
 
@@ -745,7 +745,7 @@ function CadastroManualPage() {
                   <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex flex-wrap gap-2">
                        {PREDEFINED_VENT.map(m => (
-                         <button key={m} onClick={() => setForm({...form, uti: {...form.uti, modo: m}})} className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${form.uti.modo === m ? "bg-primary text-white border-primary" : "bg-white text-slate-500 border-slate-200 hover:border-primary/30"}`}>
+                         <button key={m} onClick={() => setForm({...form, uti: {...form.uti, modo: m}})} className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${form.uti.modo === m ? "bg-primary text-white border-primary" : "bg-elevated text-muted-foreground border-border hover:border-primary/30"}`}>
                            {m}
                          </button>
                        ))}
@@ -758,7 +758,7 @@ function CadastroManualPage() {
                          { k: 'fr', l: 'FR' }
                        ].map(v => (
                          <div key={v.k} className="space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{v.l}</label>
+                            <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">{v.l}</label>
                             <ControlledInput 
                               value={(form.uti as any)[v.k]} 
                               onValueChange={val => setForm({...form, uti: {...form.uti, [v.k]: val}})} 
@@ -770,18 +770,18 @@ function CadastroManualPage() {
                   </div>
                 )}
 
-                <div className="grid md:grid-cols-2 gap-10 border-t border-slate-100 pt-10">
+                <div className="grid md:grid-cols-2 gap-10 border-t border-border pt-10">
                    <div className="space-y-6">
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">DROGAS VASOATIVAS</label>
-                        <div className="h-px flex-1 bg-slate-100 mx-4" />
+                        <label className="text-[10px] font-black text-foreground uppercase tracking-widest">DROGAS VASOATIVAS</label>
+                        <div className="h-px flex-1 bg-subtle mx-4" />
                       </div>
                       <div className="flex flex-wrap gap-2 mb-4">
                          {PREDEFINED_DVA.map(d => (
                            <button 
                             key={d} 
                             onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Math.random().toString(), text: d + " "}]}})}
-                            className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-400 hover:text-primary hover:border-primary/30"
+                            className="px-3 py-1.5 rounded-lg border border-border text-[9px] font-bold text-muted-foreground hover:text-primary hover:border-primary/30"
                            >
                             + {d}
                            </button>
@@ -796,17 +796,17 @@ function CadastroManualPage() {
                               placeholder="DOSE/VELOCIDADE..." 
                               uppercase
                              />
-                             <button onClick={() => setForm({...form, uti: {...form.uti, dva: form.uti.dva.filter(item => item.id !== dva.id)}})} className="p-4 rounded-xl bg-slate-50 text-slate-400 hover:text-destructive transition-colors">
+                             <button onClick={() => setForm({...form, uti: {...form.uti, dva: form.uti.dva.filter(item => item.id !== dva.id)}})} className="p-4 rounded-xl bg-subtle text-muted-foreground hover:text-destructive transition-colors">
                                 <Trash2 className="h-4 w-4" />
                              </button>
                           </div>
                         ))}
-                        <button onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Date.now().toString(), text: ""}]}})} className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 hover:text-primary hover:border-primary/40 transition-all">+ ADICIONAR DVA MANUAL</button>
+                        <button onClick={() => setForm({...form, uti: {...form.uti, dva: [...form.uti.dva, {id: Date.now().toString(), text: ""}]}})} className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-[10px] font-black text-muted-foreground hover:text-primary hover:border-primary/40 transition-all">+ ADICIONAR DVA MANUAL</button>
                       </div>
                    </div>
                    <div className="space-y-8">
                       <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">BALANÇO HÍDRICO 24H (ML)</label>
+                         <label className="text-[10px] font-black text-foreground uppercase tracking-widest block mb-1">BALANÇO HÍDRICO 24H (ML)</label>
                          <ControlledInput 
                            type="number" 
                            value={form.uti.bh} 
@@ -815,7 +815,7 @@ function CadastroManualPage() {
                          />
                       </div>
                       <div className="space-y-2">
-                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">SEDAÇÃO / ANALGESIA</label>
+                         <label className="text-[10px] font-black text-foreground uppercase tracking-widest block mb-1">SEDAÇÃO / ANALGESIA</label>
                          <ControlledInput 
                            value={form.uti.sedacao} 
                            onValueChange={v => setForm({...form, uti: {...form.uti, sedacao: v}})} 
@@ -880,7 +880,7 @@ function CadastroManualPage() {
         {/* CONDUTAS */}
         <Section title="PLANO TERAPÊUTICO / CONDUTAS" icon={<Save className="h-5 w-5" />}>
            <div className="flex justify-between items-center mb-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DIGITE E DÊ ENTER PARA NUMERAR</p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">DIGITE E DÊ ENTER PARA NUMERAR</p>
               <button 
                 onClick={handleAISuggestions}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-ai text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all"
@@ -896,9 +896,9 @@ function CadastroManualPage() {
              placeholder="1. Vigiar balanço..." 
              uppercase
            />
-           <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-3">
-              <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+           <div className="mt-4 p-4 bg-subtle rounded-2xl border border-border flex items-start gap-3">
+              <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed">
                 Dica: Pressione ENTER para criar automaticamente o próximo item da lista.
               </p>
            </div>
@@ -956,12 +956,12 @@ function Section({ title, icon, children }: { title: string, icon: any, children
         </div>
         <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm space-y-6">
+      <div className="bg-elevated border border-border rounded-2xl md:rounded-[3rem] p-5 md:p-12 shadow-sm space-y-6">
         {children}
       </div>
     </div>
   );
 }
 
-const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
-const textareaCls = "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white leading-relaxed transition-all uppercase";
+const inputCls = "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all uppercase";
+const textareaCls = "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated leading-relaxed transition-all uppercase";

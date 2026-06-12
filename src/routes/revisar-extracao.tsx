@@ -11,6 +11,7 @@ import { differenceInDays, parseISO, isValid } from "date-fns";
 import { createPatient, mergePatientData, type Patient } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
+import { ANTIBIOTICOS_ROTINEIROS, searchAntibioticos, type AntibioticoRotineiro } from "@/lib/antibioticos-rotineiros";
 
 export const Route = createFileRoute("/revisar-extracao")({
   component: RevisarExtracao,
@@ -19,12 +20,12 @@ export const Route = createFileRoute("/revisar-extracao")({
       patient_id: search.patient_id as string | undefined,
     };
   },
-  head: () => ({ meta: [{ title: "Revisar Extração — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Revisar Extração — PLANTONISTA" }] }),
 });
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const inputCls = "w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all placeholder:text-slate-300 shadow-sm";
-const textareaCls = "w-full bg-white border border-slate-200 rounded-2xl px-5 py-5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all leading-relaxed placeholder:text-slate-300 shadow-sm";
+const inputCls = "w-full bg-elevated border border-border rounded-2xl px-5 py-4 text-sm font-semibold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all placeholder:text-slate-300 shadow-sm";
+const textareaCls = "w-full bg-elevated border border-border rounded-2xl px-5 py-5 text-sm font-semibold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all leading-relaxed placeholder:text-slate-300 shadow-sm";
 
 // ─── Components ──────────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }
   const handleBlur = () => { if (local !== value) onChange(local); };
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">{label}</label>
       <textarea value={local} onChange={(e) => setLocal(e.target.value)} onBlur={handleBlur} rows={rows} className={textareaCls} placeholder={placeholder} />
     </div>
   );
@@ -50,7 +51,7 @@ const EditableInput = memo(({ value, onChange, label, type = "text", placeholder
   };
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">{label}</label>
       <input type={type} value={local} onChange={(e) => setLocal(e.target.value)} onBlur={handleBlur} className={inputCls} placeholder={placeholder} />
     </div>
   );
@@ -59,10 +60,10 @@ const EditableInput = memo(({ value, onChange, label, type = "text", placeholder
 const Section = memo(({ id, title, icon, children }: { id: string, title: string, icon: any, children: any }) => (
   <section id={id} className="scroll-mt-32">
     <div className="flex items-center gap-3 mb-6">
-      <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">{icon}</div>
-      <h2 className="text-xs font-black tracking-[0.2em] uppercase text-slate-900">{title}</h2>
+      <div className="h-10 w-10 rounded-xl bg-elevated border border-border flex items-center justify-center text-muted-foreground shadow-sm">{icon}</div>
+      <h2 className="text-xs font-black tracking-[0.2em] uppercase text-foreground">{title}</h2>
     </div>
-    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-10 shadow-sm space-y-8">{children}</div>
+    <div className="bg-elevated border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-10 shadow-sm space-y-6 md:space-y-8">{children}</div>
   </section>
 ));
 
@@ -92,12 +93,12 @@ const Sidebar = memo(({ onScrollTo }: { onScrollTo: (id: string) => void }) => {
   }, []);
   return (
     <aside className="w-72 hidden md:block sticky top-32 self-start space-y-2">
-      <div className="bg-white/50 border border-slate-200 rounded-[2rem] p-3 space-y-1">
+      <div className="bg-elevated/50 border border-border rounded-[2rem] p-3 space-y-1">
         {SIDEBAR_ITEMS.map(item => {
           const isActive = active === item.id;
           const Icon = item.icon;
           return (
-            <button key={item.id} onClick={() => onScrollTo(item.id)} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all ${isActive ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/30"}`}>
+            <button key={item.id} onClick={() => onScrollTo(item.id)} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all ${isActive ? "bg-elevated text-primary shadow-sm" : "text-muted-foreground hover:text-foreground/80 hover:bg-elevated/30"}`}>
               <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-300"}`} />
               {item.label}
               {isActive && <ChevronRight className="ml-auto h-3 w-3" />}
@@ -119,65 +120,141 @@ const ProblemList = memo(({ items, onChange }: any) => (
           newList[i] = { ...p, text: e.target.value.toUpperCase() };
           onChange(newList);
         }} className={inputCls} />
-        <button onClick={() => onChange(items.filter((item: any) => item.id !== p.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
+        <button onClick={() => onChange(items.filter((item: any) => item.id !== p.id))} className="p-4 text-muted-foreground hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
       </div>
     ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR PROBLEMA</button>
+    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-border rounded-[2rem] text-[11px] font-black text-muted-foreground flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR PROBLEMA</button>
   </div>
 ));
 
-const AntibioticList = memo(({ items, onChange }: any) => (
-  <div className="space-y-8">
-    {items.map((a: any, i: number) => (
-      <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2">
-             <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
-             <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
-          </div>
-          <button onClick={() => onChange(items.filter((item: any) => item.id !== a.id))} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
-        </div>
-        <div className="space-y-6">
-          <EditableInput label="NOME DO ANTIBIÓTICO" value={a.nome} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, nome: v.toUpperCase() }; onChange(list); }} />
-          <div className="grid grid-cols-2 gap-4">
-             <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dose: v.toUpperCase() }; onChange(list); }} />
-             <EditableInput label="VIA" value={a.via} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, via: v.toUpperCase() }; onChange(list); }} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-             <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, frequencia: v.toUpperCase() }; onChange(list); }} />
-             <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dataInicio: v }; onChange(list); }} />
-          </div>
+const AntibioticList = memo(({ items, onChange }: any) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const addRotineiro = (atb: AntibioticoRotineiro) => {
+    onChange([...items, {
+      id: Math.random().toString(36).substr(2, 9),
+      nome: atb.nome,
+      dose: atb.dose,
+      via: atb.via,
+      frequencia: atb.frequencia,
+      dataInicio: today,
+    }]);
+  };
+  return (
+    <div className="space-y-8">
+      <div className="bg-ai/5 border border-ai/20 rounded-2xl p-5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-ai mb-3">
+          ADICIONAR ROTINEIRO (1 CLIQUE)
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {ANTIBIOTICOS_ROTINEIROS.map((atb) => (
+            <button
+              key={atb.nome}
+              type="button"
+              onClick={() => addRotineiro(atb)}
+              className="px-3 py-1.5 rounded-lg bg-elevated border border-ai/30 text-ai text-[10px] font-black uppercase tracking-wider hover:bg-ai hover:text-white transition-all"
+              title={`${atb.dose} ${atb.via} ${atb.frequencia}`}
+            >
+              + {atb.nome.replace("PIPERACILINA + TAZOBACTAM", "PIP-TAZO").replace("AMOXICILINA + CLAVULANATO", "AMOXI-CLAV")}
+            </button>
+          ))}
         </div>
       </div>
-    ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: new Date().toISOString().slice(0, 10) }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO</button>
-  </div>
-));
+      {items.map((a: any, i: number) => (
+        <div key={a.id} className="bg-subtle border border-border rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 space-y-5 md:space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <div className="flex items-center gap-2">
+               <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}</span>
+               <span className="text-xs font-black text-foreground uppercase tracking-wider">{a.nome || "Novo ATB"}</span>
+            </div>
+            <button onClick={() => onChange(items.filter((item: any) => item.id !== a.id))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+          </div>
+          <div className="space-y-6">
+            <AntibioticNameAutocomplete
+              value={a.nome}
+              onSelect={(atb) => {
+                const list = [...items];
+                list[i] = { ...a, nome: atb.nome, dose: a.dose || atb.dose, via: a.via || atb.via, frequencia: a.frequencia || atb.frequencia };
+                onChange(list);
+              }}
+              onTextChange={(v) => { const list = [...items]; list[i] = { ...a, nome: v.toUpperCase() }; onChange(list); }}
+            />
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="DOSE" value={a.dose} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dose: v.toUpperCase() }; onChange(list); }} />
+               <EditableInput label="VIA" value={a.via} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, via: v.toUpperCase() }; onChange(list); }} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <EditableInput label="FREQUÊNCIA" value={a.frequencia} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, frequencia: v.toUpperCase() }; onChange(list); }} />
+               <EditableInput label="DATA INÍCIO" type="date" value={a.dataInicio} onChange={(v: any) => { const list = [...items]; list[i] = { ...a, dataInicio: v }; onChange(list); }} />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), nome: "", dose: "", via: "EV", frequencia: "12/12h", dataInicio: today }])} className="w-full py-5 border-2 border-dashed border-border rounded-[2rem] text-[11px] font-black text-muted-foreground flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ATB MANUAL</button>
+    </div>
+  );
+});
+
+const AntibioticNameAutocomplete = ({ value, onSelect, onTextChange }: {
+  value: string;
+  onSelect: (atb: AntibioticoRotineiro) => void;
+  onTextChange: (v: string) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const suggestions = useMemo(() => value ? searchAntibioticos(value, 6) : [], [value]);
+  return (
+    <div className="relative">
+      <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">NOME DO ANTIBIÓTICO</label>
+      <input
+        value={value}
+        onChange={(e) => { onTextChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        className="w-full px-5 py-4 rounded-2xl border border-border bg-elevated text-sm font-bold uppercase focus:outline-none focus:ring-2 focus:ring-primary/40"
+        placeholder="Digite ou escolha..."
+      />
+      {open && suggestions.length > 0 && value && !suggestions.some(s => s.nome === value.toUpperCase()) && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-elevated border border-border rounded-2xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
+          {suggestions.map((atb) => (
+            <button
+              key={atb.nome}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelect(atb); setOpen(false); }}
+              className="w-full text-left px-5 py-3 hover:bg-secondary border-b border-border last:border-b-0"
+            >
+              <p className="text-xs font-black uppercase tracking-wider">{atb.nome}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">{atb.dose} · {atb.via} · {atb.frequencia}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MedicationList = memo(({ items, onChange }: any) => (
   <div className="space-y-4">
     {items.map((m: any, i: number) => (
       <div key={m.id} className="flex gap-3">
         <input value={m.text} onChange={(e) => { const list = [...items]; list[i] = { ...m, text: e.target.value.toUpperCase() }; onChange(list); }} className={inputCls} />
-        <button onClick={() => onChange(items.filter((item: any) => item.id !== m.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
+        <button onClick={() => onChange(items.filter((item: any) => item.id !== m.id))} className="p-4 text-muted-foreground hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
       </div>
     ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO</button>
+    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-border rounded-[2rem] text-[11px] font-black text-muted-foreground flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO</button>
   </div>
 ));
 
 const LabList = memo(({ items, onChange }: any) => (
   <div className="space-y-8">
     {items.map((l: any, i: number) => (
-      <div key={l.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+      <div key={l.id} className="bg-elevated border border-border rounded-2xl md:rounded-[2rem] p-5 md:p-8 shadow-sm">
+        <div className="flex justify-between items-center border-b border-border pb-4">
           <EditableInput type="date" value={l.data} onChange={(v: any) => { const list = [...items]; list[i] = { ...l, data: v }; onChange(list); }} />
-          <button onClick={() => onChange(items.filter((item: any) => item.id !== l.id))} className="text-slate-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => onChange(items.filter((item: any) => item.id !== l.id))} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
         </div>
         <EditableTextarea label="RESULTADOS EXAMES" value={l.valor} onChange={(v: any) => { const list = [...items]; list[i] = { ...l, valor: v.toUpperCase() }; onChange(list); }} rows={4} />
       </div>
     ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), data: new Date().toISOString().slice(0, 10), valor: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR EXAME</button>
+    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), data: new Date().toISOString().slice(0, 10), valor: "" }])} className="w-full py-5 border-2 border-dashed border-border rounded-[2rem] text-[11px] font-black text-muted-foreground flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR EXAME</button>
   </div>
 ));
 
@@ -186,10 +263,10 @@ const SimpleList = memo(({ items, onChange, placeholder }: any) => (
     {items.map((c: any, i: number) => (
       <div key={c.id} className="flex gap-3">
         <input value={c.text} onChange={(e) => { const list = [...items]; list[i] = { ...c, text: e.target.value.toUpperCase() }; onChange(list); }} className={inputCls} placeholder={placeholder} />
-        <button onClick={() => onChange(items.filter((item: any) => item.id !== c.id))} className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
+        <button onClick={() => onChange(items.filter((item: any) => item.id !== c.id))} className="p-4 text-muted-foreground hover:text-red-500 rounded-2xl"><Trash2 className="h-5 w-5" /></button>
       </div>
     ))}
-    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ITEM</button>
+    <button onClick={() => onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])} className="w-full py-5 border-2 border-dashed border-border rounded-[2rem] text-[11px] font-black text-muted-foreground flex items-center justify-center gap-3"><Plus className="h-4 w-4" /> ADICIONAR ITEM</button>
   </div>
 ));
 
@@ -282,7 +359,12 @@ function RevisarExtracao() {
         name: data.nome, age: data.idade, sex: data.sexo, bed: data.leito, sector: data.setor,
         admission_date: data.data_admissao, reason_for_admission: data.motivo_admissao, hda: data.hda,
         problem_list: data.lista_de_problemas.map((p: any) => p.text),
-        antibiotics: data.antibioticos.map((a: any) => ({ nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia, data_inicio: a.dataInicio })),
+        antibiotics: data.antibioticos.map((a: any) => ({
+          nome: a.nome, dose: a.dose, via: a.via, frequencia: a.frequencia,
+          data_inicio: a.dataInicio,
+          ...(a.dataFim || a.data_fim ? { data_fim: a.dataFim || a.data_fim } : {}),
+          ...(a.status ? { status: a.status } : {}),
+        })),
         medications: data.medicacoes.map((m: any) => m.text),
         labs: data.laboratorios.map((l: any) => ({ data: l.data, texto_compacto: l.valor })),
         physical_exam: data.exame_fisico_detalhado,
@@ -303,10 +385,16 @@ function RevisarExtracao() {
         toast.success("Salvo com sucesso!");
         nav({ to: "/paciente/$id", params: { id: savedPatient.id } });
       } catch {
-        // Fallback local
+        // Fallback local — sempre marca o paciente com o shift_id ATIVO
+        // para que ele apareça apenas no dashboard daquele plantão.
         const localId = patient_id || "temp_" + Date.now();
         const existing = storage.getLocalPacientes();
-        existing.push({ id: localId, ...patientPayload, status: 'internado' });
+        const existingIdx = existing.findIndex((p: any) => p.id === localId);
+        if (existingIdx >= 0) {
+          existing[existingIdx] = { ...existing[existingIdx], ...patientPayload, shift_id: shiftId, status: 'internado' };
+        } else {
+          existing.push({ id: localId, ...patientPayload, shift_id: shiftId, status: 'internado' });
+        }
         storage.setLocalPacientes(existing);
         storage.clearExtracaoResultado();
         toast.success("Salvo localmente!");
@@ -322,14 +410,14 @@ function RevisarExtracao() {
   if (!data) return <div className="min-h-screen flex items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9]">
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+    <div className="min-h-screen bg-subtle">
+      <header className="bg-elevated/80 backdrop-blur-xl border-b border-border sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500"><X className="h-5 w-5" /></Link>
+            <Link to="/dashboard" className="h-10 w-10 rounded-xl bg-subtle flex items-center justify-center text-muted-foreground"><X className="h-5 w-5" /></Link>
             <div>
-              <h1 className="text-sm font-black text-slate-900 uppercase">REVISAR EXTRAÇÃO</h1>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-3 w-3" /> {storage.getJobArquivo()}</p>
+              <h1 className="text-sm font-black text-foreground uppercase">REVISAR EXTRAÇÃO</h1>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Clock className="h-3 w-3" /> {storage.getJobArquivo()}</p>
             </div>
           </div>
           <button onClick={handleSave} disabled={saving} className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase flex items-center gap-3 shadow-xl disabled:opacity-50">
@@ -338,15 +426,15 @@ function RevisarExtracao() {
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-10 flex gap-12">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-6 md:py-10 flex gap-6 md:gap-12">
         <Sidebar onScrollTo={scrollTo} />
-        <main className="flex-1 max-w-3xl space-y-16 pb-40">
+        <main className="flex-1 max-w-3xl space-y-10 md:space-y-16 pb-32 md:pb-40">
           {patient_id && (
-            <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex items-center gap-6">
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl md:rounded-3xl p-5 md:p-8 flex items-start md:items-center gap-4 md:gap-6">
               <div className="h-14 w-14 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0"><Plus className="h-8 w-8" /></div>
               <div>
                  <h3 className="text-sm font-black text-primary uppercase mb-1">MODO: ADICIONAR AO PACIENTE</h3>
-                 <p className="text-xs text-slate-500 font-bold">Dados extraídos serão mesclados ao prontuário.</p>
+                 <p className="text-xs text-muted-foreground font-bold">Dados extraídos serão mesclados ao prontuário.</p>
               </div>
             </div>
           )}
@@ -356,10 +444,10 @@ function RevisarExtracao() {
               <EditableInput label="NOME COMPLETO" value={data.nome} onChange={(v: any) => updateField('nome', v)} uppercase />
               <EditableInput label="IDADE" type="number" value={data.idade} onChange={(v: any) => updateField('idade', v)} />
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SEXO</label>
-                <div className="flex bg-slate-100 rounded-2xl p-1.5 gap-1.5">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">SEXO</label>
+                <div className="flex bg-subtle rounded-2xl p-1.5 gap-1.5">
                   {["F", "M"].map(s => (
-                    <button key={s} onClick={() => updateField('sexo', s)} className={`flex-1 py-4 rounded-xl text-xs font-black transition-all ${data.sexo === s ? "bg-white text-primary shadow-sm" : "text-slate-400"}`}>
+                    <button key={s} onClick={() => updateField('sexo', s)} className={`flex-1 py-4 rounded-xl text-xs font-black transition-all ${data.sexo === s ? "bg-elevated text-primary shadow-sm" : "text-muted-foreground"}`}>
                       {s === "F" ? "FEMININO" : "MASCULINO"}
                     </button>
                   ))}
@@ -422,9 +510,9 @@ function RevisarExtracao() {
             <Section id="alertas" title="ALERTAS DA IA" icon={<AlertCircle className="h-5 w-5 text-red-500" />}>
               <div className="space-y-4">
                 {data.alertas.map((alerta: string, i: number) => (
-                  <div key={i} className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4">
+                  <div key={i} className="p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl flex items-start gap-4">
                     <Info className="h-5 w-5 text-amber-500" />
-                    <p className="text-xs font-bold uppercase text-amber-900">{alerta}</p>
+                    <p className="text-xs font-bold uppercase text-amber-900 dark:text-amber-300">{alerta}</p>
                   </div>
                 ))}
               </div>

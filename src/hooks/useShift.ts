@@ -20,7 +20,10 @@ export interface ShiftContext {
 
 export function useShift() {
   const { userId } = useSupabaseUser()
-  const [shift, setShift] = useState<ShiftContext | null>(null)
+  // Hidrata o state com localStorage no init para evitar loops em rotas
+  // que dependem do shift antes do useEffect terminar (especialmente quando
+  // dbGetActiveShift trava por Supabase não configurado).
+  const [shift, setShift] = useState<ShiftContext | null>(() => readLocal())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,11 +68,9 @@ export function useShift() {
       .finally(() => setLoading(false))
   }, [userId])
 
-  // Legacy getShift for backward compat with cadastro-manual etc.
-  const getShift = useCallback((): ShiftContext | null => {
-    if (shift) return shift
-    return readLocal()
-  }, [shift])
+  // Legacy getShift para compat. NÃO chama readLocal aqui (criava nova
+  // referência a cada render, causando loops em useEffect deps).
+  const getShift = useCallback((): ShiftContext | null => shift, [shift])
 
   const getTipo = useCallback((): string | null => {
     if (shift?.tipo) return shift.tipo

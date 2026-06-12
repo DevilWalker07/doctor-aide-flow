@@ -43,7 +43,7 @@ export const ControlledInput = memo(({
       onChange={handleChange}
       onBlur={handleBlur}
       className={cn(
-        "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all",
+        "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated transition-all",
         uppercase && "uppercase",
         className
       )}
@@ -94,7 +94,7 @@ export const ControlledTextarea = memo(({
       onChange={handleChange}
       onBlur={handleBlur}
       className={cn(
-        "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white leading-relaxed transition-all",
+        "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-elevated leading-relaxed transition-all",
         uppercase && "uppercase",
         className
       )}

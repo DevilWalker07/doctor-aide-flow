@@ -13,7 +13,17 @@
       "PowerShell(py *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__get_edge_function",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__deploy_edge_function",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__get_logs",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__execute_sql",
+      "mcp__c2e2f705-40fc-4937-8c9f-c9be6f2d9bc2__list_teams",
+      "mcp__c2e2f705-40fc-4937-8c9f-c9be6f2d9bc2__list_projects",
+      "mcp__c2e2f705-40fc-4937-8c9f-c9be6f2d9bc2__get_project",
+      "mcp__c2e2f705-40fc-4937-8c9f-c9be6f2d9bc2__list_deployments",
+      "mcp__c2e2f705-40fc-4937-8c9f-c9be6f2d9bc2__check_domain_availability_and_price",
+      "mcp__a78a9f5b-a681-4ead-bbc0-7fe486646fa7__get_publishable_keys"
     ]
   }
 }
