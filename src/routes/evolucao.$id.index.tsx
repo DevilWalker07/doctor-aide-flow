@@ -24,6 +24,7 @@ import {
 } from "@/lib/evolutionTemplates";
 import ShiftBadge from "@/components/ShiftBadge";
 import ThemeToggle from "@/components/ThemeToggle";
+import VoiceRecorder from "@/components/voice/VoiceRecorder";
 import ATBAlertBanner from "@/components/atb/ATBAlertBanner";
 import { getATBsWithAlert } from "@/lib/atbAlerts";
 
@@ -864,13 +865,21 @@ function EvolucaoPage() {
                         {showRawNotes ? "OCULTAR ANOTAÇÕES BRUTAS" : "USAR ANOTAÇÕES BRUTAS COMO ENTRADA"}
                      </button>
                      {showRawNotes && (
-                        <textarea
-                           value={rawNotes}
-                           onChange={(e) => setRawNotes(e.target.value)}
-                           placeholder="Cole ou dite suas anotações brutas aqui. A IA vai reestruturar conforme o modelo selecionado."
-                           className="w-full min-h-[120px] bg-secondary/20 border border-border rounded-2xl p-4 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-ai/30"
-                           aria-label="Anotações brutas para reestruturação"
-                        />
+                        <div className="space-y-3">
+                           <VoiceRecorder
+                              value={rawNotes}
+                              onChange={setRawNotes}
+                              autosaveKey={`da_voz_rascunho_${id}`}
+                              label="DITADO POR VOZ (PT-BR)"
+                           />
+                           <textarea
+                              value={rawNotes}
+                              onChange={(e) => setRawNotes(e.target.value)}
+                              placeholder="Cole, dite ou rascunhe suas anotações brutas aqui. A IA vai reestruturar conforme o modelo selecionado."
+                              className="w-full min-h-[120px] bg-secondary/20 border border-border rounded-2xl p-4 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-ai/30"
+                              aria-label="Anotações brutas para reestruturação"
+                           />
+                        </div>
                      )}
                      <p className="text-[9px] font-bold text-muted-foreground italic mt-1">
                         Modelo: <span className="text-foreground">{activeTemplate.label}</span> · {activeTemplate.description}
