@@ -14,6 +14,7 @@ import { Route as TipoRouteImport } from './routes/tipo'
 import { Route as RoundRouteImport } from './routes/round'
 import { Route as RevisarExtracaoRouteImport } from './routes/revisar-extracao'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as PassagemPlantaoRouteImport } from './routes/passagem-plantao'
 import { Route as PassagemRouteImport } from './routes/passagem'
 import { Route as PacienteInternadoRouteImport } from './routes/paciente-internado'
 import { Route as NovoPacienteRouteImport } from './routes/novo-paciente'
@@ -57,6 +58,11 @@ const RevisarExtracaoRoute = RevisarExtracaoRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PassagemPlantaoRoute = PassagemPlantaoRouteImport.update({
+  id: '/passagem-plantao',
+  path: '/passagem-plantao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PassagemRoute = PassagemRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
   '/passagem': typeof PassagemRoute
+  '/passagem-plantao': typeof PassagemPlantaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
   '/passagem': typeof PassagemRoute
+  '/passagem-plantao': typeof PassagemPlantaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/novo-paciente': typeof NovoPacienteRoute
   '/paciente-internado': typeof PacienteInternadoRoute
   '/passagem': typeof PassagemRoute
+  '/passagem-plantao': typeof PassagemPlantaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/revisar-extracao': typeof RevisarExtracaoRoute
   '/round': typeof RoundRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/novo-paciente'
     | '/paciente-internado'
     | '/passagem'
+    | '/passagem-plantao'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/novo-paciente'
     | '/paciente-internado'
     | '/passagem'
+    | '/passagem-plantao'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/novo-paciente'
     | '/paciente-internado'
     | '/passagem'
+    | '/passagem-plantao'
     | '/recuperar-senha'
     | '/revisar-extracao'
     | '/round'
@@ -328,6 +340,7 @@ export interface RootRouteChildren {
   NovoPacienteRoute: typeof NovoPacienteRoute
   PacienteInternadoRoute: typeof PacienteInternadoRoute
   PassagemRoute: typeof PassagemRoute
+  PassagemPlantaoRoute: typeof PassagemPlantaoRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RevisarExtracaoRoute: typeof RevisarExtracaoRoute
   RoundRoute: typeof RoundRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/passagem'
       fullPath: '/passagem'
       preLoaderRoute: typeof PassagemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passagem-plantao': {
+      id: '/passagem-plantao'
+      path: '/passagem-plantao'
+      fullPath: '/passagem-plantao'
+      preLoaderRoute: typeof PassagemPlantaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paciente-internado': {
@@ -539,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   NovoPacienteRoute: NovoPacienteRoute,
   PacienteInternadoRoute: PacienteInternadoRoute,
   PassagemRoute: PassagemRoute,
+  PassagemPlantaoRoute: PassagemPlantaoRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RevisarExtracaoRoute: RevisarExtracaoRoute,
   RoundRoute: RoundRoute,

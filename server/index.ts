@@ -12,6 +12,7 @@ import express from "express";
 import cors from "cors";
 import { aiRouter } from "./routes/ai.routes.js";
 import { extractRouter } from "./routes/extract.routes.js";
+import { passagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { DEFAULT_MODEL, hasOpenAIKey } from "./services/openaiClient.js";
 
 const app = express();
@@ -40,12 +41,14 @@ app.get("/health", (_req, res) => {
       "/api/extract/job/:jobId",
       "/api/extract/extract-document-async",
       "/api/extract/extract-job/:jobId",
+      "/api/passagem-plantao/gerar",
     ],
   });
 });
 
 app.use("/api/ai", aiRouter);
 app.use("/api/extract", extractRouter);
+app.use("/api/passagem-plantao", passagemPlantaoRouter);
 
 // Serve static files from the 'dist' directory
 const distPath = path.join(__dirname, "../dist");
