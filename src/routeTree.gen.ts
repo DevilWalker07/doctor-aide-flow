@@ -391,18 +391,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecuperarSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/passagem': {
-      id: '/passagem'
-      path: '/passagem'
-      fullPath: '/passagem'
-      preLoaderRoute: typeof PassagemRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/passagem-plantao': {
       id: '/passagem-plantao'
       path: '/passagem-plantao'
       fullPath: '/passagem-plantao'
       preLoaderRoute: typeof PassagemPlantaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passagem': {
+      id: '/passagem'
+      path: '/passagem'
+      fullPath: '/passagem'
+      preLoaderRoute: typeof PassagemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/paciente-internado': {
