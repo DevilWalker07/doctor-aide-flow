@@ -20,16 +20,20 @@ export interface PatientRow {
   leito: string;
   paciente: string;
   dih: string;
+  di?: number | null;
   diagnostico: string;
+  quadroAtual?: string;
   atb: string;
   ultimoLab: string;
   condutasHoje: string;
   alertasPendencias: string;
+  dispositivos?: string | null;
   anotacoesVisita: string;
 }
 
 export interface AlertaCritico {
   prioridade: string;
+  leito?: string;
   paciente: string;
   acao: string;
 }
@@ -199,13 +203,21 @@ export async function gerarMapaPlantaoDocx(
 
   const dataRows = data.pacientes.map((p, idx) => {
     const bgColor = idx % 2 === 0 ? undefined : LIGHT_GRAY;
-    const leitoText = `${p.leito}\n${p.paciente}\nDIH: ${p.dih}`;
+    const diStr = p.di != null ? `\nDI: ${p.di}d` : "";
+    const leitoText = `${p.leito}\n${p.paciente}\nDIH: ${p.dih}${diStr}`;
     const hasAlertaUrgente = p.alertasPendencias.includes("!!");
+    const diagText = [
+      p.quadroAtual ?? null,
+      p.diagnostico,
+      p.dispositivos ? `[${p.dispositivos}]` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     return new TableRow({
       children: [
         cell(leitoText, { bold: true, fontSize: 13, bgColor, width: COL.leito }),
-        cell(p.diagnostico, { fontSize: 13, bgColor, width: COL.diagnostico }),
+        cell(diagText, { fontSize: 13, bgColor, width: COL.diagnostico }),
         cell(p.atb, { fontSize: 13, bgColor, width: COL.atb, color: p.atb === "SEM ATB" ? "888888" : "000000" }),
         cell(p.ultimoLab, { fontSize: 13, bgColor, width: COL.ultimoLab }),
         cell(p.condutasHoje, { fontSize: 13, bgColor, width: COL.condutas }),
@@ -281,7 +293,7 @@ export async function gerarMapaPlantaoDocx(
           color: a.prioridade.includes("URGENTE") ? "9B0000" : "000000",
         }),
         cell(a.paciente, { fontSize: 13, bgColor: bg, width: ALERT_COL.paciente }),
-        cell(a.acao, { fontSize: 13, bgColor: bg, width: ALERT_COL.acao }),
+        cell(a.leito ? `[${a.leito}] ${a.acao}` : a.acao, { fontSize: 13, bgColor: bg, width: ALERT_COL.acao }),
       ],
     });
   });
