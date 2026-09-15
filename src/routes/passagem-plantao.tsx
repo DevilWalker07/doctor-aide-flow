@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/apiClient";
 import {
   ChevronLeft,
   Upload,
@@ -47,6 +48,11 @@ function PassagemPlantaoPage() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [stats, setStats] = useState<{ pacientes: number; alertas: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!downloadUrl) return;
+    return () => URL.revokeObjectURL(downloadUrl);
+  }, [downloadUrl]);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
@@ -107,14 +113,15 @@ function PassagemPlantaoPage() {
       formData.append("data", data);
       readyFiles.forEach((f) => formData.append("files", f.file));
 
-      const res = await fetch("/api/passagem-plantao/gerar", {
+      const res = await apiFetch("/api/passagem-plantao/gerar", {
         method: "POST",
         body: formData,
       });
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({ error: "Erro desconhecido" }));
-        throw new Error(errJson.error || `HTTP ${res.status}`);
+        const detalhes = Array.isArray(errJson.details) ? ` (${errJson.details.join("; ")})` : "";
+        throw new Error((errJson.message || errJson.error || `HTTP ${res.status}`) + detalhes);
       }
 
       const pacientesCount = Number(res.headers.get("X-Pacientes-Count") || 0);
@@ -122,7 +129,13 @@ function PassagemPlantaoPage() {
       const warningsHeader = res.headers.get("X-File-Warnings");
 
       if (warningsHeader) {
-        setWarnings(warningsHeader.split(";").map((s) => s.trim()).filter(Boolean));
+        let decoded = warningsHeader;
+        try {
+          decoded = decodeURIComponent(warningsHeader);
+        } catch {
+          /* header já legível */
+        }
+        setWarnings(decoded.split(";").map((s) => s.trim()).filter(Boolean));
       }
 
       setStats({ pacientes: pacientesCount, alertas: alertasCount });

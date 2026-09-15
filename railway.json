@@ -5,9 +5,9 @@
     "dockerfilePath": "Dockerfile.railway"
   },
   "deploy": {
-    "startCommand": "python app.py",
+    "startCommand": "node dist-server/server/index.js",
     "restartPolicyType": "ON_FAILURE",
-    "healthCheckPath": "/health",
-    "healthCheckTimeout": 100
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 100
   }
 }

@@ -1,140 +1,99 @@
-import { Router, Request, Response } from "express";
+import os from "node:os";
+import path from "node:path";
+import { Router, type RequestHandler } from "express";
 import multer from "multer";
-import os from "os";
-import path from "path";
-import fs from "fs";
-import { PASSAGEM_PLANTAO_BATCH_PROMPT } from "../prompts/passagemPlantaoBatch.prompt.js";
-import { jsonCompletion } from "../services/openaiClient.js";
-import { gerarMapaPlantaoDocx, type MapaPlantaoData } from "../services/docxGenerator.service.js";
+import { HttpError } from "../lib/errors.js";
+import { safeUnlink, sanitizeFilename } from "../lib/files.js";
+import { PassagemBodySchema } from "../schemas/ai.schemas.js";
+import { gerarMapaPlantaoDocx } from "../services/docxGenerator.service.js";
+import { gerarMapaPlantao, type EvolucaoInput } from "../services/passagemPlantao.service.js";
+import { extractTextFromFile } from "../services/textExtraction.service.js";
 
 export const passagemPlantaoRouter = Router();
 
+const ALLOWED_EXTS = new Set([".docx", ".txt", ".md", ".pdf"]);
+const MAX_FILES = 30;
+
 const upload = multer({
   dest: os.tmpdir(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024, files: MAX_FILES },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExts = [".doc", ".docx", ".txt", ".pdf"];
-    const allowedMimes = [
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/msword",
-      "text/plain",
-      "application/pdf",
-    ];
-    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Arquivo não suportado: ${file.originalname}`));
-    }
+    if (ALLOWED_EXTS.has(ext)) cb(null, true);
+    else cb(new Error(`Arquivo não suportado: ${file.originalname}. Use DOCX, PDF ou TXT.`));
   },
 });
 
-async function extractTextFromFile(filePath: string, originalName: string): Promise<string> {
-  const ext = path.extname(originalName).toLowerCase();
-
-  if (ext === ".docx" || ext === ".doc") {
-    const mammoth = (await import("mammoth")).default;
-    const result = await mammoth.extractRawText({ path: filePath });
-    return result.value;
+const gerar: RequestHandler = async (req, res) => {
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  if (files.length === 0) {
+    throw new HttpError(400, "missing_files", "Nenhum arquivo enviado. Envie ao menos um arquivo DOCX.");
   }
 
-  if (ext === ".txt") {
-    return fs.readFileSync(filePath, "utf-8");
+  let body;
+  try {
+    body = PassagemBodySchema.parse(req.body ?? {});
+  } catch (err) {
+    await Promise.all(files.map((f) => safeUnlink(f.path)));
+    throw err;
   }
+  const { setor, data } = body;
 
-  if (ext === ".pdf") {
-    // Basic fallback for PDFs — try to read as text
-    try {
-      const content = fs.readFileSync(filePath, "utf-8");
-      return content;
-    } catch {
-      return `[Arquivo PDF: ${originalName} — conteúdo não extraído automaticamente]`;
-    }
-  }
-
-  return `[Arquivo: ${originalName}]`;
-}
-
-// POST /api/passagem-plantao/gerar
-// Accepts: multipart with fields `setor`, `data`, and up to 30 files in field `files`
-passagemPlantaoRouter.post(
-  "/gerar",
-  upload.array("files", 30),
-  async (req: Request, res: Response): Promise<void> => {
-    const files = req.files as Express.Multer.File[];
-    const setor = (req.body.setor as string) || "CMF/CMM";
-    const dataPlantao = (req.body.data as string) || new Date().toLocaleDateString("pt-BR");
-
-    if (!files || files.length === 0) {
-      res.status(400).json({ error: "Nenhum arquivo enviado. Envie ao menos um arquivo DOCX." });
-      return;
-    }
-
-    const extractedTexts: string[] = [];
-    const fileErrors: string[] = [];
-
-    for (const file of files) {
+  const extracted = await Promise.allSettled(
+    files.map(async (file) => {
       try {
-        const text = await extractTextFromFile(file.path, file.originalname);
-        if (text.trim()) {
-          extractedTexts.push(`=== ARQUIVO: ${file.originalname} ===\n${text.trim()}`);
-        } else {
-          fileErrors.push(`${file.originalname}: nenhum texto extraído`);
-        }
-      } catch (err: any) {
-        fileErrors.push(`${file.originalname}: ${err?.message || "erro na extração"}`);
+        return await extractTextFromFile(file.path, file.originalname);
       } finally {
-        try { fs.unlinkSync(file.path); } catch { /* ignore */ }
+        await safeUnlink(file.path);
       }
-    }
+    }),
+  );
 
-    if (extractedTexts.length === 0) {
-      res.status(422).json({
-        error: "Não foi possível extrair texto de nenhum arquivo.",
-        detalhes: fileErrors,
-      });
+  const items: EvolucaoInput[] = [];
+  const warnings: string[] = [];
+  extracted.forEach((r, i) => {
+    const name = files[i].originalname;
+    if (r.status === "rejected") {
+      const reason = r.reason instanceof Error ? r.reason.message : "erro na extração";
+      warnings.push(`${name}: ${reason}`);
       return;
     }
-
-    const userPayload = {
-      setor,
-      data: dataPlantao,
-      total_leitos: extractedTexts.length,
-      evolucoes: extractedTexts.join("\n\n"),
-    };
-
-    const aiResult = await jsonCompletion(PASSAGEM_PLANTAO_BATCH_PROMPT, userPayload) as MapaPlantaoData | null;
-
-    if (!aiResult || !Array.isArray(aiResult.pacientes)) {
-      res.status(500).json({ error: "A IA não retornou dados estruturados válidos." });
+    const text = r.value.text.trim();
+    if (!text) {
+      warnings.push(`${name}: ${r.value.kind === "pdf" ? "PDF sem texto selecionável" : "nenhum texto extraído"}`);
       return;
     }
+    items.push({ fileName: name, text });
+  });
 
-    if (!Array.isArray(aiResult.alertasCriticos)) {
-      aiResult.alertasCriticos = [];
-    }
-
-    try {
-      const docxBuffer = await gerarMapaPlantaoDocx(aiResult, setor, dataPlantao);
-      const filename = `MAPA_PASSAGEM_${setor.replace(/\//g, "-")}_${dataPlantao.replace(/\//g, "_")}.docx`;
-
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-Pacientes-Count", String(aiResult.pacientes.length));
-      res.setHeader("X-Alertas-Count", String(aiResult.alertasCriticos.length));
-      if (fileErrors.length > 0) {
-        res.setHeader("X-File-Warnings", fileErrors.join("; ").substring(0, 500));
-      }
-
-      res.send(docxBuffer);
-    } catch (err: any) {
-      console.error("[passagemPlantao] Erro ao gerar DOCX:", err);
-      res.status(500).json({ error: "Erro ao gerar o documento DOCX.", detalhes: err?.message });
-    }
+  if (items.length === 0) {
+    throw new HttpError(422, "no_text", "Não foi possível extrair texto de nenhum arquivo.", warnings);
   }
-);
 
-// GET /api/passagem-plantao/health
+  const result = await gerarMapaPlantao(items, setor, data);
+  warnings.push(...result.warnings);
+
+  if (result.batchesFailed === result.batchesTotal) {
+    throw new HttpError(502, "ai_invalid_response", "A IA não retornou dados estruturados válidos.", warnings);
+  }
+
+  const docxBuffer = await gerarMapaPlantaoDocx(result.data, setor, data);
+  const filename = sanitizeFilename(`MAPA_PASSAGEM_${setor}_${data.replace(/\//g, "-")}.docx`);
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Length", String(docxBuffer.length));
+  res.setHeader("X-Pacientes-Count", String(result.data.pacientes.length));
+  res.setHeader("X-Alertas-Count", String(result.data.alertasCriticos.length));
+  res.setHeader("X-Batches-Failed", String(result.batchesFailed));
+  if (warnings.length > 0) {
+    res.setHeader("X-File-Warnings", encodeURIComponent(warnings.join("; ")).slice(0, 1500));
+  }
+  res.send(docxBuffer);
+};
+
+passagemPlantaoRouter.post("/gerar", upload.array("files", MAX_FILES), gerar);
+
 passagemPlantaoRouter.get("/health", (_req, res) => {
-  res.json({ ok: true, endpoint: "passagem-plantao" });
+  res.json({ ok: true, endpoint: "passagem-plantao", maxFiles: MAX_FILES });
 });

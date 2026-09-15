@@ -8,7 +8,7 @@ import {
 import { differenceInDays, parseISO, isValid, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { getPatientById, createEvolution } from "@/lib/db";
-import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { apiJson } from "@/lib/apiClient";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
@@ -249,10 +249,9 @@ function EvolucaoPage() {
       const plantaoAtivo = storage.getPlantaoAtivo();
       const dataPlantao = plantaoAtivo?.date || format(new Date(), "yyyy-MM-dd");
 
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/api/ai/gerar-evolucao`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const result = await apiJson<{ text?: string; evolution_text?: string; evolutionText?: string }>(
+        "/api/ai/gerar-evolucao",
+        {
           patient: paciente,
           tipo_unidade: tipoUnidade,
           template: TEMPLATES[tipoUnidade] || TEMPLATES.enfermaria_clinica,
@@ -260,13 +259,10 @@ function EvolucaoPage() {
           preferences: {
             uppercase: true,
             lab_format: "compact_inline",
-            atb_day_rule: storage.getAtbDayRule()
-          }
-        }),
-      });
-
-      if (!response.ok) throw new Error("Falha na resposta do servidor");
-      const result = await response.json();
+            atb_day_rule: storage.getAtbDayRule(),
+          },
+        },
+      );
       setEvolutionText(result.evolution_text || result.evolutionText || result.text || "");
       toast.success("Evolução gerada com sucesso!");
     } catch (error: any) {

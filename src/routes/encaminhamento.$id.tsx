@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { getPatientById, createReferral } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { apiJson } from "@/lib/apiClient";
 
 export const Route = createFileRoute("/encaminhamento/$id")({
   component: EncaminhamentoPage,
@@ -56,7 +56,7 @@ function EncaminhamentoPage() {
       try {
         if (id.startsWith("temp_")) throw new Error("Local");
         const p = await getPatientById(id, userId!);
-        setPaciente({ name: p.name, bed: p.bed, ...p });
+        setPaciente({ ...p });
       } catch (err) {
         const existing = JSON.parse(localStorage.getItem("da_pacientes") || "[]");
         const p = existing.find((x: any) => x.id === id);
@@ -73,22 +73,17 @@ function EncaminhamentoPage() {
     }
     setIsGenerating(true);
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/generate-referral`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patient: paciente,
-          destinations: selectedDestinations.map(d => DESTINATIONS.find(opt => opt.id === d)?.label),
-          specialty: selectedDestinations.includes("especialista") ? specialty : null,
-          specialist_name: specialistName,
-          regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
-          reason: reason,
-          data_plantao: format(new Date(), "dd/MM/yyyy")
-        }),
+      const result = await apiJson<{ referral_text?: string }>("/api/ai/gerar-encaminhamento", {
+        patient: paciente,
+        destinations: selectedDestinations
+          .map((d) => DESTINATIONS.find((opt) => opt.id === d)?.label)
+          .filter((x): x is string => Boolean(x)),
+        specialty: selectedDestinations.includes("especialista") ? specialty : null,
+        specialist_name: specialistName,
+        regulacao_dest: selectedDestinations.includes("regulacao") ? regulacaoDest : null,
+        reason: reason,
+        data_plantao: format(new Date(), "dd/MM/yyyy"),
       });
-
-      if (!response.ok) throw new Error("Falha ao gerar encaminhamento");
-      const result = await response.json();
       setReferralText(result.referral_text || "");
       setStep(2);
       toast.success("Texto gerado com sucesso!");

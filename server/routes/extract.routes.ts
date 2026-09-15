@@ -1,112 +1,69 @@
-import { Router, Request, Response } from "express";
+import crypto from "node:crypto";
+import os from "node:os";
+import path from "node:path";
+import { Router, type RequestHandler } from "express";
 import multer from "multer";
-import path from "path";
-import os from "os";
-import crypto from "crypto";
-import { JOBS, processFileInBackground, type JobState } from "../services/documentExtractor.service.js";
+import { HttpError } from "../lib/errors.js";
+import { safeUnlink, sniffKind } from "../lib/files.js";
+import { processFileInBackground } from "../services/documentExtractor.service.js";
+import { toPublicJob, type JobStore } from "../services/jobStore.js";
 
-export const extractRouter = Router();
+const ALLOWED_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".pdf", ".docx", ".txt", ".md"]);
 
-// ─── Multer configuration (disk storage in temp dir) ─────────────────────────
 const upload = multer({
   dest: os.tmpdir(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
-    const allowed = [
-      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
-      "image/heic", "image/heif",
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/msword",
-      "text/plain", "text/markdown",
-    ];
-    // Also allow by extension when MIME is wrong (common with HEIC)
     const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
-      ".pdf", ".doc", ".docx", ".txt", ".md"];
-    if (allowed.includes(file.mimetype) || allowedExts.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Tipo de arquivo não suportado: ${file.mimetype} (${ext})`));
-    }
+    if (ALLOWED_EXTS.has(ext)) cb(null, true);
+    else cb(new Error(`Arquivo não suportado: ${file.originalname}. Use imagem, PDF, DOCX ou TXT.`));
   },
 });
 
-// ─── POST /extract-async ─────────────────────────────────────────────────────
-extractRouter.post("/extract-async", upload.single("file"), async (req: Request, res: Response) => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ error: "Nenhum arquivo enviado. Use multipart/form-data com o campo 'file'." });
-      return;
+export interface ExtractRouterDeps {
+  jobStore: JobStore;
+  limiters: { upload: RequestHandler; poll: RequestHandler };
+}
+
+export function createExtractRouter({ jobStore, limiters }: ExtractRouterDeps) {
+  const router = Router();
+
+  const createJob: RequestHandler = async (req, res) => {
+    const file = req.file;
+    if (!file) throw new HttpError(400, "missing_file", "Nenhum arquivo enviado. Use multipart/form-data com o campo 'file'.");
+
+    const kind = await sniffKind(file.path, file.originalname);
+    if (kind === "unknown") {
+      await safeUnlink(file.path);
+      throw new HttpError(415, "unsupported_format", `Conteúdo de ${file.originalname} não corresponde a um formato suportado.`);
     }
 
     const jobId = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const job = await jobStore.create({ job_id: jobId, user_id: req.userId, file_name: file.originalname });
 
-    const initialState: JobState = {
-      job_id: jobId,
-      status: "queued",
-      stage: "Arquivo recebido",
-      error: null,
-      createdAt: now,
-    };
+    void processFileInBackground({ jobId, filePath: file.path, originalName: file.originalname, store: jobStore }).catch(
+      (err) => {
+        console.error(`[extract] job ${jobId} rejeitado fora do handler:`, err);
+        return jobStore.update(jobId, { status: "error", stage: "Erro na extração", error: "Falha inesperada no processamento." });
+      },
+    );
 
-    JOBS.set(jobId, initialState);
+    res.status(202).json({ job_id: job.job_id, status: job.status, stage: job.stage });
+  };
 
-    // Fire and forget — do NOT await
-    setImmediate(() => {
-      processFileInBackground(jobId, req.file!.path, req.file!.originalname);
-    });
+  const getJob: RequestHandler = async (req, res) => {
+    const jobId = String(req.params.jobId ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(jobId)) throw new HttpError(400, "invalid_job_id", "job_id inválido.");
 
-    res.json({ job_id: jobId, status: "queued", stage: "Arquivo recebido" });
-  } catch (err: any) {
-    console.error("[extractRouter] POST /extract-async error:", err);
-    res.status(500).json({ error: err?.message || "Erro interno ao criar job." });
-  }
-});
+    const job = await jobStore.get(jobId, req.userId);
+    if (!job) throw new HttpError(404, "job_not_found", "Job não encontrado. Pode ter expirado.");
 
-// Alias for compatibility
-extractRouter.post("/extract-document-async", upload.single("file"), async (req: Request, res: Response) => {
-  // Forward to same logic by re-routing internally
-  if (!req.file) {
-    res.status(400).json({ error: "Nenhum arquivo enviado." });
-    return;
-  }
+    res.set("Cache-Control", "no-store");
+    res.json(toPublicJob(job));
+  };
 
-  const jobId = crypto.randomUUID();
-  const now = new Date().toISOString();
+  router.post(["/extract-async", "/extract-document-async"], limiters.upload, upload.single("file"), createJob);
+  router.get(["/job/:jobId", "/extract-job/:jobId"], limiters.poll, getJob);
 
-  JOBS.set(jobId, {
-    job_id: jobId,
-    status: "queued",
-    stage: "Arquivo recebido",
-    error: null,
-    createdAt: now,
-  });
-
-  setImmediate(() => {
-    processFileInBackground(jobId, req.file!.path, req.file!.originalname);
-  });
-
-  res.json({ job_id: jobId, status: "queued", stage: "Arquivo recebido" });
-});
-
-// ─── GET /job/:jobId ──────────────────────────────────────────────────────────
-extractRouter.get("/job/:jobId", (req: Request, res: Response) => {
-  const job = JOBS.get(req.params.jobId);
-  if (!job) {
-    res.status(404).json({ error: "Job não encontrado. Pode ter expirado.", job_id: req.params.jobId });
-    return;
-  }
-  res.json(job);
-});
-
-// Alias for compatibility
-extractRouter.get("/extract-job/:jobId", (req: Request, res: Response) => {
-  const job = JOBS.get(req.params.jobId);
-  if (!job) {
-    res.status(404).json({ error: "Job não encontrado.", job_id: req.params.jobId });
-    return;
-  }
-  res.json(job);
-});
+  return router;
+}

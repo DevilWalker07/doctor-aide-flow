@@ -1,4 +1,4 @@
-import { BASE_MOTOR_LUAN_PROMPT } from "./baseMotorLuan.prompt";
+import { BASE_MOTOR_LUAN_PROMPT } from "./baseMotorLuan.prompt.js";
 
 export const PASSAGEM_PLANTAO_BATCH_PROMPT =
   BASE_MOTOR_LUAN_PROMPT +

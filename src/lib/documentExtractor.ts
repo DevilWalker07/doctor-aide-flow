@@ -4,9 +4,7 @@
  * Gerencia upload → polling → resultado.
  */
 
-import { VITE_CLINICAL_AGENTS_URL } from "./clinicalAgentsConfig";
-
-const BACKEND_URL = VITE_CLINICAL_AGENTS_URL.replace(/\/$/, "");
+import { apiFetch } from "./apiClient";
 
 export interface JobStatusResponse {
   job_id: string;
@@ -67,19 +65,14 @@ const EXTRACTION_SESSION_KEY = "extracao_session";
  * Never waits for AI processing.
  */
 export async function startClinicalExtractionJob(file: File): Promise<string> {
-  if (!BACKEND_URL) throw new Error("Backend de IA não configurado (VITE_CLINICAL_AGENTS_URL).");
-
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${BACKEND_URL}/api/extract/extract-async`, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await apiFetch("/api/extract/extract-async", { method: "POST", body: formData });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.error || `Erro ao enviar arquivo (${response.status}).`);
+    throw new Error(payload?.message || payload?.error || `Erro ao enviar arquivo (${response.status}).`);
   }
 
   const data = await response.json();
@@ -96,9 +89,7 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
  * Gets the current status of a job. Single poll — no loop.
  */
 export async function getClinicalExtractionJob(jobId: string): Promise<JobStatusResponse> {
-  if (!BACKEND_URL) throw new Error("Backend de IA não configurado.");
-
-  const response = await fetch(`${BACKEND_URL}/api/extract/job/${jobId}`);
+  const response = await apiFetch(`/api/extract/job/${encodeURIComponent(jobId)}`);
   if (!response.ok) {
     if (response.status === 404) throw new Error("Job não encontrado. O servidor pode ter reiniciado.");
     throw new Error(`Erro ao consultar job (${response.status}).`);

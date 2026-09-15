@@ -4,22 +4,19 @@ import type { ImportedRoundPatient } from "../types/round";
 import { fallbackEvolution, fallbackLabExtraction, gerarBriefingLocal, gerarMapaPassagemPlantao } from "./localFallbacks";
 import { mockImportedPatients } from "./mocks";
 
-import { VITE_CLINICAL_AGENTS_URL } from "../clinicalAgentsConfig";
+import { apiJson } from "../apiClient";
 
-const AI_BACKEND_URL = VITE_CLINICAL_AGENTS_URL.replace(/\/$/, "");
+const postBackend = <T>(path: string, body: unknown) => apiJson<T>(path, body);
 
-async function postBackend<T>(path: string, body: unknown): Promise<T> {
-  if (!AI_BACKEND_URL) throw new Error("Backend de IA não configurado.");
-  const response = await fetch(`${AI_BACKEND_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.error || `Backend indisponível (${response.status}).`);
-  }
-  return response.json();
+export interface EvolutionReview {
+  campos_faltantes: string[];
+  inconsistencias: string[];
+  alertas: string[];
+  sugestoes: string[];
+}
+
+export function reviewEvolution(evolutionText: string, patient?: unknown): Promise<EvolutionReview> {
+  return postBackend<EvolutionReview>("/api/ai/revisar-evolucao", { evolutionText, patient });
 }
 
 export async function processDocumentsWithMotorLuan(rawText: string, context?: unknown): Promise<MotorLuanDocumentResult> {
