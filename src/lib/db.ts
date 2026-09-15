@@ -458,3 +458,44 @@ export async function upsertSettings(data: Partial<UserSettings>, userId: string
   if (error) throw error
   return settings
 }
+
+// ═══════════════════════════════════
+// OUTPATIENT DOCUMENTS (receita de alta, encaminhamento, orientações)
+// ═══════════════════════════════════
+
+export type OutpatientDocumentType = 'receita' | 'encaminhamento' | 'orientacoes'
+
+export interface OutpatientDocumentRow {
+  id: string
+  user_id: string
+  patient_id: string | null
+  type: OutpatientDocumentType
+  title: string
+  content: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export async function createOutpatientDocument(
+  data: { type: OutpatientDocumentType; title: string; patient_id: string | null; content: Record<string, unknown> },
+  userId: string,
+): Promise<OutpatientDocumentRow> {
+  const { data: row, error } = await supabase
+    .from('outpatient_documents')
+    .insert({ ...data, user_id: userId })
+    .select()
+    .single()
+  if (error) throw error
+  return row as OutpatientDocumentRow
+}
+
+export async function getOutpatientDocumentsByPatient(patientId: string, userId: string): Promise<OutpatientDocumentRow[]> {
+  const { data, error } = await supabase
+    .from('outpatient_documents')
+    .select('*')
+    .eq('patient_id', patientId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as OutpatientDocumentRow[]
+}

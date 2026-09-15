@@ -287,7 +287,15 @@ function HomePage() {
              </div>
            )}
 
-           <button 
+           <button
+             onClick={() => nav({ to: "/prescricao-alta", search: {} })}
+             className="py-5 rounded-[2.5rem] bg-white border border-success/40 text-success font-black uppercase tracking-[0.2em] text-[10px] hover:bg-success/5 transition-all"
+             data-testid="home-receita-avulsa"
+           >
+              RECEITA AVULSA / DOCUMENTOS
+           </button>
+
+           <button
              onClick={() => nav({ to: "/configuracoes" })}
              className="py-5 rounded-[2.5rem] bg-white border border-border text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] hover:bg-secondary transition-all"
            >

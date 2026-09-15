@@ -286,6 +286,9 @@ function DashboardPage() {
               <button onClick={() => nav({ to: "/passagem-plantao" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-ai/30 text-ai font-bold uppercase tracking-widest text-[10px] hover:bg-ai/5">
                  <FileText className="h-4 w-4" /> MAPA IA (DOCX)
               </button>
+              <button onClick={() => nav({ to: "/prescricao-alta", search: {} })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-success/40 text-success font-bold uppercase tracking-widest text-[10px] hover:bg-success/5" data-testid="dashboard-documentos">
+                 <ClipboardList className="h-4 w-4" /> DOCUMENTOS
+              </button>
            </div>
         </div>
 
