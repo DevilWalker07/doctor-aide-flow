@@ -277,7 +277,7 @@ function DashboardPage() {
            </div>
            
            <div className="flex gap-3 w-full sm:w-auto">
-              <button onClick={() => nav({ to: "/novo-paciente" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
+              <button onClick={() => nav({ to: "/novo-paciente" })} data-testid="dashboard-add-patient" className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
                  <UserPlus className="h-4 w-4" /> ADICIONAR
               </button>
               <button onClick={() => nav({ to: "/passagem" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-border text-foreground font-bold uppercase tracking-widest text-[10px] hover:bg-secondary">

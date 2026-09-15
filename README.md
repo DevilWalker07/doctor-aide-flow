@@ -64,3 +64,21 @@ npm run lint
 ## Aviso médico
 
 Este app não substitui julgamento médico. Sugestões são apoio à decisão e devem ser revisadas pelo médico responsável.
+
+## Desenvolvimento e testes
+
+```bash
+npm install
+cp .env.example .env            # preencha OPENAI_API_KEY, VITE_SUPABASE_*, SUPABASE_*
+npm run dev:all                 # Vite (5173, com proxy) + Express (8787)
+
+npm run typecheck               # frontend, servidor e testes
+npm test                        # Vitest: rotas do servidor, guardrails, schemas, documentos
+npm run test:e2e                # Playwright (modo local sem login; AI_MOCK=1 no backend)
+E2E_SUPABASE_URL=... E2E_SUPABASE_ANON_KEY=... E2E_SUPABASE_SERVICE_ROLE_KEY=... npm run test:e2e   # com auth real (supabase start)
+
+npm run build && npm run build:server && npm start   # produção (Dockerfile.railway faz o mesmo)
+```
+
+Banco: aplique `supabase/migrations/20260915000000_canonical_schema.sql` em um projeto limpo (`supabase db reset` local ou `supabase db push`).
+Variáveis novas no Railway: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS`. Na Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.

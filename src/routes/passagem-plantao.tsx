@@ -29,7 +29,7 @@ interface UploadedFile {
   errorMsg?: string;
 }
 
-const ALLOWED_EXTS = [".docx", ".doc", ".txt", ".pdf"];
+const ALLOWED_EXTS = [".docx", ".txt", ".pdf"];
 
 function isAllowed(file: File) {
   const ext = "." + file.name.split(".").pop()?.toLowerCase();
@@ -60,7 +60,7 @@ function PassagemPlantaoPage() {
       id: crypto.randomUUID(),
       file: f,
       status: isAllowed(f) ? "ready" : "error",
-      errorMsg: !isAllowed(f) ? `Formato não suportado (use DOCX, DOC, TXT ou PDF)` : undefined,
+      errorMsg: !isAllowed(f) ? `Formato não suportado (use DOCX, TXT ou PDF)` : undefined,
     }));
     setFiles((prev) => {
       const existing = new Set(prev.map((x) => x.file.name));
@@ -240,14 +240,15 @@ function PassagemPlantaoPage() {
             {isDragging ? "Solte os arquivos aqui" : "Arraste os DOCX dos leitos ou clique para selecionar"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Suporte a DOCX, DOC, TXT — até 30 arquivos — 20MB cada
+            Suporte a DOCX, TXT e PDF — até 30 arquivos — 20MB cada
           </p>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".docx,.doc,.txt,.pdf"
+            accept=".docx,.txt,.pdf"
             className="hidden"
+            data-testid="handoff-files"
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
         </div>
@@ -319,6 +320,7 @@ function PassagemPlantaoPage() {
           <button
             onClick={handleGenerate}
             disabled={isGenerating || readyFiles.length === 0}
+            data-testid="handoff-generate"
             className="flex-1 h-14 rounded-2xl bg-[#1F4E79] text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-[#1F4E79]/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             {isGenerating ? (
@@ -338,6 +340,7 @@ function PassagemPlantaoPage() {
             <a
               href={downloadUrl}
               download={downloadName}
+              data-testid="handoff-download"
               className="flex-1 h-14 rounded-2xl bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-emerald-600/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >
               <Download className="h-4 w-4" />

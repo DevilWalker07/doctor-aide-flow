@@ -145,6 +145,7 @@ function IniciarPlantaoPage() {
               <button 
                 onClick={handleContinue}
                 disabled={saving}
+                data-testid="shift-submit"
                 className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>CONTINUAR <ArrowRight className="h-5 w-5" /></>}

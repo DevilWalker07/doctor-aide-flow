@@ -61,6 +61,7 @@ function AdmissaoNovaTriage() {
           {/* Enviar Documento Inicial */}
           <button
             onClick={() => nav({ to: "/upload-ia", search: { tipo: "admissao" } as any })}
+            data-testid="admissao-upload"
             className="group relative bg-white border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

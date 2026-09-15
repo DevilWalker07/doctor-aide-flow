@@ -332,7 +332,7 @@ function RevisarExtracao() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Clock className="h-3 w-3" /> {storage.getJobArquivo()}</p>
             </div>
           </div>
-          <button onClick={handleSave} disabled={saving} className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase flex items-center gap-3 shadow-xl disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving} data-testid="extraction-save" className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase flex items-center gap-3 shadow-xl disabled:opacity-50">
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> SALVAR DADOS</>}
           </button>
         </div>

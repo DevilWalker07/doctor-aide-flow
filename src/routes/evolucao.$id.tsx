@@ -329,7 +329,7 @@ function EvolucaoPage() {
               </div>
            </div>
            <div className="flex items-center gap-3">
-              <button onClick={handleSave} disabled={!evolutionText || isSaving} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
+              <button onClick={handleSave} disabled={!evolutionText || isSaving} data-testid="evolution-save" className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50">
                  {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} SALVAR
               </button>
               <button onClick={handleCopy} disabled={!evolutionText} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50">
@@ -420,6 +420,7 @@ function EvolucaoPage() {
                      <button 
                         onClick={handleGenerate}
                         disabled={isGenerating}
+                        data-testid="evolution-generate"
                         className="px-8 py-4 rounded-2xl bg-ai text-white text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-1 transition-all disabled:opacity-50 flex items-center gap-3"
                      >
                         {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -437,6 +438,7 @@ function EvolucaoPage() {
                      <ControlledTextarea
                         value={evolutionText}
                         onValueChange={setEvolutionText}
+                        data-testid="evolution-text"
                         placeholder="Clique em 'GERAR EVOLUÇÃO' para iniciar o rascunho com IA ou digite aqui..."
                         className="w-full h-full min-h-[500px] bg-secondary/20 border border-border rounded-3xl p-8 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-navy/20 custom-scrollbar uppercase"
                      />

@@ -91,7 +91,7 @@ function UploadIAPage() {
 
         <div className="w-full bg-white border border-border rounded-[2.5rem] p-10 shadow-xl relative overflow-hidden">
           <input 
-            type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden"
+            type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" data-testid="upload-input"
             accept={engine === 'vision' ? "image/*" : ".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp,.heic,.heif"}
             capture={engine === 'vision' ? "environment" : undefined}
           />
@@ -133,6 +133,7 @@ function UploadIAPage() {
               <button
                 disabled={isUploading}
                 onClick={handleUpload}
+                data-testid="upload-submit"
                 className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {isUploading ? (

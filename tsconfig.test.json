@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vitest/globals", "vite/client"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["tests/**/*.ts", "e2e/**/*.ts", "server/**/*.ts", "shared/**/*.ts", "src/lib/**/*.ts", "vitest.config.ts", "playwright.config.ts"],
+  "exclude": ["dist-server", "node_modules"]
+}
