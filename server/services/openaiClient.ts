@@ -127,6 +127,31 @@ export async function safeJsonCompletion<T>(
   return second.ok ? second : first;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function chatCompletion(system: string, messages: ChatMessage[], opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey"> = {}): Promise<string> {
+  const { maxTokens = 1200, temperature = 0.3, mockKey } = opts;
+
+  if (env.AI_MOCK) {
+    const fixture = mockKey ? aiFixtures[mockKey] : null;
+    return typeof fixture === "string" ? fixture : "";
+  }
+
+  const openai = getOpenAIClient();
+  if (!openai) throw new AIUnavailableError();
+
+  const response = await openai.chat.completions.create({
+    model: DEFAULT_MODEL,
+    temperature,
+    max_tokens: maxTokens,
+    messages: [{ role: "system", content: system }, ...messages],
+  });
+  return response.choices[0]?.message?.content?.trim() ?? "";
+}
+
 export async function textCompletion(
   system: string,
   payload: unknown,

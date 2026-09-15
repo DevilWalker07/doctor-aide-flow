@@ -88,6 +88,15 @@ export const SugerirReceitaBody = z.object({
 });
 export type SugerirReceitaBody = z.infer<typeof SugerirReceitaBody>;
 
+export const CopilotoBody = z.object({
+  messages: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(4000) }))
+    .min(1)
+    .max(20),
+  ambiente: z.string().max(60).optional(),
+});
+export type CopilotoBody = z.infer<typeof CopilotoBody>;
+
 export const PassagemBodySchema = z
   .object({
     setor: z

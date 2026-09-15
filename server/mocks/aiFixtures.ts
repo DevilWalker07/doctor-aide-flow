@@ -125,6 +125,8 @@ PENDÊNCIAS
     valores_duvidosos: [],
     campos_nao_encontrados: ["NA", "K"],
   },
+  copiloto:
+    "RESPOSTA DO COPILOTO (MOCK)\n\n- Vancomicina com ClCr 25 mL/min: dose de ataque 20–25 mg/kg e manutenção guiada por nível sérico (vale 15–20 mg/L).\n- Reavaliar função renal a cada 48 h.\n\nConfira: peso real, ClCr atual e nível sérico antes da próxima dose.",
   receita: {
     itens: [
       {

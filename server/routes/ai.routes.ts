@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import type { z } from "zod";
 import {
+  CopilotoBody,
   EncaminhamentoBody,
   EvolucaoBody,
   EvolutionReviewBody,
@@ -44,6 +45,7 @@ aiRouter.post("/gerar-mapa-plantao", route(RoundBody, (b) => motorLuanService.ge
 aiRouter.post("/gerar-briefing", route(RoundBody, (b) => motorLuanService.gerarBriefing(b)));
 aiRouter.post("/gerar-encaminhamento", route(EncaminhamentoBody, (b) => motorLuanService.gerarEncaminhamento(b)));
 aiRouter.post("/sugerir-receita", route(SugerirReceitaBody, (b) => motorLuanService.sugerirReceita(b)));
+aiRouter.post("/copiloto", route(CopilotoBody, (b) => motorLuanService.copiloto(b)));
 
 const legacy = { deprecated: true };
 aiRouter.post("/lab-extractor", route(MotorLuanTextBody, (b) => motorLuanService.extrairClinicaMedica({ ...b, task: "lab-extractor" }), legacy));

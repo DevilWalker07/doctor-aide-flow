@@ -1,6 +1,7 @@
 import { AIResponseError } from "../lib/errors.js";
 import { BRIEFING_PROMPT } from "../prompts/briefing.prompt.js";
 import { CLINICA_MEDICA_PROMPT } from "../prompts/clinicaMedica.prompt.js";
+import { COPILOTO_PROMPT } from "../prompts/copiloto.prompt.js";
 import { EVOLUTION_REVIEWER_PROMPT } from "../prompts/evolutionReviewer.prompt.js";
 import { GERADOR_ENCAMINHAMENTO_PROMPT } from "../prompts/geradorEncaminhamento.prompt.js";
 import { GERADOR_EVOLUCAO_PROMPT } from "../prompts/geradorEvolucao.prompt.js";
@@ -17,6 +18,7 @@ import {
   OrquestradorOutputSchema,
   SugestaoReceitaSchema,
   type ClinicalExtractionOutput,
+  type CopilotoBody,
   type EncaminhamentoBody,
   type EvolucaoBody,
   type EvolutionReviewBody,
@@ -25,7 +27,7 @@ import {
   type SugerirReceitaBody,
 } from "../schemas/ai.schemas.js";
 import { findingsToAlerts, mergeAlerts, parseLabString, parseVitalsFromText, runPatientGuardrails } from "./clinicalGuardrails.js";
-import { safeJsonCompletion, textCompletion, type SafeResult } from "./openaiClient.js";
+import { chatCompletion, safeJsonCompletion, textCompletion, type SafeResult } from "./openaiClient.js";
 import { gerarBriefingLocal, gerarMapaPlantaoLocal } from "./round.service.js";
 
 const NO_PATIENTS_ALERT = "IA NÃO IDENTIFICOU PACIENTES NO TEXTO";
@@ -119,6 +121,13 @@ export const motorLuanService = {
     const text = await textCompletion(GERADOR_ENCAMINHAMENTO_PROMPT, body, { mockKey: "encaminhamento", maxTokens: 1500 });
     if (!text) throw new AIResponseError("A IA não gerou o texto do encaminhamento.");
     return { referral_text: text };
+  },
+
+  async copiloto(body: CopilotoBody) {
+    const system = body.ambiente ? `${COPILOTO_PROMPT}\nambiente: ${body.ambiente}` : COPILOTO_PROMPT;
+    const reply = await chatCompletion(system, body.messages, { mockKey: "copiloto" });
+    if (!reply) throw new AIResponseError("O copiloto não respondeu.");
+    return { reply };
   },
 
   async sugerirReceita(body: SugerirReceitaBody) {
