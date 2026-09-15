@@ -4,12 +4,13 @@ export { calcularDiaAtb, cicloAtbExcedido } from "./medical/antibiotico";
 export { gerarAlertasPaciente } from "./medical/alertas";
 export { gerarEvolucaoLocal } from "./medical/evolucaoLocal";
 export { calcularHgtStats } from "./medical/glicemia";
-export { detectarReascensaoPCR, formatarLaboratorio, gerarAnaliseLaboratorialLocal } from "./medical/laboratorio";
+export { avaliarLaboratorio, detectarReascensaoPCR, formatarLaboratorio, gerarAnaliseLaboratorialLocal, parseLabValues } from "./medical/laboratorio";
 export { calcularCKDEPI2021, classificarDRC } from "./medical/renal";
+export { LAB_THRESHOLDS } from "../../shared/medical/labThresholds";
 
 import { calcularDiaAtb } from "./medical/antibiotico";
 import { calcularHgtStats } from "./medical/glicemia";
-import { detectarReascensaoPCR } from "./medical/laboratorio";
+import { avaliarLaboratorio, detectarReascensaoPCR } from "./medical/laboratorio";
 import { calcularCKDEPI2021, classificarDRC } from "./medical/renal";
 
 export const ckdEpi2021 = calcularCKDEPI2021;
@@ -34,14 +35,14 @@ export function pcrTrend(values: number[]): "rising" | "falling" | "stable" | "r
 }
 
 export function getLabAlerts(vals: Record<string, string>) {
-  const alerts: string[] = [];
-  const parse = (v?: string) => parseFloat(v?.replace(",", ".") || "0");
-  const hb = parse(vals.Hb || vals.Hemoglobina || vals.hb);
-  const cr = parse(vals.Creatinina || vals.Cr || vals.creatinina);
-  const pcr = parse(vals.PCR || vals.pcr);
-  if (hb > 0 && hb < 7) alerts.push("ANEMIA GRAVE");
-  else if (hb > 0 && hb < 10) alerts.push("ANEMIA MODERADA");
-  if (cr > 1.3) alerts.push("DISFUNÇÃO RENAL");
-  if (pcr > 10) alerts.push("PROVA INFLAMATÓRIA ELEVADA");
-  return alerts;
+  return [
+    ...new Set(
+      avaliarLaboratorio(vals).map((a) => {
+        if (a.key === "HB") return a.severity === "critical" ? "ANEMIA GRAVE" : "ANEMIA MODERADA";
+        if (a.key === "CR") return "DISFUNÇÃO RENAL";
+        if (a.key === "PCR") return "PROVA INFLAMATÓRIA ELEVADA";
+        return a.message;
+      }),
+    ),
+  ];
 }

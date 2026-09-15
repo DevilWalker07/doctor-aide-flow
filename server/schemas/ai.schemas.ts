@@ -186,13 +186,29 @@ function normalizePrioridade(v: unknown): Prioridade {
   return "!! URGENTE";
 }
 
+export const QUADRO_PREFIXOS = ["ESTÁVEL", "EM MELHORA", "INSTÁVEL", "CRÍTICO", "PALIATIVO"] as const;
+const QUADRO_RE = /^(ESTÁVEL|ESTAVEL|EM MELHORA|INSTÁVEL|INSTAVEL|CRÍTICO|CRITICO|PALIATIVO)\s*[—–-]/i;
+
+function normalizeQuadro(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "NÃO CLASSIFICADO — NÃO REFERIDO";
+  const m = s.match(QUADRO_RE);
+  if (!m) return `NÃO CLASSIFICADO — ${s}`;
+  const prefixo = m[1]
+    .toUpperCase()
+    .replace("ESTAVEL", "ESTÁVEL")
+    .replace("INSTAVEL", "INSTÁVEL")
+    .replace("CRITICO", "CRÍTICO");
+  return `${prefixo} — ${s.slice(m[0].length).trim()}`;
+}
+
 export const PatientRowSchema = z.object({
   leito: str("LEITO NÃO IDENTIFICADO"),
   paciente: str("NÃO REFERIDO"),
   dih: str("NÃO REFERIDO"),
   di: z.coerce.number().int().min(0).max(400).nullable().catch(null),
   diagnostico: str("NÃO REFERIDO"),
-  quadroAtual: str("NÃO REFERIDO"),
+  quadroAtual: str("").transform(normalizeQuadro),
   atb: str("NÃO REFERIDO"),
   ultimoLab: str("Sem lab recente"),
   condutasHoje: str(""),

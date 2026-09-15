@@ -24,6 +24,7 @@ import {
   type RoundBody,
   type SugerirReceitaBody,
 } from "../schemas/ai.schemas.js";
+import { findingsToAlerts, mergeAlerts, parseLabString, parseVitalsFromText, runPatientGuardrails } from "./clinicalGuardrails.js";
 import { safeJsonCompletion, textCompletion, type SafeResult } from "./openaiClient.js";
 import { gerarBriefingLocal, gerarMapaPlantaoLocal } from "./round.service.js";
 
@@ -34,15 +35,29 @@ function unwrap<T>(result: SafeResult<T>): T {
   throw new AIResponseError(result.error, result.raw);
 }
 
-function withEmptyAlert(out: ClinicalExtractionOutput): ClinicalExtractionOutput {
-  if (out.patients.length === 0 && !out.globalAlerts.includes(NO_PATIENTS_ALERT)) {
-    out.globalAlerts = [...out.globalAlerts, NO_PATIENTS_ALERT];
+function applyGuardrails(out: ClinicalExtractionOutput): ClinicalExtractionOutput {
+  const globais: string[] = [];
+  for (const p of out.patients) {
+    const idade = Number.parseInt(p.idade, 10);
+    const findings = runPatientGuardrails({
+      laboratorio: p.laboratorio,
+      antibioticos: p.antibioticos,
+      quadro: p.quadro,
+      idade: Number.isFinite(idade) ? idade : null,
+      sexo: p.sexo,
+    });
+    if (findings.length === 0) continue;
+    p.alertas = mergeAlerts(p.alertas, findingsToAlerts(findings));
+    const criticos = findingsToAlerts(findings, true);
+    if (criticos.length) globais.push(`${p.leito}: ${criticos.join("; ")}`);
   }
+  if (out.patients.length === 0 && !out.globalAlerts.includes(NO_PATIENTS_ALERT)) globais.push(NO_PATIENTS_ALERT);
+  out.globalAlerts = mergeAlerts(out.globalAlerts, globais);
   return out;
 }
 
 async function extract(prompt: string, body: MotorLuanTextBody) {
-  return withEmptyAlert(
+  return applyGuardrails(
     unwrap(await safeJsonCompletion(prompt, body, ClinicalExtractionOutputSchema, { mockKey: "clinicaMedica", maxTokens: 6000 })),
   );
 }
@@ -50,10 +65,7 @@ async function extract(prompt: string, body: MotorLuanTextBody) {
 export const motorLuanService = {
   async orquestrador(body: MotorLuanTextBody) {
     const out = unwrap(await safeJsonCompletion(ORQUESTRADOR_PROMPT, body, OrquestradorOutputSchema, { mockKey: "orquestrador", maxTokens: 6000 }));
-    if (out.patients.length === 0 && !out.globalAlerts.includes(NO_PATIENTS_ALERT)) {
-      out.globalAlerts = [...out.globalAlerts, NO_PATIENTS_ALERT];
-    }
-    return out;
+    return { ...out, ...applyGuardrails({ patients: out.patients, globalAlerts: out.globalAlerts }) };
   },
 
   async extrairClinicaMedica(body: MotorLuanTextBody) {
@@ -75,7 +87,22 @@ export const motorLuanService = {
   },
 
   async reviewEvolution(body: EvolutionReviewBody) {
-    return unwrap(await safeJsonCompletion(EVOLUTION_REVIEWER_PROMPT, body, EvolutionReviewSchema, { mockKey: "evolutionReview" }));
+    const review = unwrap(await safeJsonCompletion(EVOLUTION_REVIEWER_PROMPT, body, EvolutionReviewSchema, { mockKey: "evolutionReview" }));
+    const patient = (body.patient ?? {}) as Record<string, unknown>;
+    const labsTexto = [
+      ...(Array.isArray(patient.labs) ? (patient.labs as Array<Record<string, unknown>>).map((l) => String(l.texto_compacto ?? "")) : []),
+      typeof patient.laboratorio === "string" ? patient.laboratorio : "",
+    ].join(" / ");
+    const findings = runPatientGuardrails({
+      labs: { ...parseLabString(labsTexto), ...parseLabString(body.evolutionText) },
+      vitals: parseVitalsFromText(body.evolutionText),
+      antibioticos: Array.isArray(patient.antibiotics)
+        ? (patient.antibiotics as Array<Record<string, unknown>>).map((a) => [a.nome, a.dose, a.via, a.frequencia].filter(Boolean).join(" ")).join("\n")
+        : typeof patient.antibioticos === "string"
+          ? patient.antibioticos
+          : null,
+    });
+    return { ...review, alertas: mergeAlerts(review.alertas, findingsToAlerts(findings)) };
   },
 
   async gerarMapaPlantao(body: RoundBody) {

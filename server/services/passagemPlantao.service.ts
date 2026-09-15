@@ -7,6 +7,7 @@ import {
   type PassagemPlantaoBatch,
   type PatientRow,
 } from "../schemas/ai.schemas.js";
+import { flagLabOutliers } from "./clinicalGuardrails.js";
 import { safeJsonCompletion } from "./openaiClient.js";
 
 export interface EvolucaoInput {
@@ -75,6 +76,31 @@ export function mergeBatchResults(batches: PassagemPlantaoBatch[]): MapaPlantaoD
     const [na, sa] = leitoSortKey(a.leito);
     const [nb, sb] = leitoSortKey(b.leito);
     return na - nb || sa.localeCompare(sb);
+  });
+
+  return applyLabGuardrails({ pacientes, alertasCriticos: alertas });
+}
+
+export function applyLabGuardrails(data: MapaPlantaoData): MapaPlantaoData {
+  const alertas = [...data.alertasCriticos];
+  const seen = new Set(alertas.map((a) => `${normalizeLeito(a.leito ?? "")}|${a.acao.toUpperCase()}`));
+
+  const pacientes = data.pacientes.map((row) => {
+    const criticos = flagLabOutliers(row.ultimoLab).filter((f) => f.severity === "critical");
+    if (criticos.length === 0) return row;
+
+    const resumo = criticos.map((f) => f.message).join("; ");
+    const linha = `!! LAB CRÍTICO: ${resumo} — REAVALIAR`;
+    const jaTem = row.alertasPendencias.toUpperCase().includes("LAB CRÍTICO");
+    const alertasPendencias = jaTem ? row.alertasPendencias : [linha, row.alertasPendencias].filter(Boolean).join("\n");
+
+    const acao = `LAB CRÍTICO: ${resumo} — REAVALIAR`;
+    const key = `${normalizeLeito(row.leito)}|${acao.toUpperCase()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      alertas.unshift({ prioridade: "!! URGENTE", leito: row.leito, paciente: row.paciente, acao });
+    }
+    return { ...row, alertasPendencias };
   });
 
   return { pacientes, alertasCriticos: alertas };

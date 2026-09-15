@@ -4,6 +4,7 @@ import { AIResponseError } from "../lib/errors.js";
 import { extOf, readTextFile, safeUnlink } from "../lib/files.js";
 import { DOCUMENT_EXTRACTION_PROMPT } from "../prompts/documentExtraction.prompt.js";
 import { DocumentExtractionSchema, type DocumentExtraction } from "../schemas/ai.schemas.js";
+import { findingsToAlerts, mergeAlerts, parseVitalsFromText, runPatientGuardrails } from "./clinicalGuardrails.js";
 import { normalizeImageToJpeg } from "./image.service.js";
 import type { JobStore } from "./jobStore.js";
 import { safeJsonCompletion } from "./openaiClient.js";
@@ -28,7 +29,14 @@ export function normalizeToLegacySchema(
   simple: DocumentExtraction & { engine: string; fileName?: string; markdown?: string; extraAlerts?: string[] },
 ): ClinicalExtractionResult {
   const { engine, fileName, markdown, extraAlerts = [], ...data } = simple;
-  const alertas = [...data.alertas, ...extraAlerts];
+  const findings = runPatientGuardrails({
+    laboratorio: data.laboratorios.join(" / "),
+    antibioticos: data.antibioticos.join("\n"),
+    vitals: parseVitalsFromText(data.exame_fisico ?? ""),
+    idade: data.idade,
+    sexo: data.sexo,
+  });
+  const alertas = mergeAlerts([...data.alertas, ...extraAlerts], findingsToAlerts(findings));
   const uncertain = (["nome", "idade", "sexo", "leito", "setor"] as const).filter((k) => data[k] == null);
 
   return {
