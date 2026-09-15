@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { env } from "../config.js";
+import { authRequired } from "../config.js";
 import { getSupabaseAdmin } from "../lib/supabaseAdmin.js";
 
 declare global {
@@ -41,7 +41,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
 
   if (!token) {
-    if (env.AUTH_REQUIRED) {
+    if (authRequired()) {
       res.status(401).json({ error: "unauthorized", message: "Token de acesso ausente." });
       return;
     }

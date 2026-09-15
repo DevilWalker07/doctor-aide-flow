@@ -1,33 +1,14 @@
-// Local-only mock user. Replaces Clerk integration.
-// Generates a stable user id stored in localStorage so all data persists.
+import { useAuth } from "@/lib/auth/AuthContext";
 
-const USER_ID_KEY = "da_local_user_id";
-const USER_NAME_KEY = "da_local_user_name";
+const LOCAL_USER_ID_KEY = "da_local_user_id";
 
-function generateUUID(): string {
-  // RFC4122 v4 fallback for environments without crypto.randomUUID
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    try {
-      return crypto.randomUUID();
-    } catch {
-      // fall through
-    }
-  }
-  // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-function getOrCreateLocalUserId(): string {
-  if (typeof window === "undefined") return "00000000-0000-4000-8000-000000000000";
+// Sem Supabase configurado o app roda em modo local (sem login): mantém um id estável por dispositivo.
+function getLocalUserId(): string {
   try {
-    let id = localStorage.getItem(USER_ID_KEY);
+    let id = localStorage.getItem(LOCAL_USER_ID_KEY);
     if (!id) {
-      id = generateUUID();
-      localStorage.setItem(USER_ID_KEY, id);
+      id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `local-${Date.now()}`;
+      localStorage.setItem(LOCAL_USER_ID_KEY, id);
     }
     return id;
   } catch {
@@ -35,23 +16,19 @@ function getOrCreateLocalUserId(): string {
   }
 }
 
-function getLocalUserName(): string {
-  if (typeof window === "undefined") return "Doutor";
-  try {
-    return localStorage.getItem(USER_NAME_KEY) || "Doutor";
-  } catch {
-    return "Doutor";
-  }
-}
-
 export function useSupabaseUser() {
-  const userId = getOrCreateLocalUserId();
-  const userName = getLocalUserName();
+  const { user, loading, configured } = useAuth();
 
+  if (!configured) {
+    return { userId: getLocalUserId(), userEmail: null as string | null, userName: "Doutor", isLoaded: true, localMode: true };
+  }
+
+  const meta = (user?.user_metadata ?? {}) as { name?: string };
   return {
-    userId,
-    userEmail: null as string | null,
-    userName,
-    isLoaded: true,
+    userId: user?.id ?? null,
+    userEmail: user?.email ?? null,
+    userName: meta.name || user?.email?.split("@")[0] || "Doutor",
+    isLoaded: !loading,
+    localMode: false,
   };
 }

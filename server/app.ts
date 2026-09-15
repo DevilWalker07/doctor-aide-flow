@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import helmet from "helmet";
-import { env, hasOpenAIKey, hasSupabase, STATIC_DIR } from "./config.js";
+import { authRequired, env, hasOpenAIKey, hasSupabase, STATIC_DIR } from "./config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
@@ -55,7 +55,7 @@ export function createApp(deps: AppDeps = {}) {
       aiMock: env.AI_MOCK,
       jobStore: jobStore.kind,
       supabase: hasSupabase(),
-      authRequired: env.AUTH_REQUIRED,
+      authRequired: authRequired(),
       uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     });
   });

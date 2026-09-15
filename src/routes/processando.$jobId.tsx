@@ -79,7 +79,7 @@ function ProcessandoRoute() {
              storage.clearUploadPatientId();
              nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
           } else {
-             nav({ to: "/revisar-extracao" });
+             nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
           }
           
           toast.success("Processamento concluído!");
@@ -184,7 +184,7 @@ function ProcessandoRoute() {
                 <RefreshCw className="h-4 w-4" /> Tentar Novamente
               </button>
               <button
-                onClick={() => nav({ to: "/cadastro-manual" })}
+                onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
                 className="py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
               >
                 <ClipboardList className="h-4 w-4" /> Preencher Manual
@@ -239,7 +239,7 @@ function ProcessandoRoute() {
                       <RefreshCw className="h-3.5 w-3.5" /> Aguardar mais
                     </button>
                     <button
-                      onClick={() => nav({ to: "/cadastro-manual" })}
+                      onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
                       className="flex-1 py-4 rounded-xl bg-secondary text-foreground font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                     >
                       <ClipboardList className="h-3.5 w-3.5" /> Digitar Manual

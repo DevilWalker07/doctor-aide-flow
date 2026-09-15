@@ -21,7 +21,7 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   ALLOWED_ORIGINS: z.string().default(""),
-  AUTH_REQUIRED: bool.default(false),
+  AUTH_OPTIONAL: bool.default(false),
   AI_MOCK: bool.default(false),
   MAX_PDF_PAGES: z.coerce.number().int().min(1).max(30).default(15),
   STATIC_DIR: z.string().optional(),
@@ -39,8 +39,11 @@ export const isProduction = env.NODE_ENV === "production";
 export const hasOpenAIKey = () => Boolean(env.OPENAI_API_KEY) || env.AI_MOCK;
 export const hasSupabase = () => Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
 
-if (env.AUTH_REQUIRED && !hasSupabase()) {
-  console.error("[config] AUTH_REQUIRED=true exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.");
+// Autenticação é obrigatória por padrão. AUTH_OPTIONAL=true só para dev/testes sem Supabase.
+export const authRequired = () => !env.AUTH_OPTIONAL;
+
+if (authRequired() && !hasSupabase()) {
+  console.error("[config] Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).");
   process.exit(1);
 }
 export const allowedOrigins = () =>

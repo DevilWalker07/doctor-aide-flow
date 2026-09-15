@@ -1,5 +1,12 @@
-import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, redirect } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import type { AuthApi } from "@/lib/auth/AuthContext";
+
+export interface RouterContext {
+  auth: AuthApi;
+}
+
+const PUBLIC_PATHS = new Set(["/login", "/cadastro", "/recuperar-senha", "/nova-senha"]);
 
 function NotFoundComponent() {
   return (
@@ -23,7 +30,18 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: ({ context, location }) => {
+    const { auth } = context;
+    if (!auth.configured) return;
+    const isPublic = PUBLIC_PATHS.has(location.pathname);
+    if (!isPublic && !auth.session) {
+      throw redirect({ to: "/login", search: { redirect: location.href } });
+    }
+    if (isPublic && auth.session && location.pathname !== "/nova-senha") {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
