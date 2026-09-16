@@ -17,7 +17,7 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
-  head: () => ({ meta: [{ title: "Dashboard — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — MEDFLUXO" }] }),
 });
 
 interface Patient {

@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroRedirect,
-  head: () => ({ meta: [{ title: "DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "MEDFLUXO" }] }),
 });
 
 function CadastroRedirect() {

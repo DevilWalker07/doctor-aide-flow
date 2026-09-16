@@ -13,7 +13,7 @@ import { plantaoImportService, type ImportedPatient } from "@/lib/plantaoImportS
 
 export const Route = createFileRoute("/round")({
   component: RoundInteligente,
-  head: () => ({ meta: [{ title: "Round Inteligente — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Round Inteligente — MEDFLUXO" }] }),
 });
 
 const TODAY = new Date().toLocaleDateString("pt-BR");
@@ -169,7 +169,7 @@ function RoundInteligente() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-3">
-              <h1 className="text-sm font-black text-[#0F172A] tracking-widest uppercase">DOUTOR AJUDA</h1>
+              <h1 className="text-sm font-black text-[#0F172A] tracking-widest uppercase">MEDFLUXO</h1>
               <Badge variant="navy">ROUND {TODAY}</Badge>
             </div>
           </div>
@@ -503,7 +503,7 @@ function RoundInteligente() {
         </div>
         
         <footer className="mt-12 pt-8 border-t border-[#DCE4F0] text-center">
-          <p className="text-[9px] font-black text-[#CBD5E1] uppercase tracking-[0.5em]">GERADO PELO SISTEMA DOUTOR AJUDA — MOTOR LUAN IA</p>
+          <p className="text-[9px] font-black text-[#CBD5E1] uppercase tracking-[0.5em]">GERADO PELO SISTEMA MEDFLUXO — MOTOR LUAN IA</p>
         </footer>
       </div>
     </div>

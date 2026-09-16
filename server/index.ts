@@ -24,7 +24,7 @@ app.use(express.json({ limit: "10mb" }));
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
-    service: "doutor-ajuda-motor-luan",
+    service: "medfluxo-motor-luan",
     version: "0.2.1",
     hasOpenAIKey: hasOpenAIKey(),
     model: DEFAULT_MODEL,
@@ -71,5 +71,5 @@ app.use((req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`DOUTOR AJUDA Motor Luan v0.2.1 listening on http://localhost:${port}`);
+  console.log(`MEDFLUXO Motor Luan v0.2.1 listening on http://localhost:${port}`);
 });

@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/login")({
   component: LoginRedirect,
-  head: () => ({ meta: [{ title: "DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "MEDFLUXO" }] }),
 });
 
 function LoginRedirect() {

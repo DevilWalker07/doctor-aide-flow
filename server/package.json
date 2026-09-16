@@ -1,5 +1,5 @@
 {
-  "name": "doutor-ajuda-local-server",
+  "name": "medfluxo-local-server",
   "private": true,
   "type": "module",
   "scripts": {

@@ -16,7 +16,7 @@ import {
 
 export const Route = createFileRoute("/passagem-plantao")({
   component: PassagemPlantaoPage,
-  head: () => ({ meta: [{ title: "Passagem de Plantão IA — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Passagem de Plantão IA — MEDFLUXO" }] }),
 });
 
 type FileStatus = "idle" | "ready" | "error";

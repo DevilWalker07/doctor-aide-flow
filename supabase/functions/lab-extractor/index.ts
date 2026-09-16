@@ -20,7 +20,7 @@ serve(async (req) => {
       throw new Error("Missing OPENAI_API_KEY secret");
     }
 
-    const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico DOUTOR AJUDA.
+    const systemPrompt = `Você é um extrator de exames laboratoriais para o sistema médico MEDFLUXO.
 Retorne exclusivamente JSON puro (sem markdown \`\`\`json ou texto extra).
 Nunca invente valores.
 Se um valor não for encontrado, retorne null.

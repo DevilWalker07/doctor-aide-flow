@@ -1,4 +1,4 @@
-# DOUTOR AJUDA / HNAS ASSIST
+# MEDFLUXO / HNAS ASSIST
 
 Sistema médico pessoal para evolução clínica, round de enfermaria, importação de laboratórios e mapa de passagem de plantão.
 

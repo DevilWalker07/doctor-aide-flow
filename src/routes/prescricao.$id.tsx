@@ -15,7 +15,7 @@ import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/prescricao/$id")({
   component: PrescricaoPage,
-  head: () => ({ meta: [{ title: "Gerar Prescrição — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Prescrição — MEDFLUXO" }] }),
 });
 
 const DIET_OPTIONS = ["Geral", "Hipossódica", "Hipolipídica", "Hipoglicídica", "Pastosa", "Líquida", "Zero via oral", "Sonda"];

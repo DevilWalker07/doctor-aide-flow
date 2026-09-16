@@ -1,4 +1,4 @@
-# Arquitetura - DOUTOR AJUDA / HNAS ASSIST
+# Arquitetura - MEDFLUXO / HNAS ASSIST
 
 ## Visão Geral
 

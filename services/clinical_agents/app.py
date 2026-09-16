@@ -37,7 +37,7 @@ except ImportError:
     HAS_DOCLING = False
     print("Warning: docling not installed. Falling back to other extraction methods.")
 
-app = FastAPI(title="Doutor Ajuda - Async Clinical Agents")
+app = FastAPI(title="Medfluxo - Async Clinical Agents")
 
 app.add_middleware(
     CORSMiddleware,
