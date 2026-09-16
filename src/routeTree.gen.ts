@@ -37,8 +37,9 @@ import { Route as PrescricaoIdRouteImport } from './routes/prescricao.$id'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
-import { Route as AmbienteAmbienteIdRouteImport } from './routes/ambiente.$ambienteId'
+import { Route as AmbienteAmbienteIdIndexRouteImport } from './routes/ambiente.$ambienteId.index'
 import { Route as EvolucaoIdHistoricoRouteImport } from './routes/evolucao.$id.historico'
+import { Route as AmbienteAmbienteIdSubIdRouteImport } from './routes/ambiente.$ambienteId.$subId'
 
 const UploadIaRoute = UploadIaRouteImport.update({
   id: '/upload-ia',
@@ -180,15 +181,20 @@ const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   path: '/evolucao/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AmbienteAmbienteIdRoute = AmbienteAmbienteIdRouteImport.update({
-  id: '/ambiente/$ambienteId',
-  path: '/ambiente/$ambienteId',
+const AmbienteAmbienteIdIndexRoute = AmbienteAmbienteIdIndexRouteImport.update({
+  id: '/ambiente/$ambienteId/',
+  path: '/ambiente/$ambienteId/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EvolucaoIdHistoricoRoute = EvolucaoIdHistoricoRouteImport.update({
   id: '/historico',
   path: '/historico',
   getParentRoute: () => EvolucaoIdRoute,
+} as any)
+const AmbienteAmbienteIdSubIdRoute = AmbienteAmbienteIdSubIdRouteImport.update({
+  id: '/ambiente/$ambienteId/$subId',
+  path: '/ambiente/$ambienteId/$subId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -215,13 +221,14 @@ export interface FileRoutesByFullPath {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
-  '/ambiente/$ambienteId': typeof AmbienteAmbienteIdRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/ambiente/$ambienteId/': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -247,13 +254,14 @@ export interface FileRoutesByTo {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
-  '/ambiente/$ambienteId': typeof AmbienteAmbienteIdRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/ambiente/$ambienteId': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -280,13 +288,14 @@ export interface FileRoutesById {
   '/round': typeof RoundRoute
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
-  '/ambiente/$ambienteId': typeof AmbienteAmbienteIdRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
+  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
+  '/ambiente/$ambienteId/': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -314,13 +323,14 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/upload-ia'
-    | '/ambiente/$ambienteId'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
+    | '/ambiente/$ambienteId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -346,13 +356,14 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/upload-ia'
-    | '/ambiente/$ambienteId'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
+    | '/ambiente/$ambienteId'
   id:
     | '__root__'
     | '/'
@@ -378,13 +389,14 @@ export interface FileRouteTypes {
     | '/round'
     | '/tipo'
     | '/upload-ia'
-    | '/ambiente/$ambienteId'
     | '/evolucao/$id'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
+    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
+    | '/ambiente/$ambienteId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -411,12 +423,13 @@ export interface RootRouteChildren {
   RoundRoute: typeof RoundRoute
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
-  AmbienteAmbienteIdRoute: typeof AmbienteAmbienteIdRoute
   EvolucaoIdRoute: typeof EvolucaoIdRouteWithChildren
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   PrescricaoIdRoute: typeof PrescricaoIdRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
+  AmbienteAmbienteIdSubIdRoute: typeof AmbienteAmbienteIdSubIdRoute
+  AmbienteAmbienteIdIndexRoute: typeof AmbienteAmbienteIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -617,11 +630,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EvolucaoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ambiente/$ambienteId': {
-      id: '/ambiente/$ambienteId'
+    '/ambiente/$ambienteId/': {
+      id: '/ambiente/$ambienteId/'
       path: '/ambiente/$ambienteId'
-      fullPath: '/ambiente/$ambienteId'
-      preLoaderRoute: typeof AmbienteAmbienteIdRouteImport
+      fullPath: '/ambiente/$ambienteId/'
+      preLoaderRoute: typeof AmbienteAmbienteIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/evolucao/$id/historico': {
@@ -630,6 +643,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/evolucao/$id/historico'
       preLoaderRoute: typeof EvolucaoIdHistoricoRouteImport
       parentRoute: typeof EvolucaoIdRoute
+    }
+    '/ambiente/$ambienteId/$subId': {
+      id: '/ambiente/$ambienteId/$subId'
+      path: '/ambiente/$ambienteId/$subId'
+      fullPath: '/ambiente/$ambienteId/$subId'
+      preLoaderRoute: typeof AmbienteAmbienteIdSubIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -670,12 +690,13 @@ const rootRouteChildren: RootRouteChildren = {
   RoundRoute: RoundRoute,
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
-  AmbienteAmbienteIdRoute: AmbienteAmbienteIdRoute,
   EvolucaoIdRoute: EvolucaoIdRouteWithChildren,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   PrescricaoIdRoute: PrescricaoIdRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
+  AmbienteAmbienteIdSubIdRoute: AmbienteAmbienteIdSubIdRoute,
+  AmbienteAmbienteIdIndexRoute: AmbienteAmbienteIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -2,63 +2,75 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { AMBIENTES } from "@/lib/ambientes";
 
-export function AmbienteMatrix() {
+/**
+ * Matriz de ambientes. Os chips de subambiente levam direto ao destino final
+ * — um toque em vez de dois — e já mostram "Em breve" quando o subambiente
+ * ainda não tem fluxo, para o médico não descobrir depois do clique.
+ */
+export function AmbienteMatrix({ primeiroAcesso = false }: { primeiroAcesso?: boolean }) {
   return (
     <section aria-labelledby="hub-ambientes" className="space-y-4">
       <div>
-        <h2
-          id="hub-ambientes"
-          className="text-xl sm:text-2xl font-black tracking-tight text-slate-100"
-        >
-          Onde você está atendendo agora?
+        <h2 id="hub-ambientes" className="t-display text-foreground">
+          Onde você está atendendo?
         </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Escolha o ambiente para abrir um plantão com o fluxo e os agentes certos.
+        <p className="t-body text-muted-foreground mt-1">
+          {primeiroAcesso
+            ? "Escolha o ambiente para abrir seu primeiro plantão."
+            : "O ambiente define o modelo de evolução e os agentes usados."}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {AMBIENTES.map((amb) => (
           <article
             key={amb.id}
             data-testid={`hub-ambiente-${amb.id}`}
-            className={`relative rounded-[1.75rem] border ${amb.accent.border} bg-slate-900/60 p-5 flex flex-col gap-4 transition-colors hover:bg-slate-900`}
+            className={`rounded-3xl border ${amb.accent.border} bg-card flex flex-col gap-4 p-5`}
           >
             <Link
               to="/ambiente/$ambienteId"
               params={{ ambienteId: amb.id }}
-              search={{}}
-              className="flex items-start gap-4 group focus-visible:outline-none"
+              className="group focus-visible:ring-ring -m-2 flex items-start gap-4 rounded-2xl p-2 focus-visible:ring-2 focus-visible:outline-none"
             >
               <div
                 className={`h-12 w-12 shrink-0 rounded-2xl ${amb.accent.bg} ${amb.accent.text} flex items-center justify-center`}
               >
-                <amb.icon className="h-6 w-6" />
+                <amb.icon className="h-6 w-6" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span aria-hidden="true">{amb.emoji}</span>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-100 leading-tight">
-                    {amb.label}
-                  </h3>
-                </div>
-                <p className="mt-1 text-xs text-slate-400 leading-relaxed">{amb.descricao}</p>
+                <h3 className="t-title text-foreground">
+                  <span aria-hidden="true" className="mr-1.5">
+                    {amb.emoji}
+                  </span>
+                  {amb.label}
+                </h3>
+                <p className="t-body text-muted-foreground mt-1">{amb.descricao}</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-200 transition-colors mt-1" />
+              <ChevronRight
+                className="text-muted-foreground group-hover:text-foreground mt-1 h-5 w-5 shrink-0 transition-colors"
+                aria-hidden="true"
+              />
             </Link>
 
-            <ul className="flex flex-wrap gap-2" aria-label={`Sub-áreas de ${amb.label}`}>
+            <ul className="flex flex-wrap gap-2" aria-label={`Áreas de ${amb.label}`}>
               {amb.subs.map((s) => (
                 <li key={s.id}>
                   <Link
-                    to="/ambiente/$ambienteId"
-                    params={{ ambienteId: amb.id }}
-                    search={{ sub: s.id }}
+                    to="/ambiente/$ambienteId/$subId"
+                    params={{ ambienteId: amb.id, subId: s.id }}
                     data-testid={`hub-sub-${s.id}`}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-slate-950/50 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:text-slate-50 hover:border-slate-500 transition-colors focus-visible:outline-none focus-visible:ring-2 ${amb.accent.ring}`}
+                    className={`t-label border-border bg-background hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl border px-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                      s.implementado ? "text-foreground" : "text-muted-foreground"
+                    }`}
                   >
-                    {s.icon ? <s.icon className="h-3 w-3" /> : null}
+                    {s.icon ? <s.icon className="h-4 w-4" aria-hidden="true" /> : null}
                     {s.label}
+                    {!s.implementado && (
+                      <span className="t-eyebrow bg-muted text-muted-foreground rounded-full px-2 py-0.5">
+                        Em breve
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}
