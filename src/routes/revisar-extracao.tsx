@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useId, memo, useCallback } from "react";
 import {
   User,
   Stethoscope,
@@ -41,14 +41,17 @@ export const Route = createFileRoute("/revisar-extracao")({
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const inputCls =
-  "w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all placeholder:text-slate-300 shadow-sm";
+  "w-full min-h-[3rem] bg-card border border-border rounded-2xl px-4 py-3 text-base font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors placeholder:text-muted-foreground placeholder:font-normal";
 const textareaCls =
-  "w-full bg-white border border-slate-200 rounded-2xl px-5 py-5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all leading-relaxed placeholder:text-slate-300 shadow-sm";
+  "w-full bg-card border border-border rounded-2xl px-4 py-4 text-base font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors leading-relaxed placeholder:text-muted-foreground placeholder:font-normal";
 
 // ─── Components ──────────────────────────────────────────────────────────────
 
 const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }: any) => {
   const [local, setLocal] = useState(value || "");
+  // Os rótulos não estavam ligados aos campos: tocar no rótulo não focava
+  // nada e o leitor de tela anunciava o campo sem nome.
+  const id = useId();
   useEffect(() => {
     setLocal(value || "");
   }, [value]);
@@ -56,11 +59,12 @@ const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }
     if (local !== value) onChange(local);
   };
   return (
-    <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="t-label text-muted-foreground">
         {label}
       </label>
       <textarea
+        id={id}
         value={local}
         onChange={(e) => setLocal(e.target.value)}
         onBlur={handleBlur}
@@ -75,6 +79,7 @@ const EditableTextarea = memo(({ value, onChange, label, rows = 4, placeholder }
 const EditableInput = memo(
   ({ value, onChange, label, type = "text", placeholder, uppercase = false }: any) => {
     const [local, setLocal] = useState(value || "");
+    const id = useId();
     useEffect(() => {
       setLocal(value || "");
     }, [value]);
@@ -84,11 +89,12 @@ const EditableInput = memo(
       if (v !== value) onChange(v);
     };
     return (
-      <div className="space-y-2">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+      <div className="space-y-1.5">
+        <label htmlFor={id} className="t-label text-muted-foreground">
           {label}
         </label>
         <input
+          id={id}
           type={type}
           value={local}
           onChange={(e) => setLocal(e.target.value)}
@@ -103,14 +109,16 @@ const EditableInput = memo(
 
 const Section = memo(
   ({ id, title, icon, children }: { id: string; title: string; icon: any; children: any }) => (
-    <section id={id} className="scroll-mt-32">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
+    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-28">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="bg-secondary border-border text-muted-foreground flex h-10 w-10 items-center justify-center rounded-xl border">
           {icon}
         </div>
-        <h2 className="text-xs font-black tracking-[0.2em] uppercase text-slate-900">{title}</h2>
+        <h2 id={`${id}-titulo`} className="t-title text-foreground">
+          {title}
+        </h2>
       </div>
-      <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-10 shadow-sm space-y-8">
+      <div className="bg-card border-border space-y-6 rounded-3xl border p-5 sm:p-6">
         {children}
       </div>
     </section>
@@ -119,12 +127,12 @@ const Section = memo(
 
 const SIDEBAR_ITEMS = [
   { id: "identificacao", label: "Identificação", icon: User },
-  { id: "hda", label: "HDA / Motivo", icon: Stethoscope },
+  { id: "hda", label: "História e motivo", icon: Stethoscope },
   { id: "problemas", label: "Problemas", icon: ClipboardList },
   { id: "antibioticos", label: "Antibióticos", icon: Pill },
   { id: "medicacoes", label: "Medicações", icon: Activity },
-  { id: "laboratorios", label: "Laboratórios", icon: FlaskConical },
-  { id: "exame-fisico", label: "Exame Físico", icon: Activity },
+  { id: "laboratorios", label: "Laboratório", icon: FlaskConical },
+  { id: "exame-fisico", label: "Exame físico", icon: Activity },
   { id: "condutas", label: "Condutas", icon: ClipboardList },
   { id: "pendencias", label: "Pendências", icon: AlertTriangle },
   { id: "alertas", label: "Alertas", icon: AlertCircle },
@@ -145,24 +153,32 @@ const Sidebar = memo(({ onScrollTo }: { onScrollTo: (id: string) => void }) => {
     return () => sections.forEach((s) => observer.unobserve(s));
   }, []);
   return (
-    <aside className="w-72 hidden md:block sticky top-32 self-start space-y-2">
-      <div className="bg-white/50 border border-slate-200 rounded-[2rem] p-3 space-y-1">
-        {SIDEBAR_ITEMS.map((item) => {
-          const isActive = active === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onScrollTo(item.id)}
-              className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all ${isActive ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-white/30"}`}
-            >
-              <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-300"}`} />
-              {item.label}
-              {isActive && <ChevronRight className="ml-auto h-3 w-3" />}
-            </button>
-          );
-        })}
-      </div>
+    <aside className="sticky top-24 hidden w-64 self-start md:block">
+      <nav aria-label="Seções da revisão" className="border-border bg-card rounded-2xl border p-2">
+        <ul className="space-y-1">
+          {SIDEBAR_ITEMS.map((item) => {
+            const isActive = active === item.id;
+            const Icon = item.icon;
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => onScrollTo(item.id)}
+                  aria-current={isActive ? "true" : undefined}
+                  className={`t-label focus-visible:ring-ring flex min-h-[2.75rem] w-full items-center gap-3 rounded-xl px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {item.label}
+                  {isActive && <ChevronRight className="ml-auto h-4 w-4" aria-hidden="true" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
     </aside>
   );
 });
@@ -183,7 +199,7 @@ const ProblemList = memo(({ items, onChange }: any) => (
         />
         <button
           onClick={() => onChange(items.filter((item: any) => item.id !== p.id))}
-          className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"
+          className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <Trash2 className="h-5 w-5" />
         </button>
@@ -193,7 +209,7 @@ const ProblemList = memo(({ items, onChange }: any) => (
       onClick={() =>
         onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])
       }
-      className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"
+      className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
     </button>
@@ -203,29 +219,24 @@ const ProblemList = memo(({ items, onChange }: any) => (
 const AntibioticList = memo(({ items, onChange }: any) => (
   <div className="space-y-8">
     {items.map((a: any, i: number) => (
-      <div
-        key={a.id}
-        className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 space-y-6"
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+      <div key={a.id} className="bg-secondary border-border space-y-5 rounded-2xl border p-5">
+        <div className="border-border flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-2">
             <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs">
               D{differenceInDays(new Date(), parseISO(a.dataInicio)) + 1 || "?"}
             </span>
-            <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              {a.nome || "Novo ATB"}
-            </span>
+            <span className="t-title text-foreground">{a.nome || "Novo ATB"}</span>
           </div>
           <button
             onClick={() => onChange(items.filter((item: any) => item.id !== a.id))}
-            className="text-slate-400 hover:text-red-500"
+            className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-6">
           <EditableInput
-            label="NOME DO ANTIBIÓTICO"
+            label="Nome do antibiótico"
             value={a.nome}
             onChange={(v: any) => {
               const list = [...items];
@@ -235,7 +246,7 @@ const AntibioticList = memo(({ items, onChange }: any) => (
           />
           <div className="grid grid-cols-2 gap-4">
             <EditableInput
-              label="DOSE"
+              label="Dose"
               value={a.dose}
               onChange={(v: any) => {
                 const list = [...items];
@@ -244,7 +255,7 @@ const AntibioticList = memo(({ items, onChange }: any) => (
               }}
             />
             <EditableInput
-              label="VIA"
+              label="Via"
               value={a.via}
               onChange={(v: any) => {
                 const list = [...items];
@@ -255,7 +266,7 @@ const AntibioticList = memo(({ items, onChange }: any) => (
           </div>
           <div className="grid grid-cols-2 gap-4">
             <EditableInput
-              label="FREQUÊNCIA"
+              label="Frequência"
               value={a.frequencia}
               onChange={(v: any) => {
                 const list = [...items];
@@ -264,7 +275,7 @@ const AntibioticList = memo(({ items, onChange }: any) => (
               }}
             />
             <EditableInput
-              label="DATA INÍCIO"
+              label="Data de início"
               type="date"
               value={a.dataInicio}
               onChange={(v: any) => {
@@ -291,7 +302,7 @@ const AntibioticList = memo(({ items, onChange }: any) => (
           },
         ])
       }
-      className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"
+      className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
     </button>
@@ -313,7 +324,7 @@ const MedicationList = memo(({ items, onChange }: any) => (
         />
         <button
           onClick={() => onChange(items.filter((item: any) => item.id !== m.id))}
-          className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"
+          className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <Trash2 className="h-5 w-5" />
         </button>
@@ -323,7 +334,7 @@ const MedicationList = memo(({ items, onChange }: any) => (
       onClick={() =>
         onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])
       }
-      className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"
+      className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO
     </button>
@@ -333,8 +344,8 @@ const MedicationList = memo(({ items, onChange }: any) => (
 const LabList = memo(({ items, onChange }: any) => (
   <div className="space-y-8">
     {items.map((l: any, i: number) => (
-      <div key={l.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+      <div key={l.id} className="bg-secondary border-border rounded-2xl border p-5">
+        <div className="border-border flex items-center justify-between border-b pb-3">
           <EditableInput
             type="date"
             value={l.data}
@@ -346,13 +357,13 @@ const LabList = memo(({ items, onChange }: any) => (
           />
           <button
             onClick={() => onChange(items.filter((item: any) => item.id !== l.id))}
-            className="text-slate-400 hover:text-red-500"
+            className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
         <EditableTextarea
-          label="RESULTADOS EXAMES"
+          label="Resultados"
           value={l.valor}
           onChange={(v: any) => {
             const list = [...items];
@@ -374,7 +385,7 @@ const LabList = memo(({ items, onChange }: any) => (
           },
         ])
       }
-      className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"
+      className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" /> ADICIONAR EXAME
     </button>
@@ -397,7 +408,7 @@ const SimpleList = memo(({ items, onChange, placeholder }: any) => (
         />
         <button
           onClick={() => onChange(items.filter((item: any) => item.id !== c.id))}
-          className="p-4 text-slate-400 hover:text-red-500 rounded-2xl"
+          className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <Trash2 className="h-5 w-5" />
         </button>
@@ -407,7 +418,7 @@ const SimpleList = memo(({ items, onChange, placeholder }: any) => (
       onClick={() =>
         onChange([...items, { id: Math.random().toString(36).substr(2, 9), text: "" }])
       }
-      className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-[11px] font-black text-slate-400 flex items-center justify-center gap-3"
+      className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" /> ADICIONAR ITEM
     </button>
@@ -613,19 +624,19 @@ function RevisarExtracao() {
     );
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9]">
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+    <div className="bg-background min-h-screen">
+      <header className="bg-background/90 border-border sticky top-0 z-50 border-b backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <Link
               to="/dashboard"
-              className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500"
+              className="bg-secondary text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             >
               <X className="h-5 w-5" />
             </Link>
             <div>
-              <h1 className="text-sm font-black text-slate-900 uppercase">REVISAR EXTRAÇÃO</h1>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <h1 className="t-title text-foreground">Conferir o que a IA leu</h1>
+              <p className="t-label text-muted-foreground flex items-center gap-2 font-normal">
                 <Clock className="h-3 w-3" /> {storage.getJobArquivo()}
               </p>
             </div>
@@ -634,62 +645,58 @@ function RevisarExtracao() {
             onClick={handleSave}
             disabled={saving}
             data-testid="extraction-save"
-            className="bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase flex items-center gap-3 shadow-xl disabled:opacity-50"
+            className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-2xl px-5 text-base font-bold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           >
             {saving ? (
               <RefreshCw className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Save className="h-4 w-4" /> SALVAR DADOS
+                <Save className="h-5 w-5" aria-hidden="true" /> Salvar
               </>
             )}
           </button>
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-10 flex gap-12">
+      <div className="mx-auto flex max-w-[1400px] gap-8 px-4 py-6 sm:px-6">
         <Sidebar onScrollTo={scrollTo} />
-        <main className="flex-1 max-w-3xl space-y-16 pb-40">
+        <main className="max-w-3xl flex-1 space-y-8 pb-24">
           {patient_id && (
-            <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0">
-                <Plus className="h-8 w-8" />
+            <div className="bg-primary/5 border-primary/20 flex items-center gap-4 rounded-3xl border p-5">
+              <div className="bg-primary text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+                <Plus className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-primary uppercase mb-1">
-                  MODO: ADICIONAR AO PACIENTE
-                </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <h3 className="t-title text-primary">Adicionando a um paciente existente</h3>
+                <p className="t-body text-muted-foreground">
                   Dados extraídos serão mesclados ao prontuário.
                 </p>
               </div>
             </div>
           )}
 
-          <Section id="identificacao" title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
+          <Section id="identificacao" title="Identificação" icon={<User className="h-5 w-5" />}>
             <div className="space-y-8">
               <EditableInput
-                label="NOME COMPLETO"
+                label="Nome completo"
                 value={data.nome}
                 onChange={(v: any) => updateField("nome", v)}
                 uppercase
               />
               <EditableInput
-                label="IDADE"
+                label="Idade"
                 type="number"
                 value={data.idade}
                 onChange={(v: any) => updateField("idade", v)}
               />
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  SEXO
-                </label>
-                <div className="flex bg-slate-100 rounded-2xl p-1.5 gap-1.5">
+                <span className="t-label text-muted-foreground">Sexo</span>
+                <div className="bg-secondary flex gap-1.5 rounded-2xl p-1.5">
                   {["F", "M"].map((s) => (
                     <button
                       key={s}
                       onClick={() => updateField("sexo", s)}
-                      className={`flex-1 py-4 rounded-xl text-xs font-black transition-all ${data.sexo === s ? "bg-white text-primary shadow-sm" : "text-slate-400"}`}
+                      className={`focus-visible:ring-ring min-h-[2.75rem] flex-1 rounded-xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none ${data.sexo === s ? "bg-card text-primary" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       {s === "F" ? "FEMININO" : "MASCULINO"}
                     </button>
@@ -697,18 +704,18 @@ function RevisarExtracao() {
                 </div>
               </div>
               <EditableInput
-                label="LEITO"
+                label="Leito"
                 value={data.leito}
                 onChange={(v: any) => updateField("leito", v)}
                 uppercase
               />
               <EditableInput
-                label="SETOR"
+                label="Setor"
                 value={data.setor}
                 onChange={(v: any) => updateField("setor", v)}
               />
               <EditableInput
-                label="DATA ADMISSÃO"
+                label="Data de admissão"
                 type="date"
                 value={data.data_admissao}
                 onChange={(v: any) => updateField("data_admissao", v)}
@@ -716,16 +723,16 @@ function RevisarExtracao() {
             </div>
           </Section>
 
-          <Section id="hda" title="HDA / MOTIVO" icon={<Stethoscope className="h-5 w-5" />}>
+          <Section id="hda" title="História e motivo" icon={<Stethoscope className="h-5 w-5" />}>
             <div className="space-y-8">
               <EditableTextarea
-                label="MOTIVO ADMISSÃO"
+                label="Motivo da admissão"
                 value={data.motivo_admissao}
                 onChange={(v: any) => updateField("motivo_admissao", v)}
                 rows={3}
               />
               <EditableTextarea
-                label="HDA (HISTÓRIA DA DOENÇA ATUAL)"
+                label="História da doença atual"
                 value={data.hda}
                 onChange={(v: any) => updateField("hda", v)}
                 rows={10}
@@ -735,7 +742,7 @@ function RevisarExtracao() {
 
           <Section
             id="problemas"
-            title="LISTA DE PROBLEMAS"
+            title="Lista de problemas"
             icon={<ClipboardList className="h-5 w-5" />}
           >
             <ProblemList
@@ -744,14 +751,14 @@ function RevisarExtracao() {
             />
           </Section>
 
-          <Section id="antibioticos" title="ANTIBIÓTICOS" icon={<Pill className="h-5 w-5" />}>
+          <Section id="antibioticos" title="Antibióticos" icon={<Pill className="h-5 w-5" />}>
             <AntibioticList
               items={data.antibioticos}
               onChange={(newList: any) => updateField("antibioticos", newList)}
             />
           </Section>
 
-          <Section id="medicacoes" title="MEDICAÇÕES" icon={<Activity className="h-5 w-5" />}>
+          <Section id="medicacoes" title="Medicações" icon={<Activity className="h-5 w-5" />}>
             <MedicationList
               items={data.medicacoes}
               onChange={(newList: any) => updateField("medicacoes", newList)}
@@ -760,7 +767,7 @@ function RevisarExtracao() {
 
           <Section
             id="laboratorios"
-            title="LABORATÓRIOS"
+            title="Laboratório"
             icon={<FlaskConical className="h-5 w-5" />}
           >
             <LabList
@@ -769,7 +776,7 @@ function RevisarExtracao() {
             />
           </Section>
 
-          <Section id="exame-fisico" title="EXAME FÍSICO" icon={<Heart className="h-5 w-5" />}>
+          <Section id="exame-fisico" title="Exame físico" icon={<Heart className="h-5 w-5" />}>
             <div className="space-y-8">
               {[
                 { k: "geral", l: "GERAL" },
@@ -790,14 +797,14 @@ function RevisarExtracao() {
             </div>
           </Section>
 
-          <Section id="condutas" title="CONDUTAS" icon={<ClipboardList className="h-5 w-5" />}>
+          <Section id="condutas" title="Condutas" icon={<ClipboardList className="h-5 w-5" />}>
             <SimpleList
               items={data.condutas}
               onChange={(newList: any) => updateField("condutas", newList)}
             />
           </Section>
 
-          <Section id="pendencias" title="PENDÊNCIAS" icon={<AlertTriangle className="h-5 w-5" />}>
+          <Section id="pendencias" title="Pendências" icon={<AlertTriangle className="h-5 w-5" />}>
             <SimpleList
               items={data.pendencias}
               onChange={(newList: any) => updateField("pendencias", newList)}
@@ -807,17 +814,20 @@ function RevisarExtracao() {
           {data.alertas && data.alertas.length > 0 && (
             <Section
               id="alertas"
-              title="ALERTAS DA IA"
-              icon={<AlertCircle className="h-5 w-5 text-red-500" />}
+              title="Alertas da IA"
+              icon={<AlertCircle className="text-destructive h-5 w-5" />}
             >
               <div className="space-y-4">
                 {data.alertas.map((alerta: string, i: number) => (
                   <div
                     key={i}
-                    className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4"
+                    className="flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4"
                   >
-                    <Info className="h-5 w-5 text-amber-500" />
-                    <p className="text-xs font-bold uppercase text-amber-900">{alerta}</p>
+                    <Info
+                      className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <p className="t-body text-foreground">{alerta}</p>
                   </div>
                 ))}
               </div>
