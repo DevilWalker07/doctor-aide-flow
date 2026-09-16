@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AuthShell, authButtonCls, authInputCls } from "@/components/auth/AuthShell";
+import { AuthField, AuthShell, authButtonCls } from "@/components/auth/AuthShell";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/login")({
@@ -55,25 +55,26 @@ function LoginPage() {
           Supabase não configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
         </p>
       )}
-      <form onSubmit={submit} className="space-y-3">
-        <input
+      <form onSubmit={submit} className="space-y-4">
+        <AuthField
+          id="auth-email"
+          label="E-mail"
           type="email"
           required
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-mail"
-          className={authInputCls}
+          placeholder="seu@email.com"
           data-testid="auth-email"
         />
-        <input
+        <AuthField
+          id="auth-password"
+          label="Senha"
           type="password"
           required
           autoComplete="current-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          placeholder="Senha"
-          className={authInputCls}
           data-testid="auth-password"
         />
         <button
@@ -82,13 +83,13 @@ function LoginPage() {
           className={authButtonCls}
           data-testid="auth-submit"
         >
-          {loading && <Loader2 className="h-3 w-3 animate-spin" />} Entrar
+          {loading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />} Entrar
         </button>
       </form>
       <div className="mt-4 text-center">
         <Link
           to="/recuperar-senha"
-          className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary"
+          className="t-label text-muted-foreground hover:text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 focus-visible:ring-2 focus-visible:outline-none"
         >
           Esqueci minha senha
         </Link>

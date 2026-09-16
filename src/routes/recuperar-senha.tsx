@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AuthShell, authButtonCls, authInputCls } from "@/components/auth/AuthShell";
+import { AuthField, AuthShell, authButtonCls } from "@/components/auth/AuthShell";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/recuperar-senha")({
@@ -45,15 +45,16 @@ function RecuperarSenhaPage() {
           para criar uma nova senha.
         </p>
       ) : (
-        <form onSubmit={submit} className="space-y-3">
-          <input
+        <form onSubmit={submit} className="space-y-4">
+          <AuthField
+            id="auth-email"
+            label="E-mail da conta"
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="E-mail da conta"
-            className={authInputCls}
+            placeholder="seu@email.com"
             data-testid="auth-email"
           />
           <button

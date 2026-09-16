@@ -20,7 +20,7 @@ import type { AlertaCritico, MapaPlantaoData, PatientRow } from "../schemas/ai.s
 
 export type { AlertaCritico, MapaPlantaoData, PatientRow };
 
-const BLUE_HNAS = "1F4E79";
+const AZUL_MEDFLUXO = "1F4E79";
 const BLUE_HEADER_ROW = "2E74B5";
 const RED_ALERT = "C00000";
 const WHITE = "FFFFFF";
@@ -139,7 +139,7 @@ export async function gerarMapaPlantaoDocx(
     children: [
       new TableCell({
         columnSpan: 7,
-        shading: { type: ShadingType.SOLID, color: BLUE_HNAS, fill: BLUE_HNAS },
+        shading: { type: ShadingType.SOLID, color: AZUL_MEDFLUXO, fill: AZUL_MEDFLUXO },
         borders: {
           top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
           bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
@@ -316,7 +316,7 @@ export async function gerarMapaPlantaoDocx(
             spacing: { before: 100 },
             children: [
               new TextRun({
-                text: `Gerado em ${new Date().toLocaleString("pt-BR")} — HNAS`,
+                text: `Gerado em ${new Date().toLocaleString("pt-BR")}`,
                 size: 12,
                 color: "888888",
                 font: "Calibri",

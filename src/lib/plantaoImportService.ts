@@ -11,7 +11,7 @@ export interface ImportedPatient extends ImportedRoundPatient {}
 export const plantaoImportService = {
   processarTextoEvolucoes: async (text: string): Promise<ImportedPatient[]> => {
     const result = await importYesterdayEvolutionsWithAI(text, {
-      product: "MEDFLUXO / HNAS ASSIST",
+      product: "MEDFLUXO",
       mode: "round-import",
     });
 

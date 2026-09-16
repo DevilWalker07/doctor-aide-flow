@@ -289,7 +289,7 @@ function HubPage() {
       </main>
 
       <footer className="py-8 text-center">
-        <p className="t-label text-muted-foreground font-normal">Medfluxo · HNAS Assist</p>
+        <p className="t-label text-muted-foreground font-normal">Medfluxo</p>
       </footer>
 
       {selectedHandoff && (

@@ -677,7 +677,7 @@ function RoundInteligente() {
           MAPA DE PASSAGEM DE PLANTÃO
         </h1>
         <p className="text-xs font-bold text-[#64748B] mb-8 uppercase tracking-[0.3em]">
-          HNAS ASSIST — CLÍNICA MÉDICA FEMININA — {TODAY}
+          CLÍNICA MÉDICA FEMININA — {TODAY}
         </p>
 
         <div className="space-y-8">

@@ -32,18 +32,18 @@ export const motorLuanService = {
    * Gera templates de documentos clínicos
    */
   gerarRelatorio: (tipo: "transferencia" | "alta" | "obito", patient: RoundPatient) => {
-    const header = `HNAS ASSIST - RELATÓRIO MÉDICO\nDATA: ${new Date().toLocaleDateString("pt-BR")}\n\n`;
+    const header = `RELATÓRIO MÉDICO\nDATA: ${new Date().toLocaleDateString("pt-BR")}\n\n`;
     const patientInfo = `PACIENTE: ${patient.nome}\nIDADE: ${patient.idade}A | LEITO: ${patient.leito}\nDIAGNÓSTICOS: ${patient.diagnosticos}\n\n`;
 
     switch (tipo) {
       case "transferencia":
-        return `${header}${patientInfo}SOLICITO TRANSFERÊNCIA PARA UTI DEVIDO A:\n- ${patient.quadroAtual}\n- Necessidade de monitorização intensiva e suporte avançado.\n\nQUADRO ATUAL:\n${patient.evolucaoPadraoOuro}\n\nLABS:\n${patient.laboratorio}\n\nAtenciosamente,\nEquipe Clínica HNAS`;
+        return `${header}${patientInfo}SOLICITO TRANSFERÊNCIA PARA UTI DEVIDO A:\n- ${patient.quadroAtual}\n- Necessidade de monitorização intensiva e suporte avançado.\n\nQUADRO ATUAL:\n${patient.evolucaoPadraoOuro}\n\nLABS:\n${patient.laboratorio}\n\nAtenciosamente,\nEquipe Clínica`;
 
       case "alta":
-        return `${header}${patientInfo}SUMÁRIO DE ALTA:\nInternado por ${patient.dih} dias devido a ${patient.diagnosticos}.\n\nEVOLUÇÃO HOSPITALAR:\nPaciente evoluiu com ${patient.status === "estavel" ? "estabilidade clínica" : "melhora progressiva"} durante a internação.\n\nPRESCRIÇÃO DE ALTA:\n1. Manter cuidados gerais.\n2. Retorno em 15 dias para reavaliação.\n\nAtenciosamente,\nEquipe Clínica HNAS`;
+        return `${header}${patientInfo}SUMÁRIO DE ALTA:\nInternado por ${patient.dih} dias devido a ${patient.diagnosticos}.\n\nEVOLUÇÃO HOSPITALAR:\nPaciente evoluiu com ${patient.status === "estavel" ? "estabilidade clínica" : "melhora progressiva"} durante a internação.\n\nPRESCRIÇÃO DE ALTA:\n1. Manter cuidados gerais.\n2. Retorno em 15 dias para reavaliação.\n\nAtenciosamente,\nEquipe Clínica`;
 
       case "obito":
-        return `${header}${patientInfo}ATESTADO DE ÓBITO / CONSTATAÇÃO:\nConstatado óbito em ${new Date().toLocaleString("pt-BR")} devido a complicações de ${patient.diagnosticos}.\n\nANTECEDENTES:\n${patient.comorbidades}\n\nAtenciosamente,\nEquipe Clínica HNAS`;
+        return `${header}${patientInfo}ATESTADO DE ÓBITO / CONSTATAÇÃO:\nConstatado óbito em ${new Date().toLocaleString("pt-BR")} devido a complicações de ${patient.diagnosticos}.\n\nANTECEDENTES:\n${patient.comorbidades}\n\nAtenciosamente,\nEquipe Clínica`;
     }
   },
 };

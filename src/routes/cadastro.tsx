@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AuthShell, authButtonCls, authInputCls } from "@/components/auth/AuthShell";
+import { AuthField, AuthShell, authButtonCls } from "@/components/auth/AuthShell";
 import { useAuth } from "@/hooks/useAuth";
 import { storage } from "@/lib/storage";
 
@@ -51,7 +51,7 @@ function CadastroPage() {
   if (aguardandoConfirmacao) {
     return (
       <AuthShell titulo="Confirme seu e-mail" subtitulo="Enviamos um link de confirmação">
-        <p className="text-sm font-semibold text-foreground">
+        <p className="t-body text-foreground">
           Abra o e-mail enviado para <strong>{email}</strong> e clique no link para ativar a conta.
           Depois volte e entre.
         </p>
@@ -75,46 +75,48 @@ function CadastroPage() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-3">
-        <input
+      <form onSubmit={submit} className="space-y-4">
+        <AuthField
+          id="auth-name"
+          label="Nome completo"
           required
           autoComplete="name"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome completo"
-          className={authInputCls}
+          placeholder="Dr(a). Nome Sobrenome"
           data-testid="auth-name"
         />
-        <input
+        <AuthField
+          id="auth-email"
+          label="E-mail"
           type="email"
           required
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-mail"
-          className={authInputCls}
+          placeholder="seu@email.com"
           data-testid="auth-email"
         />
-        <input
+        <AuthField
+          id="auth-password"
+          label="Senha (mínimo 8 caracteres)"
           type="password"
           required
           minLength={8}
           autoComplete="new-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          placeholder="Senha (mín. 8 caracteres)"
-          className={authInputCls}
           data-testid="auth-password"
         />
-        <input
+        <AuthField
+          id="auth-password-confirm"
+          label="Repita a senha"
           type="password"
           required
           minLength={8}
           autoComplete="new-password"
           value={confirma}
           onChange={(e) => setConfirma(e.target.value)}
-          placeholder="Confirmar senha"
-          className={authInputCls}
           data-testid="auth-password-confirm"
         />
         <button

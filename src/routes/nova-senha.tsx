@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AuthShell, authButtonCls, authInputCls } from "@/components/auth/AuthShell";
+import { AuthField, AuthShell, authButtonCls } from "@/components/auth/AuthShell";
 import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/nova-senha")({
@@ -56,27 +56,27 @@ function NovaSenhaPage() {
           Abra esta página pelo link enviado ao seu e-mail para redefinir a senha.
         </p>
       ) : (
-        <form onSubmit={submit} className="space-y-3">
-          <input
+        <form onSubmit={submit} className="space-y-4">
+          <AuthField
+            id="auth-password"
+            label="Nova senha (mínimo 8 caracteres)"
             type="password"
             required
             minLength={8}
             autoComplete="new-password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            placeholder="Nova senha (mín. 8 caracteres)"
-            className={authInputCls}
             data-testid="auth-password"
           />
-          <input
+          <AuthField
+            id="auth-password-confirm"
+            label="Repita a nova senha"
             type="password"
             required
             minLength={8}
             autoComplete="new-password"
             value={confirma}
             onChange={(e) => setConfirma(e.target.value)}
-            placeholder="Confirmar nova senha"
-            className={authInputCls}
             data-testid="auth-password-confirm"
           />
           <button
