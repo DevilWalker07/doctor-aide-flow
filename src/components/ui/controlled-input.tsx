@@ -44,7 +44,9 @@ export const ControlledInput = memo(
         onChange={handleChange}
         onBlur={handleBlur}
         className={cn(
-          "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all",
+          // text-base (16px) não é estética: abaixo disso o Safari do iPhone dá
+          // zoom ao focar o campo, e o médico precisa dar pinch para voltar.
+          "w-full min-h-[3rem] bg-secondary/40 border border-border rounded-xl px-4 py-3 text-base font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card transition-colors",
           uppercase && "uppercase",
           className,
         )}
@@ -97,7 +99,7 @@ export const ControlledTextarea = memo(
         onChange={handleChange}
         onBlur={handleBlur}
         className={cn(
-          "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white leading-relaxed transition-all",
+          "w-full bg-secondary/40 border border-border rounded-2xl px-4 py-4 text-base font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card leading-relaxed transition-colors",
           uppercase && "uppercase",
           className,
         )}

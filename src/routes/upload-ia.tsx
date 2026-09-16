@@ -33,14 +33,19 @@ function UploadIAPage() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+  // Uma só validação para o seletor e para o arrastar-e-soltar. Antes o drop
+  // montava um evento falso para reaproveitar o handler do input.
+  const selecionarArquivo = (selected: File) => {
     if (selected.size > 20 * 1024 * 1024) {
-      toast.error("O arquivo deve ter no máximo 20MB.");
+      toast.error("O arquivo deve ter no máximo 20 MB.");
       return;
     }
     setFile(selected);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) selecionarArquivo(selected);
   };
 
   const handleUpload = async () => {
@@ -71,42 +76,44 @@ function UploadIAPage() {
       : "/paciente-internado";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
-        <Link
-          to={goBackUrl}
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ChevronLeft className="h-4 w-4" /> VOLTAR
-        </Link>
-        <span className="text-xs font-extrabold tracking-[0.2em] uppercase text-primary">
-          IMPORTAR DOCUMENTO
-        </span>
-        <div className="w-16" />
+    <div className="bg-background flex min-h-screen flex-col">
+      <header className="bg-background/90 border-border sticky top-0 z-20 w-full border-b backdrop-blur-xl">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
+          <Link
+            to={goBackUrl}
+            aria-label="Voltar"
+            className="touch-target border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </Link>
+          <span className="t-eyebrow text-muted-foreground">Importar documento</span>
+        </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center justify-center">
-        <div className="text-center mb-12">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+        <div className="flex items-start gap-4">
           <div
-            className={`h-20 w-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${engine === "vision" ? "bg-primary/10 text-primary" : "bg-ai/10 text-ai"}`}
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${engine === "vision" ? "bg-primary/10 text-primary" : "bg-ai/10 text-ai"}`}
           >
             {engine === "vision" ? (
-              <Camera className="h-10 w-10" />
+              <Camera className="h-7 w-7" aria-hidden="true" />
             ) : (
-              <FileText className="h-10 w-10" />
+              <FileText className="h-7 w-7" aria-hidden="true" />
             )}
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-4 uppercase">
-            {engine === "vision" ? "CAPTURAR FOTO" : "ENVIAR DOCUMENTO"}
-          </h1>
-          <p className="text-muted-foreground">
-            {engine === "vision"
-              ? "Tire uma foto nítida do prontuário ou evolução para nossa IA ler."
-              : "Faça o upload do PDF, DOCX ou imagem do documento."}
-          </p>
+          <div className="min-w-0">
+            <h1 className="t-display text-foreground">
+              {engine === "vision" ? "Fotografar documento" : "Enviar documento"}
+            </h1>
+            <p className="t-body text-muted-foreground mt-1">
+              {engine === "vision"
+                ? "Fotografe o prontuário ou a evolução com o texto legível e bem iluminado."
+                : "PDF, DOCX, TXT ou imagem, até 20 MB."}
+            </p>
+          </div>
         </div>
 
-        <div className="w-full bg-white border border-border rounded-[2.5rem] p-10 shadow-xl relative overflow-hidden">
+        <div className="bg-card border-border mt-6 rounded-3xl border p-5 sm:p-6">
           <input
             type="file"
             ref={fileInputRef}
@@ -120,43 +127,47 @@ function UploadIAPage() {
           />
 
           {!file ? (
-            <div
+            // Era um <div onClick>: invisível para teclado e leitor de tela.
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
                 const dropped = e.dataTransfer.files[0];
-                if (dropped) handleFileChange({ target: { files: [dropped] } } as any);
+                if (dropped) selecionarArquivo(dropped);
               }}
-              className="border-2 border-dashed border-border rounded-[2rem] p-16 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              data-testid="upload-dropzone"
+              className="border-border hover:border-primary/60 hover:bg-primary/5 focus-visible:ring-ring flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground mb-6 group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                <Upload className="h-10 w-10" />
+              <div className="bg-secondary text-muted-foreground mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                <Upload className="h-8 w-8" aria-hidden="true" />
               </div>
-              <h3 className="font-bold text-xl mb-2">Clique ou arraste aqui</h3>
-              <p className="text-sm text-muted-foreground text-center">
-                {engine === "vision"
-                  ? "Selecione a foto do prontuário"
-                  : "Selecione o arquivo digital"}
-              </p>
-            </div>
+              <span className="t-title text-foreground">
+                {engine === "vision" ? "Tocar para fotografar" : "Escolher arquivo"}
+              </span>
+              <span className="t-body text-muted-foreground mt-1 text-center">
+                {engine === "vision" ? "Abre a câmera do aparelho" : "Ou arraste o arquivo para cá"}
+              </span>
+            </button>
           ) : (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 bg-secondary/50 p-6 rounded-2xl border border-border">
-                <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <FileUp className="h-8 w-8" />
+            <div className="space-y-4">
+              <div className="bg-secondary border-border flex items-center gap-4 rounded-2xl border p-4">
+                <div className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+                  <FileUp className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-foreground truncate">{file.name}</p>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                <div className="min-w-0 flex-1">
+                  <p className="t-title text-foreground truncate">{file.name}</p>
+                  <p className="t-label text-muted-foreground font-normal">
                     {(file.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>
                 <button
                   onClick={() => setFile(null)}
-                  className="h-10 w-10 rounded-full hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
+                  aria-label={`Remover ${file.name}`}
+                  className="touch-target text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 
@@ -164,15 +175,15 @@ function UploadIAPage() {
                 disabled={isUploading}
                 onClick={handleUpload}
                 data-testid="upload-submit"
-                className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" /> ENVIANDO...
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Enviando…
                   </>
                 ) : (
                   <>
-                    PROCESSAR COM IA <ArrowRight className="h-5 w-5" />
+                    Ler com IA <ArrowRight className="h-5 w-5" aria-hidden="true" />
                   </>
                 )}
               </button>
@@ -180,11 +191,12 @@ function UploadIAPage() {
           )}
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-            SEGURO E PRIVADO · PROCESSAMENTO EM TEMPO REAL
-          </p>
-        </div>
+        {/* Dizia "SEGURO E PRIVADO". O documento sai do aparelho e vai para um
+            provedor de IA — o médico merece saber disso antes de enviar. */}
+        <p className="t-body text-muted-foreground mt-6">
+          O documento é enviado ao provedor de IA para leitura e não fica armazenado lá. Confira o
+          que foi extraído antes de salvar na ficha.
+        </p>
       </main>
     </div>
   );

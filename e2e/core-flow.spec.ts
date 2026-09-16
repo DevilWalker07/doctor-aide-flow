@@ -15,10 +15,7 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     await page.locator("#hospital-name").fill("HOSPITAL E2E");
     await page.getByTestId("shift-submit").click();
     await expect(page).toHaveURL(/\/tipo/);
-    await page
-      .getByRole("button", { name: /Enfermaria Clínica Médica/i })
-      .first()
-      .click();
+    await page.getByTestId("tipo-enfermaria_clinica").click();
     await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Novo paciente → admissão nova → upload IA
