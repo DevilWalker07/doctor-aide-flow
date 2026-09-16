@@ -3,6 +3,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { getRouter } from "./router";
 import { AuthProvider, useAuth } from "./lib/auth/AuthContext";
+import { ThemeProvider } from "./lib/theme/ThemeProvider";
 import "./styles.css";
 
 const router = getRouter();
@@ -28,7 +29,9 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>,
+  <ThemeProvider>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </ThemeProvider>,
 );

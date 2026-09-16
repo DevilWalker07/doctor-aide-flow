@@ -147,6 +147,28 @@ export const storage = {
     return merged;
   },
 
+  // Tema (preferência do aparelho — sobrevive ao logout de propósito:
+  // resetar para claro ao sair derrubaria o modo escuro no meio do plantão noturno)
+  getTema: (): "light" | "dark" | "system" => {
+    const v = localStorage.getItem("da_tema");
+    return v === "light" || v === "dark" || v === "system" ? v : "system";
+  },
+  setTema: (t: "light" | "dark" | "system") => localStorage.setItem("da_tema", t),
+
+  // Último ambiente visitado (para a retomada de contexto no hub)
+  getUltimoAmbiente: (): { ambienteId: string; subId?: string } | null => {
+    try {
+      const raw = localStorage.getItem("da_ultimo_ambiente");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.ambienteId === "string" ? parsed : null;
+    } catch {
+      return null;
+    }
+  },
+  setUltimoAmbiente: (ambienteId: string, subId?: string) =>
+    localStorage.setItem("da_ultimo_ambiente", JSON.stringify({ ambienteId, subId })),
+
   // Documentos ambulatoriais (receita de alta, encaminhamento, orientações)
   getDocumentos: (): unknown[] => {
     try {
@@ -174,5 +196,6 @@ export const storage = {
     localStorage.removeItem("da_prescricoes");
     localStorage.removeItem("da_encaminhamentos");
     localStorage.removeItem("da_passagens");
+    localStorage.removeItem("da_ultimo_ambiente");
   },
 };

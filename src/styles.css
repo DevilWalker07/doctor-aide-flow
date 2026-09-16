@@ -95,8 +95,55 @@
 }
 
 .dark {
-  --background: oklch(0.21 0.05 260);
-  --foreground: oklch(0.97 0.005 250);
+  /* Plantão noturno: superfícies frias e escuras, texto de alto contraste.
+     A paleta inteira é redefinida — redefinir só background/foreground deixa
+     cards brancos sobre fundo escuro. */
+  --background: oklch(0.19 0.035 260); /* #0C1322 */
+  --foreground: oklch(0.96 0.008 250);
+  --card: oklch(0.245 0.04 260); /* superfície elevada */
+  --card-foreground: oklch(0.96 0.008 250);
+  --popover: oklch(0.245 0.04 260);
+  --popover-foreground: oklch(0.96 0.008 250);
+  --primary: oklch(0.68 0.17 262); /* clareado: 0.55 não passa AA no escuro */
+  --primary-foreground: oklch(0.17 0.04 260);
+  --brand: oklch(0.7 0.18 258);
+  --brand-foreground: oklch(0.17 0.04 260);
+  --secondary: oklch(0.29 0.04 260);
+  --secondary-foreground: oklch(0.96 0.008 250);
+  --muted: oklch(0.29 0.04 260);
+  --muted-foreground: oklch(0.76 0.028 250); /* AA sobre --background */
+  --text-secondary: oklch(0.76 0.028 250);
+  --accent: oklch(0.32 0.045 260);
+  --accent-foreground: oklch(0.96 0.008 250);
+  --destructive: oklch(0.7 0.19 25);
+  --destructive-foreground: oklch(0.17 0.04 260);
+  --success: oklch(0.73 0.16 148);
+  --success-foreground: oklch(0.17 0.04 260);
+  --warning: oklch(0.82 0.15 78);
+  --warning-foreground: oklch(0.2 0.05 60);
+  --ai: oklch(0.7 0.19 295);
+  --ai-foreground: oklch(0.17 0.04 260);
+  --navy: oklch(0.15 0.03 260);
+  --navy-foreground: oklch(0.96 0.008 250);
+  --border: oklch(0.34 0.035 260);
+  --input: oklch(0.34 0.035 260);
+  --input-bg: oklch(0.24 0.04 260);
+  --ring: oklch(0.68 0.17 262);
+  --chart-1: oklch(0.68 0.17 262);
+  --chart-2: oklch(0.73 0.16 148);
+  --chart-3: oklch(0.82 0.15 78);
+  --chart-4: oklch(0.7 0.19 25);
+  --chart-5: oklch(0.7 0.19 295);
+  --sidebar: oklch(0.15 0.03 260);
+  --sidebar-foreground: oklch(0.96 0.008 250);
+  --sidebar-primary: oklch(0.68 0.17 262);
+  --sidebar-primary-foreground: oklch(0.17 0.04 260);
+  --sidebar-accent: oklch(0.29 0.04 260);
+  --sidebar-accent-foreground: oklch(0.96 0.008 250);
+  --sidebar-border: oklch(0.34 0.035 260);
+  --sidebar-ring: oklch(0.68 0.17 262);
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -115,6 +162,65 @@
     text-transform: uppercase;
     font-weight: 600;
     color: var(--color-text-secondary);
+  }
+}
+
+/* ── Escala tipográfica ──
+   O app é lido de pé, com pressa e muitas vezes à noite. Nada abaixo de 13 px
+   em texto que o médico precise ler, e caixa alta apenas em .t-eyebrow —
+   em qualquer outro lugar ela apaga a forma da palavra e atrasa a leitura. */
+@layer components {
+  .t-display {
+    font-size: 1.75rem; /* 28px */
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 640px) {
+    .t-display {
+      font-size: 2.25rem; /* 36px */
+    }
+  }
+
+  .t-title {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 640px) {
+    .t-title {
+      font-size: 1.25rem; /* 20px */
+    }
+  }
+
+  .t-body {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  .t-label {
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.4;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .t-eyebrow {
+    font-size: 0.6875rem; /* 11px — único lugar com caixa alta */
+    line-height: 1.2;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* Alvo de toque mínimo (WCAG 2.2 AA). O ícone continua com 20 px;
+     o que cresce é a área clicável. */
+  .touch-target {
+    min-height: 2.75rem; /* 44px */
+    min-width: 2.75rem;
   }
 }
 

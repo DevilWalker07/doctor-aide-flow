@@ -32,7 +32,7 @@ sem chamar a OpenAI. É assim que os testes e2e rodam.
 ## Regras que não se negociam
 
 **Configuração antes de serviço.** `server/config.ts` carrega o `.env` e valida o
-ambiente com Zod. Todo import de serviço vem *depois* dele — o hoisting de ESM já
+ambiente com Zod. Todo import de serviço vem _depois_ dele — o hoisting de ESM já
 fez o `OPENAI_MODEL` ser ignorado em silêncio uma vez. Leia o ambiente por `env`,
 nunca por `process.env` direto.
 
@@ -61,7 +61,7 @@ O app é usado de pé, com pressa, com uma mão, muitas vezes à noite. Isso dit
   `src/styles.css`: `.t-display`, `.t-title`, `.t-body`, `.t-label`, `.t-eyebrow`.
 - **Caixa alta só em `.t-eyebrow`** (chapéu de seção). Em nome, descrição, botão ou
   mensagem, caixa alta destrói a forma da palavra e atrasa a leitura.
-  Exceção: o *conteúdo clínico* das evoluções é maiúsculo por convenção médica —
+  Exceção: o _conteúdo clínico_ das evoluções é maiúsculo por convenção médica —
   isso é dado, não interface.
 - **Alvo de toque mínimo 44 × 44 px.** O ícone pode ter 20 px; a área clicável, não.
 - **Os dois temas precisam funcionar.** Cores vêm dos tokens em `src/styles.css`,
