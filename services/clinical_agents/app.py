@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import json
 import asyncio
@@ -69,6 +70,25 @@ pillow_heif.register_heif_opener()
 
 # PDF page cap for image fallback — protects context window and timeout
 MAX_PDF_PAGES = int(os.environ.get("MAX_PDF_PAGES", "15"))
+
+def sanitize_ai_text(text: str) -> str:
+    """Remove tiques de escrita de IA (ex.: travessão como conector de frase)
+    do texto clínico gerado pelo modelo, sem alterar o conteúdo médico."""
+    if not text:
+        return text
+    text = re.sub(r"\s*—\s*", ", ", text)  # travessão usado como conector
+    text = re.sub(r"\s*–\s*", "-", text)   # en dash sobrando -> hífen normal
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text.strip()
+
+def sanitize_ai_value(value):
+    if isinstance(value, str):
+        return sanitize_ai_text(value)
+    if isinstance(value, list):
+        return [sanitize_ai_value(v) for v in value]
+    if isinstance(value, dict):
+        return {k: sanitize_ai_value(v) for k, v in value.items()}
+    return value
 
 def save_job(job_id: str, data: dict):
     if supabase_client:
@@ -298,6 +318,7 @@ REGRAS CLÍNICAS:
         
         try:
             clinical_json = json.loads(result_content)
+            clinical_json = sanitize_ai_value(clinical_json)
         except Exception:
             clinical_json = {"error": "Falha ao parsear JSON", "raw": result_content}
 
@@ -360,7 +381,7 @@ REGRAS:
             temperature=0.3
         )
         
-        text = response.choices[0].message.content
+        text = sanitize_ai_text(response.choices[0].message.content)
         return {"evolution_text": text}
 
     except Exception as e:
