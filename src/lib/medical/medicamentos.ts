@@ -82,8 +82,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("1x-manha", "25 mg pela manhã", "25 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias."),
-      p("2x-manha", "50 mg pela manhã", "50 mg", cp(60), { manha: 2 }, "Tomar 2 comprimidos pela manhã, todos os dias."),
+      p(
+        "1x-manha",
+        "25 mg pela manhã",
+        "25 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+      p(
+        "2x-manha",
+        "50 mg pela manhã",
+        "50 mg",
+        cp(60),
+        { manha: 2 },
+        "Tomar 2 comprimidos pela manhã, todos os dias.",
+      ),
     ],
     alertas: ["Controlar potássio e creatinina."],
   },
@@ -96,8 +110,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("1x-manha", "40 mg pela manhã", "40 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, em jejum."),
-      p("2x", "40 mg manhã e almoço", "40 mg", cp(60), { manha: 1, almoco: 1 }, "Tomar 1 comprimido pela manhã e 1 no almoço."),
+      p(
+        "1x-manha",
+        "40 mg pela manhã",
+        "40 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, em jejum.",
+      ),
+      p(
+        "2x",
+        "40 mg manhã e almoço",
+        "40 mg",
+        cp(60),
+        { manha: 1, almoco: 1 },
+        "Tomar 1 comprimido pela manhã e 1 no almoço.",
+      ),
     ],
   },
   {
@@ -108,7 +136,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("1x-manha", "25 mg pela manhã", "25 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias.")],
+    presets: [
+      p(
+        "1x-manha",
+        "25 mg pela manhã",
+        "25 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+    ],
   },
   {
     id: "losartana-50",
@@ -119,8 +156,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("1x-manha", "50 mg pela manhã", "50 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias."),
-      p("2x", "50 mg de 12 em 12 horas", "50 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite."),
+      p(
+        "1x-manha",
+        "50 mg pela manhã",
+        "50 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+      p(
+        "2x",
+        "50 mg de 12 em 12 horas",
+        "50 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite.",
+      ),
     ],
   },
   {
@@ -131,7 +182,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("2x", "10 mg de 12 em 12 horas", "10 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite.")],
+    presets: [
+      p(
+        "2x",
+        "10 mg de 12 em 12 horas",
+        "10 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite.",
+      ),
+    ],
   },
   {
     id: "captopril-25",
@@ -141,7 +201,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("3x", "25 mg de 8 em 8 horas", "25 mg", cp(90), { manha: 1, tarde: 1, noite: 1 }, "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, longe das refeições.")],
+    presets: [
+      p(
+        "3x",
+        "25 mg de 8 em 8 horas",
+        "25 mg",
+        cp(90),
+        { manha: 1, tarde: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, longe das refeições.",
+      ),
+    ],
   },
   {
     id: "anlodipino-5",
@@ -152,8 +221,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("1x-manha", "5 mg pela manhã", "5 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias."),
-      p("2x-manha", "10 mg pela manhã", "10 mg", cp(60), { manha: 2 }, "Tomar 2 comprimidos pela manhã, todos os dias."),
+      p(
+        "1x-manha",
+        "5 mg pela manhã",
+        "5 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+      p(
+        "2x-manha",
+        "10 mg pela manhã",
+        "10 mg",
+        cp(60),
+        { manha: 2 },
+        "Tomar 2 comprimidos pela manhã, todos os dias.",
+      ),
     ],
   },
   {
@@ -164,7 +247,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("1x-manha", "50 mg pela manhã", "50 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias.")],
+    presets: [
+      p(
+        "1x-manha",
+        "50 mg pela manhã",
+        "50 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+    ],
   },
   {
     id: "carvedilol-6",
@@ -174,7 +266,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("2x", "6,25 mg de 12 em 12 horas", "6,25 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite, junto com alimentos.")],
+    presets: [
+      p(
+        "2x",
+        "6,25 mg de 12 em 12 horas",
+        "6,25 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite, junto com alimentos.",
+      ),
+    ],
   },
   {
     id: "propranolol-40",
@@ -184,7 +285,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("2x", "40 mg de 12 em 12 horas", "40 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite.")],
+    presets: [
+      p(
+        "2x",
+        "40 mg de 12 em 12 horas",
+        "40 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite.",
+      ),
+    ],
   },
   {
     id: "aas-100",
@@ -194,7 +304,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-almoco", "100 mg após o almoço", "100 mg", cp(30), { almoco: 1 }, "Tomar 1 comprimido após o almoço, todos os dias.")],
+    presets: [
+      p(
+        "1x-almoco",
+        "100 mg após o almoço",
+        "100 mg",
+        cp(30),
+        { almoco: 1 },
+        "Tomar 1 comprimido após o almoço, todos os dias.",
+      ),
+    ],
   },
   {
     id: "varfarina-5",
@@ -204,7 +323,18 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-noite", "5 mg à noite", "5 mg", cp(30), { noite: 1 }, "Tomar 1 comprimido à noite, sempre no mesmo horário.", "Uso contínuo", "Controlar INR conforme orientação.")],
+    presets: [
+      p(
+        "1x-noite",
+        "5 mg à noite",
+        "5 mg",
+        cp(30),
+        { noite: 1 },
+        "Tomar 1 comprimido à noite, sempre no mesmo horário.",
+        "Uso contínuo",
+        "Controlar INR conforme orientação.",
+      ),
+    ],
     alertas: ["Ajustar dose pelo INR.", "Evitar AINEs."],
   },
   {
@@ -215,7 +345,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-almoco", "20 mg no almoço", "20 mg", cp(30), { almoco: 1 }, "Tomar 1 comprimido junto com o almoço, todos os dias.")],
+    presets: [
+      p(
+        "1x-almoco",
+        "20 mg no almoço",
+        "20 mg",
+        cp(30),
+        { almoco: 1 },
+        "Tomar 1 comprimido junto com o almoço, todos os dias.",
+      ),
+    ],
   },
   {
     id: "apixabana-5",
@@ -225,7 +364,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("2x", "5 mg de 12 em 12 horas", "5 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite.")],
+    presets: [
+      p(
+        "2x",
+        "5 mg de 12 em 12 horas",
+        "5 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite.",
+      ),
+    ],
   },
   {
     id: "sinvastatina-20",
@@ -236,8 +384,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("1x-noite", "20 mg à noite", "20 mg", cp(30), { noite: 1 }, "Tomar 1 comprimido à noite, todos os dias."),
-      p("2x-noite", "40 mg à noite", "40 mg", cp(60), { noite: 2 }, "Tomar 2 comprimidos à noite, todos os dias."),
+      p(
+        "1x-noite",
+        "20 mg à noite",
+        "20 mg",
+        cp(30),
+        { noite: 1 },
+        "Tomar 1 comprimido à noite, todos os dias.",
+      ),
+      p(
+        "2x-noite",
+        "40 mg à noite",
+        "40 mg",
+        cp(60),
+        { noite: 2 },
+        "Tomar 2 comprimidos à noite, todos os dias.",
+      ),
     ],
   },
   {
@@ -248,7 +410,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Cardiologia/Nefrologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("1x-noite", "20 mg à noite", "20 mg", cp(30), { noite: 1 }, "Tomar 1 comprimido à noite, todos os dias.")],
+    presets: [
+      p(
+        "1x-noite",
+        "20 mg à noite",
+        "20 mg",
+        cp(30),
+        { noite: 1 },
+        "Tomar 1 comprimido à noite, todos os dias.",
+      ),
+    ],
   },
 
   // ── Endocrinologia ───────────────────────────────────────────────────────
@@ -261,8 +432,22 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: true,
     presets: [
-      p("2x", "500 mg no almoço e no jantar", "500 mg", cp(60), { almoco: 1, noite: 1 }, "Tomar 1 comprimido no almoço e 1 no jantar, junto com a comida."),
-      p("3x", "500 mg nas 3 refeições", "500 mg", cp(90), { manha: 1, almoco: 1, noite: 1 }, "Tomar 1 comprimido no café, 1 no almoço e 1 no jantar, junto com a comida."),
+      p(
+        "2x",
+        "500 mg no almoço e no jantar",
+        "500 mg",
+        cp(60),
+        { almoco: 1, noite: 1 },
+        "Tomar 1 comprimido no almoço e 1 no jantar, junto com a comida.",
+      ),
+      p(
+        "3x",
+        "500 mg nas 3 refeições",
+        "500 mg",
+        cp(90),
+        { manha: 1, almoco: 1, noite: 1 },
+        "Tomar 1 comprimido no café, 1 no almoço e 1 no jantar, junto com a comida.",
+      ),
     ],
   },
   {
@@ -273,7 +458,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("2x", "850 mg no almoço e no jantar", "850 mg", cp(60), { almoco: 1, noite: 1 }, "Tomar 1 comprimido no almoço e 1 no jantar, junto com a comida.")],
+    presets: [
+      p(
+        "2x",
+        "850 mg no almoço e no jantar",
+        "850 mg",
+        cp(60),
+        { almoco: 1, noite: 1 },
+        "Tomar 1 comprimido no almoço e 1 no jantar, junto com a comida.",
+      ),
+    ],
   },
   {
     id: "glibenclamida-5",
@@ -283,7 +477,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("1x-manha", "5 mg antes do café", "5 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido 30 minutos antes do café da manhã.")],
+    presets: [
+      p(
+        "1x-manha",
+        "5 mg antes do café",
+        "5 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido 30 minutos antes do café da manhã.",
+      ),
+    ],
     alertas: ["Risco de hipoglicemia em idosos."],
   },
   {
@@ -294,7 +497,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-manha", "60 mg no café", "60 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido junto com o café da manhã.")],
+    presets: [
+      p(
+        "1x-manha",
+        "60 mg no café",
+        "60 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido junto com o café da manhã.",
+      ),
+    ],
   },
   {
     id: "dapagliflozina-10",
@@ -304,7 +516,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("1x-manha", "10 mg pela manhã", "10 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias.")],
+    presets: [
+      p(
+        "1x-manha",
+        "10 mg pela manhã",
+        "10 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+      ),
+    ],
   },
   {
     id: "insulina-nph",
@@ -315,7 +536,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "injecao",
     farmaciaPopular: true,
     presets: [
-      p("2x", "manhã e ao deitar (dose individual)", "__ UI", "1 frasco", { manha: 1, ao_deitar: 1 }, "Aplicar __ unidades pela manhã e __ unidades ao deitar, na barriga ou na coxa, sob a pele.", "Uso contínuo", "Guardar na geladeira. Rodar os locais de aplicação."),
+      p(
+        "2x",
+        "manhã e ao deitar (dose individual)",
+        "__ UI",
+        "1 frasco",
+        { manha: 1, ao_deitar: 1 },
+        "Aplicar __ unidades pela manhã e __ unidades ao deitar, na barriga ou na coxa, sob a pele.",
+        "Uso contínuo",
+        "Guardar na geladeira. Rodar os locais de aplicação.",
+      ),
     ],
     alertas: ["Preencher as doses em UI."],
   },
@@ -327,7 +557,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "injecao",
     farmaciaPopular: true,
-    presets: [p("3x", "antes das refeições (dose individual)", "__ UI", "1 frasco", { manha: 1, almoco: 1, noite: 1 }, "Aplicar __ unidades 30 minutos antes do café, do almoço e do jantar.", "Uso contínuo")],
+    presets: [
+      p(
+        "3x",
+        "antes das refeições (dose individual)",
+        "__ UI",
+        "1 frasco",
+        { manha: 1, almoco: 1, noite: 1 },
+        "Aplicar __ unidades 30 minutos antes do café, do almoço e do jantar.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "levotiroxina-50",
@@ -337,7 +577,16 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Endocrinologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-jejum", "50 mcg em jejum", "50 mcg", cp(30), { manha: 1 }, "Tomar 1 comprimido em jejum, 30 minutos antes do café, todos os dias.")],
+    presets: [
+      p(
+        "1x-jejum",
+        "50 mcg em jejum",
+        "50 mcg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido em jejum, 30 minutos antes do café, todos os dias.",
+      ),
+    ],
   },
 
   // ── Infectologia / Pneumologia ───────────────────────────────────────────
@@ -349,7 +598,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("3x-7d", "500 mg de 8 em 8 horas por 7 dias", "500 mg", "21 cápsulas", { manha: 1, tarde: 1, noite: 1 }, "Tomar 1 cápsula pela manhã, 1 à tarde e 1 à noite, por 7 dias, sem parar.", "7 dias")],
+    presets: [
+      p(
+        "3x-7d",
+        "500 mg de 8 em 8 horas por 7 dias",
+        "500 mg",
+        "21 cápsulas",
+        { manha: 1, tarde: 1, noite: 1 },
+        "Tomar 1 cápsula pela manhã, 1 à tarde e 1 à noite, por 7 dias, sem parar.",
+        "7 dias",
+      ),
+    ],
   },
   {
     id: "amoxicilina-clavulanato-875",
@@ -359,7 +618,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("2x-7d", "875 mg de 12 em 12 horas por 7 dias", "875/125 mg", cp(14), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite, junto com a comida, por 7 dias.", "7 dias")],
+    presets: [
+      p(
+        "2x-7d",
+        "875 mg de 12 em 12 horas por 7 dias",
+        "875/125 mg",
+        cp(14),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite, junto com a comida, por 7 dias.",
+        "7 dias",
+      ),
+    ],
   },
   {
     id: "azitromicina-500",
@@ -370,8 +639,24 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     presets: [
-      p("1x-5d", "500 mg por 5 dias", "500 mg", cp(5), { manha: 1 }, "Tomar 1 comprimido pela manhã, por 5 dias.", "5 dias"),
-      p("1x-3d", "500 mg por 3 dias", "500 mg", cp(3), { manha: 1 }, "Tomar 1 comprimido pela manhã, por 3 dias.", "3 dias"),
+      p(
+        "1x-5d",
+        "500 mg por 5 dias",
+        "500 mg",
+        cp(5),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, por 5 dias.",
+        "5 dias",
+      ),
+      p(
+        "1x-3d",
+        "500 mg por 3 dias",
+        "500 mg",
+        cp(3),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, por 3 dias.",
+        "3 dias",
+      ),
     ],
   },
   {
@@ -382,7 +667,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("4x-7d", "500 mg de 6 em 6 horas por 7 dias", "500 mg", "28 cápsulas", { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 }, "Tomar 1 cápsula de 6 em 6 horas (manhã, almoço, noite e ao deitar), por 7 dias.", "7 dias")],
+    presets: [
+      p(
+        "4x-7d",
+        "500 mg de 6 em 6 horas por 7 dias",
+        "500 mg",
+        "28 cápsulas",
+        { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 },
+        "Tomar 1 cápsula de 6 em 6 horas (manhã, almoço, noite e ao deitar), por 7 dias.",
+        "7 dias",
+      ),
+    ],
   },
   {
     id: "ciprofloxacino-500",
@@ -392,7 +687,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("2x-7d", "500 mg de 12 em 12 horas por 7 dias", "500 mg", cp(14), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite, por 7 dias.", "7 dias")],
+    presets: [
+      p(
+        "2x-7d",
+        "500 mg de 12 em 12 horas por 7 dias",
+        "500 mg",
+        cp(14),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite, por 7 dias.",
+        "7 dias",
+      ),
+    ],
     alertas: ["Ajustar em insuficiência renal."],
   },
   {
@@ -403,7 +708,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("4x-5d", "100 mg de 6 em 6 horas por 5 dias", "100 mg", "20 cápsulas", { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 }, "Tomar 1 cápsula de 6 em 6 horas, junto com alimentos, por 5 dias.", "5 dias")],
+    presets: [
+      p(
+        "4x-5d",
+        "100 mg de 6 em 6 horas por 5 dias",
+        "100 mg",
+        "20 cápsulas",
+        { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 },
+        "Tomar 1 cápsula de 6 em 6 horas, junto com alimentos, por 5 dias.",
+        "5 dias",
+      ),
+    ],
   },
   {
     id: "smx-tmp-800",
@@ -413,7 +728,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("2x-7d", "800/160 mg de 12 em 12 horas por 7 dias", "800/160 mg", cp(14), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite, com bastante água, por 7 dias.", "7 dias")],
+    presets: [
+      p(
+        "2x-7d",
+        "800/160 mg de 12 em 12 horas por 7 dias",
+        "800/160 mg",
+        cp(14),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite, com bastante água, por 7 dias.",
+        "7 dias",
+      ),
+    ],
   },
   {
     id: "salbutamol-spray",
@@ -423,7 +748,18 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "inalacao",
     farmaciaPopular: true,
-    presets: [p("sos", "2 jatos se falta de ar", "2 jatos", "1 frasco", {}, "Fazer 2 jatos se tiver falta de ar ou chiado. Pode repetir a cada 4 horas se precisar.", "Se necessário", "Usar com espaçador.")],
+    presets: [
+      p(
+        "sos",
+        "2 jatos se falta de ar",
+        "2 jatos",
+        "1 frasco",
+        {},
+        "Fazer 2 jatos se tiver falta de ar ou chiado. Pode repetir a cada 4 horas se precisar.",
+        "Se necessário",
+        "Usar com espaçador.",
+      ),
+    ],
   },
   {
     id: "beclometasona-spray",
@@ -433,7 +769,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "inalacao",
     farmaciaPopular: true,
-    presets: [p("2x", "2 jatos de 12 em 12 horas", "2 jatos", "1 frasco", { manha: 1, noite: 1 }, "Fazer 2 jatos pela manhã e 2 à noite, todos os dias. Enxaguar a boca depois.", "Uso contínuo")],
+    presets: [
+      p(
+        "2x",
+        "2 jatos de 12 em 12 horas",
+        "2 jatos",
+        "1 frasco",
+        { manha: 1, noite: 1 },
+        "Fazer 2 jatos pela manhã e 2 à noite, todos os dias. Enxaguar a boca depois.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "budesonida-formoterol",
@@ -443,7 +789,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "inalacao",
     farmaciaPopular: false,
-    presets: [p("2x", "1 inalação de 12 em 12 horas", "200/6 mcg", "1 dispositivo", { manha: 1, noite: 1 }, "Fazer 1 inalação pela manhã e 1 à noite, todos os dias. Enxaguar a boca depois.", "Uso contínuo")],
+    presets: [
+      p(
+        "2x",
+        "1 inalação de 12 em 12 horas",
+        "200/6 mcg",
+        "1 dispositivo",
+        { manha: 1, noite: 1 },
+        "Fazer 1 inalação pela manhã e 1 à noite, todos os dias. Enxaguar a boca depois.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "ipratropio-spray",
@@ -453,7 +809,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Infectologia/Pneumologia",
     acao: "inalacao",
     farmaciaPopular: true,
-    presets: [p("4x", "2 jatos de 6 em 6 horas", "2 jatos", "1 frasco", { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 }, "Fazer 2 jatos de 6 em 6 horas.", "Uso contínuo")],
+    presets: [
+      p(
+        "4x",
+        "2 jatos de 6 em 6 horas",
+        "2 jatos",
+        "1 frasco",
+        { manha: 1, almoco: 1, noite: 1, ao_deitar: 1 },
+        "Fazer 2 jatos de 6 em 6 horas.",
+        "Uso contínuo",
+      ),
+    ],
   },
 
   // ── Gastroenterologia ────────────────────────────────────────────────────
@@ -465,7 +831,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-jejum", "20 mg em jejum", "20 mg", "30 cápsulas", { manha: 1 }, "Tomar 1 cápsula em jejum, 30 minutos antes do café da manhã.", "30 dias")],
+    presets: [
+      p(
+        "1x-jejum",
+        "20 mg em jejum",
+        "20 mg",
+        "30 cápsulas",
+        { manha: 1 },
+        "Tomar 1 cápsula em jejum, 30 minutos antes do café da manhã.",
+        "30 dias",
+      ),
+    ],
   },
   {
     id: "pantoprazol-40",
@@ -475,7 +851,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("1x-jejum", "40 mg em jejum", "40 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido em jejum, 30 minutos antes do café da manhã.", "30 dias")],
+    presets: [
+      p(
+        "1x-jejum",
+        "40 mg em jejum",
+        "40 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido em jejum, 30 minutos antes do café da manhã.",
+        "30 dias",
+      ),
+    ],
   },
   {
     id: "domperidona-10",
@@ -485,7 +871,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("3x", "10 mg antes das refeições", "10 mg", cp(30), { manha: 1, almoco: 1, noite: 1 }, "Tomar 1 comprimido 30 minutos antes do café, do almoço e do jantar.", "10 dias")],
+    presets: [
+      p(
+        "3x",
+        "10 mg antes das refeições",
+        "10 mg",
+        cp(30),
+        { manha: 1, almoco: 1, noite: 1 },
+        "Tomar 1 comprimido 30 minutos antes do café, do almoço e do jantar.",
+        "10 dias",
+      ),
+    ],
   },
   {
     id: "ondansetrona-8",
@@ -495,7 +891,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("sos", "8 mg se enjoo", "8 mg", cp(10), {}, "Tomar 1 comprimido se tiver enjoo ou vômito. Pode repetir após 8 horas.", "Se necessário")],
+    presets: [
+      p(
+        "sos",
+        "8 mg se enjoo",
+        "8 mg",
+        cp(10),
+        {},
+        "Tomar 1 comprimido se tiver enjoo ou vômito. Pode repetir após 8 horas.",
+        "Se necessário",
+      ),
+    ],
   },
   {
     id: "lactulose",
@@ -505,7 +911,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "gotas",
     farmaciaPopular: false,
-    presets: [p("1x-noite", "15 mL à noite", "15 mL", "1 frasco", { noite: 1 }, "Tomar 15 mL (1 colher de sopa) à noite. Ajustar para evacuar 1 vez ao dia.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-noite",
+        "15 mL à noite",
+        "15 mL",
+        "1 frasco",
+        { noite: 1 },
+        "Tomar 15 mL (1 colher de sopa) à noite. Ajustar para evacuar 1 vez ao dia.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "simeticona-40",
@@ -515,7 +931,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Gastroenterologia",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("3x", "40 mg após as refeições", "40 mg", cp(30), { manha: 1, almoco: 1, noite: 1 }, "Tomar 1 comprimido após o café, o almoço e o jantar.", "Se necessário")],
+    presets: [
+      p(
+        "3x",
+        "40 mg após as refeições",
+        "40 mg",
+        cp(30),
+        { manha: 1, almoco: 1, noite: 1 },
+        "Tomar 1 comprimido após o café, o almoço e o jantar.",
+        "Se necessário",
+      ),
+    ],
   },
 
   // ── Neurologia ───────────────────────────────────────────────────────────
@@ -527,7 +953,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Neurologia",
     acao: "comprimido",
     farmaciaPopular: true,
-    presets: [p("3x", "250/25 mg de 8 em 8 horas", "250/25 mg", cp(90), { manha: 1, tarde: 1, noite: 1 }, "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, longe das refeições com proteína.", "Uso contínuo")],
+    presets: [
+      p(
+        "3x",
+        "250/25 mg de 8 em 8 horas",
+        "250/25 mg",
+        cp(90),
+        { manha: 1, tarde: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, longe das refeições com proteína.",
+        "Uso contínuo",
+      ),
+    ],
     alertas: ["Nunca suspender abruptamente."],
   },
   {
@@ -539,7 +975,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("2x", "200 mg de 12 em 12 horas", "200 mg", cp(60), { manha: 1, noite: 1 }, "Tomar 1 comprimido pela manhã e 1 à noite, todos os dias, sem interromper.", "Uso contínuo")],
+    presets: [
+      p(
+        "2x",
+        "200 mg de 12 em 12 horas",
+        "200 mg",
+        cp(60),
+        { manha: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã e 1 à noite, todos os dias, sem interromper.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "fenitoina-100",
@@ -550,7 +996,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("3x", "100 mg de 8 em 8 horas", "100 mg", cp(90), { manha: 1, tarde: 1, noite: 1 }, "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, sem interromper.", "Uso contínuo")],
+    presets: [
+      p(
+        "3x",
+        "100 mg de 8 em 8 horas",
+        "100 mg",
+        cp(90),
+        { manha: 1, tarde: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, sem interromper.",
+        "Uso contínuo",
+      ),
+    ],
   },
 
   // ── Psiquiatria ──────────────────────────────────────────────────────────
@@ -563,7 +1019,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("1x-manha", "50 mg pela manhã", "50 mg", cp(30), { manha: 1 }, "Tomar 1 comprimido pela manhã, todos os dias.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-manha",
+        "50 mg pela manhã",
+        "50 mg",
+        cp(30),
+        { manha: 1 },
+        "Tomar 1 comprimido pela manhã, todos os dias.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "fluoxetina-20",
@@ -574,7 +1040,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("1x-manha", "20 mg pela manhã", "20 mg", "30 cápsulas", { manha: 1 }, "Tomar 1 cápsula pela manhã, todos os dias.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-manha",
+        "20 mg pela manhã",
+        "20 mg",
+        "30 cápsulas",
+        { manha: 1 },
+        "Tomar 1 cápsula pela manhã, todos os dias.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "amitriptilina-25",
@@ -585,7 +1061,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("1x-deitar", "25 mg ao deitar", "25 mg", cp(30), { ao_deitar: 1 }, "Tomar 1 comprimido ao deitar, todos os dias.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-deitar",
+        "25 mg ao deitar",
+        "25 mg",
+        cp(30),
+        { ao_deitar: 1 },
+        "Tomar 1 comprimido ao deitar, todos os dias.",
+        "Uso contínuo",
+      ),
+    ],
     alertas: ["Cautela em idosos (anticolinérgico)."],
   },
   {
@@ -597,7 +1083,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("1x-noite", "1 mg à noite", "1 mg", cp(30), { noite: 1 }, "Tomar 1 comprimido à noite, todos os dias.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-noite",
+        "1 mg à noite",
+        "1 mg",
+        cp(30),
+        { noite: 1 },
+        "Tomar 1 comprimido à noite, todos os dias.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "haloperidol-5",
@@ -608,7 +1104,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "C1",
-    presets: [p("1x-noite", "5 mg à noite", "5 mg", cp(30), { noite: 1 }, "Tomar 1 comprimido à noite, todos os dias.", "Uso contínuo")],
+    presets: [
+      p(
+        "1x-noite",
+        "5 mg à noite",
+        "5 mg",
+        cp(30),
+        { noite: 1 },
+        "Tomar 1 comprimido à noite, todos os dias.",
+        "Uso contínuo",
+      ),
+    ],
   },
   {
     id: "clonazepam-2",
@@ -619,7 +1125,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     acao: "comprimido",
     farmaciaPopular: false,
     controlado: "B1",
-    presets: [p("1x-deitar", "2 mg ao deitar", "2 mg", cp(30), { ao_deitar: 1 }, "Tomar 1 comprimido ao deitar.", "30 dias")],
+    presets: [
+      p(
+        "1x-deitar",
+        "2 mg ao deitar",
+        "2 mg",
+        cp(30),
+        { ao_deitar: 1 },
+        "Tomar 1 comprimido ao deitar.",
+        "30 dias",
+      ),
+    ],
     alertas: ["Receita B1 (azul). Risco de dependência e quedas."],
   },
 
@@ -632,7 +1148,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Analgesia/Geral",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("sos", "500 mg se dor ou febre", "500 mg", cp(20), {}, "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas se precisar.", "Se necessário")],
+    presets: [
+      p(
+        "sos",
+        "500 mg se dor ou febre",
+        "500 mg",
+        cp(20),
+        {},
+        "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas se precisar.",
+        "Se necessário",
+      ),
+    ],
   },
   {
     id: "dipirona-1g",
@@ -642,7 +1168,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Analgesia/Geral",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("sos", "1 g se dor ou febre", "1 g", cp(20), {}, "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas se precisar.", "Se necessário")],
+    presets: [
+      p(
+        "sos",
+        "1 g se dor ou febre",
+        "1 g",
+        cp(20),
+        {},
+        "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas se precisar.",
+        "Se necessário",
+      ),
+    ],
   },
   {
     id: "paracetamol-750",
@@ -652,7 +1188,17 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Analgesia/Geral",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("sos", "750 mg se dor ou febre", "750 mg", cp(20), {}, "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas. No máximo 4 por dia.", "Se necessário")],
+    presets: [
+      p(
+        "sos",
+        "750 mg se dor ou febre",
+        "750 mg",
+        cp(20),
+        {},
+        "Tomar 1 comprimido se tiver dor ou febre. Pode repetir a cada 6 horas. No máximo 4 por dia.",
+        "Se necessário",
+      ),
+    ],
   },
   {
     id: "ibuprofeno-600",
@@ -662,29 +1208,42 @@ export const MEDICAMENTOS: Medicamento[] = [
     especialidade: "Analgesia/Geral",
     acao: "comprimido",
     farmaciaPopular: false,
-    presets: [p("3x-5d", "600 mg de 8 em 8 horas por 5 dias", "600 mg", cp(15), { manha: 1, tarde: 1, noite: 1 }, "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, após as refeições, por 5 dias.", "5 dias")],
+    presets: [
+      p(
+        "3x-5d",
+        "600 mg de 8 em 8 horas por 5 dias",
+        "600 mg",
+        cp(15),
+        { manha: 1, tarde: 1, noite: 1 },
+        "Tomar 1 comprimido pela manhã, 1 à tarde e 1 à noite, após as refeições, por 5 dias.",
+        "5 dias",
+      ),
+    ],
     alertas: ["Evitar em DRC, IC e úlcera."],
   },
 ];
 
 export const CLASSES_POR_ESPECIALIDADE: Record<Especialidade, string[]> = ESPECIALIDADES.reduce(
   (acc, esp) => {
-    acc[esp] = [...new Set(MEDICAMENTOS.filter((m) => m.especialidade === esp).map((m) => m.classe))];
+    acc[esp] = [
+      ...new Set(MEDICAMENTOS.filter((m) => m.especialidade === esp).map((m) => m.classe)),
+    ];
     return acc;
   },
   {} as Record<Especialidade, string[]>,
 );
 
 function normalize(s: string) {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 export function buscarMedicamentos(
   query: string,
-  filtros: { especialidade?: Especialidade | null; classe?: string | null; farmaciaPopular?: boolean } = {},
+  filtros: {
+    especialidade?: Especialidade | null;
+    classe?: string | null;
+    farmaciaPopular?: boolean;
+  } = {},
 ): Medicamento[] {
   const q = normalize(query.trim());
   return MEDICAMENTOS.filter((m) => {

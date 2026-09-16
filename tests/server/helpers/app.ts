@@ -7,7 +7,11 @@ export function makeApp(store?: JobStore) {
   return { app: createApp({ jobStore }), jobStore };
 }
 
-export async function waitFor<T>(fn: () => Promise<T | null | undefined>, pred: (v: T) => boolean, timeoutMs = 10_000): Promise<T> {
+export async function waitFor<T>(
+  fn: () => Promise<T | null | undefined>,
+  pred: (v: T) => boolean,
+  timeoutMs = 10_000,
+): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const v = await fn();

@@ -12,7 +12,8 @@ const txt = path.join(fixtures, "evolucao.txt");
 function gerar(files: Array<string | [Buffer, string]>, fields: Record<string, string> = {}) {
   let req = request(app).post("/api/passagem-plantao/gerar").set(auth);
   for (const [k, v] of Object.entries(fields)) req = req.field(k, v);
-  for (const f of files) req = typeof f === "string" ? req.attach("files", f) : req.attach("files", f[0], f[1]);
+  for (const f of files)
+    req = typeof f === "string" ? req.attach("files", f) : req.attach("files", f[0], f[1]);
   return req;
 }
 
@@ -20,11 +21,16 @@ describe("/api/passagem-plantao/gerar", () => {
   beforeEach(resetAiMock);
 
   it("2 arquivos → DOCX válido com headers de contagem", async () => {
-    const res = await gerar([txt, path.join(fixtures, "test.docx")], { setor: "CMF", data: "15/09/2026" }).buffer().parse((r, cb) => {
-      const chunks: Buffer[] = [];
-      r.on("data", (c) => chunks.push(c));
-      r.on("end", () => cb(null, Buffer.concat(chunks)));
-    });
+    const res = await gerar([txt, path.join(fixtures, "test.docx")], {
+      setor: "CMF",
+      data: "15/09/2026",
+    })
+      .buffer()
+      .parse((r, cb) => {
+        const chunks: Buffer[] = [];
+        r.on("data", (c) => chunks.push(c));
+        r.on("end", () => cb(null, Buffer.concat(chunks)));
+      });
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("wordprocessingml");
     expect(res.headers["content-disposition"]).toContain("MAPA_PASSAGEM_CMF_15-09-2026.docx");
@@ -37,7 +43,10 @@ describe("/api/passagem-plantao/gerar", () => {
   });
 
   it("8 arquivos → 2 lotes (6 + 2) processados e mesclados por leito", async () => {
-    const files = Array.from({ length: 8 }, (_, i) => [Buffer.from(`LEITO L${i + 1}\nEVOLUCAO ${i}`), `ev${i}.txt`] as [Buffer, string]);
+    const files = Array.from(
+      { length: 8 },
+      (_, i) => [Buffer.from(`LEITO L${i + 1}\nEVOLUCAO ${i}`), `ev${i}.txt`] as [Buffer, string],
+    );
     const res = await gerar(files, { data: "15/09/2026" });
     expect(res.status).toBe(200);
     expect(aiMock.json).toHaveBeenCalledTimes(2);
@@ -48,11 +57,15 @@ describe("/api/passagem-plantao/gerar", () => {
     let call = 0;
     aiMock.json.mockImplementation(async (_s, _p, schema) => {
       call++;
-      if (call === 1) return { ok: false, error: "Resposta da IA truncada (limite de tokens).", raw: "{" };
+      if (call === 1)
+        return { ok: false, error: "Resposta da IA truncada (limite de tokens).", raw: "{" };
       const { aiFixtures } = await import("../../server/mocks/aiFixtures.js");
       return { ok: true, data: schema.parse(aiFixtures.passagemBatch) };
     });
-    const files = Array.from({ length: 8 }, (_, i) => [Buffer.from(`LEITO L${i + 1}`), `ev${i}.txt`] as [Buffer, string]);
+    const files = Array.from(
+      { length: 8 },
+      (_, i) => [Buffer.from(`LEITO L${i + 1}`), `ev${i}.txt`] as [Buffer, string],
+    );
     const res = await gerar(files, { data: "15/09/2026" });
     expect(res.status).toBe(200);
     expect(res.headers["x-batches-failed"]).toBe("1");
@@ -60,7 +73,11 @@ describe("/api/passagem-plantao/gerar", () => {
   });
 
   it("todos os lotes falham → 502", async () => {
-    aiMock.json.mockResolvedValue({ ok: false, error: "A IA não retornou JSON válido.", raw: "xx" });
+    aiMock.json.mockResolvedValue({
+      ok: false,
+      error: "A IA não retornou JSON válido.",
+      raw: "xx",
+    });
     const res = await gerar([txt], { data: "15/09/2026" });
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("ai_invalid_response");
@@ -94,7 +111,10 @@ describe("/api/passagem-plantao/gerar", () => {
   });
 
   it("400 sem arquivos", async () => {
-    const res = await request(app).post("/api/passagem-plantao/gerar").set(auth).field("data", "15/09/2026");
+    const res = await request(app)
+      .post("/api/passagem-plantao/gerar")
+      .set(auth)
+      .field("data", "15/09/2026");
     expect(res.status).toBe(400);
   });
 });

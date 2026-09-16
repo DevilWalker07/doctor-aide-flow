@@ -4,7 +4,9 @@ import { ZodError } from "zod";
 import { HttpError } from "../lib/errors.js";
 
 export const apiNotFound: RequestHandler = (req, res) => {
-  res.status(404).json({ error: "not_found", message: `Rota ${req.method} ${req.path} não existe.` });
+  res
+    .status(404)
+    .json({ error: "not_found", message: `Rota ${req.method} ${req.path} não existe.` });
 };
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {

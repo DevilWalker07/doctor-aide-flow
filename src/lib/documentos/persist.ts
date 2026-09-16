@@ -5,7 +5,9 @@ import type { OutpatientDocument, StoredOutpatientDocument } from "./types";
 const MAX_LOCAL = 200;
 
 function localId() {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function saveLocal(doc: OutpatientDocument): StoredOutpatientDocument {
@@ -29,16 +31,32 @@ export interface SaveResult {
   erro?: string;
 }
 
-export async function saveOutpatientDocument(doc: OutpatientDocument, userId: string | null): Promise<SaveResult> {
+export async function saveOutpatientDocument(
+  doc: OutpatientDocument,
+  userId: string | null,
+): Promise<SaveResult> {
   const podeUsarBanco = Boolean(userId) && !(doc.patientId && doc.patientId.startsWith("temp_"));
   if (podeUsarBanco) {
     try {
       const row = await createOutpatientDocument(
-        { type: doc.type, title: doc.title, patient_id: doc.patientId, content: doc.content as unknown as Record<string, unknown> },
+        {
+          type: doc.type,
+          title: doc.title,
+          patient_id: doc.patientId,
+          content: doc.content as unknown as Record<string, unknown>,
+        },
         userId!,
       );
       return {
-        doc: { id: row.id, type: doc.type, title: doc.title, patient_id: doc.patientId, content: doc.content, created_at: row.created_at, origem: "supabase" },
+        doc: {
+          id: row.id,
+          type: doc.type,
+          title: doc.title,
+          patient_id: doc.patientId,
+          content: doc.content,
+          created_at: row.created_at,
+          origem: "supabase",
+        },
         origem: "supabase",
       };
     } catch (err) {
@@ -49,8 +67,13 @@ export async function saveOutpatientDocument(doc: OutpatientDocument, userId: st
   return { doc: saveLocal(doc), origem: "local" };
 }
 
-export async function listOutpatientDocuments(patientId: string | null, userId: string | null): Promise<StoredOutpatientDocument[]> {
-  const local = (storage.getDocumentos() as StoredOutpatientDocument[]).filter((d) => !patientId || d.patient_id === patientId);
+export async function listOutpatientDocuments(
+  patientId: string | null,
+  userId: string | null,
+): Promise<StoredOutpatientDocument[]> {
+  const local = (storage.getDocumentos() as StoredOutpatientDocument[]).filter(
+    (d) => !patientId || d.patient_id === patientId,
+  );
   if (!userId || !patientId || patientId.startsWith("temp_")) return local;
   try {
     const rows = await getOutpatientDocumentsByPatient(patientId, userId);

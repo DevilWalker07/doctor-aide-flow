@@ -52,7 +52,11 @@ export function createSupabaseJobStore(client: SupabaseClient): JobStore {
         created_at: now,
         updated_at: now,
       };
-      const { data, error } = await client.from(TABLE).upsert(row, { onConflict: "job_id" }).select().single();
+      const { data, error } = await client
+        .from(TABLE)
+        .upsert(row, { onConflict: "job_id" })
+        .select()
+        .single();
       if (error) throw new Error(`jobStore.create: ${error.message}`);
       return data as JobRecord;
     },
@@ -126,7 +130,9 @@ export function getJobStore(): JobStore {
   if (admin) {
     singleton = createSupabaseJobStore(admin);
   } else {
-    console.warn("[jobStore] SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes — jobs em memória (perdidos no restart).");
+    console.warn(
+      "[jobStore] SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes — jobs em memória (perdidos no restart).",
+    );
     singleton = createMemoryJobStore();
   }
   return singleton;

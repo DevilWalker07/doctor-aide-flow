@@ -41,7 +41,9 @@ export function createApp(deps: AppDeps = {}) {
 
   app.set("trust proxy", 1);
   app.disable("x-powered-by");
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
+  app.use(
+    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }),
+  );
   app.use(buildCors());
   app.use(express.json({ limit: "2mb" }));
 

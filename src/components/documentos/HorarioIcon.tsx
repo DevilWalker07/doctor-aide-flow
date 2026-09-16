@@ -12,7 +12,15 @@ const ICONS: Record<Horario, typeof Sunrise> = {
 
 const SIZES = { sm: "h-4 w-4", md: "h-6 w-6", lg: "h-8 w-8" } as const;
 
-export function HorarioIcon({ horario, size = "md", className }: { horario: Horario; size?: keyof typeof SIZES; className?: string }) {
+export function HorarioIcon({
+  horario,
+  size = "md",
+  className,
+}: {
+  horario: Horario;
+  size?: keyof typeof SIZES;
+  className?: string;
+}) {
   const Icon = ICONS[horario];
   return <Icon className={cn(SIZES[size], className)} aria-hidden="true" strokeWidth={2.25} />;
 }

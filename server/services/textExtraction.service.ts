@@ -11,7 +11,10 @@ export interface ExtractedText {
   numPages?: number;
 }
 
-export async function extractTextFromFile(filePath: string, originalName: string): Promise<ExtractedText> {
+export async function extractTextFromFile(
+  filePath: string,
+  originalName: string,
+): Promise<ExtractedText> {
   const ext = extOf(originalName);
 
   if (ext === "txt" || ext === "md") {
@@ -25,7 +28,11 @@ export async function extractTextFromFile(filePath: string, originalName: string
   }
 
   if (ext === "doc") {
-    throw new HttpError(415, "unsupported_format", `${originalName}: formato .doc legado não suportado. Salve como .docx ou PDF.`);
+    throw new HttpError(
+      415,
+      "unsupported_format",
+      `${originalName}: formato .doc legado não suportado. Salve como .docx ou PDF.`,
+    );
   }
 
   if (ext === "pdf") {
@@ -33,5 +40,9 @@ export async function extractTextFromFile(filePath: string, originalName: string
     return { text, kind: "pdf", numPages };
   }
 
-  throw new HttpError(415, "unsupported_format", `${originalName}: extensão .${ext} não suportada.`);
+  throw new HttpError(
+    415,
+    "unsupported_format",
+    `${originalName}: extensão .${ext} não suportada.`,
+  );
 }

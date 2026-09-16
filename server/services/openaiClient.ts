@@ -13,7 +13,11 @@ let client: OpenAI | null = null;
 export function getOpenAIClient(): OpenAI | null {
   if (!env.OPENAI_API_KEY) return null;
   if (!client) {
-    client = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: env.OPENAI_TIMEOUT_MS, maxRetries: 2 });
+    client = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+      timeout: env.OPENAI_TIMEOUT_MS,
+      maxRetries: 2,
+    });
   }
   return client;
 }
@@ -105,7 +109,12 @@ export async function safeJsonCompletion<T>(
 
     const validated = schema.safeParse(parsed.value);
     if (!validated.success) {
-      return { ok: false, error: "JSON da IA fora do schema esperado.", raw, issues: validated.error.issues };
+      return {
+        ok: false,
+        error: "JSON da IA fora do schema esperado.",
+        raw,
+        issues: validated.error.issues,
+      };
     }
     return { ok: true, data: validated.data, usage };
   };
@@ -132,7 +141,11 @@ export interface ChatMessage {
   content: string;
 }
 
-export async function chatCompletion(system: string, messages: ChatMessage[], opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey"> = {}): Promise<string> {
+export async function chatCompletion(
+  system: string,
+  messages: ChatMessage[],
+  opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey"> = {},
+): Promise<string> {
   const { maxTokens = 1200, temperature = 0.3, mockKey } = opts;
 
   if (env.AI_MOCK) {
@@ -173,7 +186,10 @@ export async function textCompletion(
     max_tokens: maxTokens,
     messages: [
       { role: "system", content: system },
-      { role: "user", content: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2) },
+      {
+        role: "user",
+        content: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2),
+      },
     ],
   });
   return response.choices[0]?.message?.content?.trim() ?? "";

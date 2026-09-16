@@ -27,7 +27,11 @@ const upload = multer({
 const gerar: RequestHandler = async (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   if (files.length === 0) {
-    throw new HttpError(400, "missing_files", "Nenhum arquivo enviado. Envie ao menos um arquivo DOCX.");
+    throw new HttpError(
+      400,
+      "missing_files",
+      "Nenhum arquivo enviado. Envie ao menos um arquivo DOCX.",
+    );
   }
 
   let body;
@@ -60,27 +64,42 @@ const gerar: RequestHandler = async (req, res) => {
     }
     const text = r.value.text.trim();
     if (!text) {
-      warnings.push(`${name}: ${r.value.kind === "pdf" ? "PDF sem texto selecionável" : "nenhum texto extraído"}`);
+      warnings.push(
+        `${name}: ${r.value.kind === "pdf" ? "PDF sem texto selecionável" : "nenhum texto extraído"}`,
+      );
       return;
     }
     items.push({ fileName: name, text });
   });
 
   if (items.length === 0) {
-    throw new HttpError(422, "no_text", "Não foi possível extrair texto de nenhum arquivo.", warnings);
+    throw new HttpError(
+      422,
+      "no_text",
+      "Não foi possível extrair texto de nenhum arquivo.",
+      warnings,
+    );
   }
 
   const result = await gerarMapaPlantao(items, setor, data);
   warnings.push(...result.warnings);
 
   if (result.batchesFailed === result.batchesTotal) {
-    throw new HttpError(502, "ai_invalid_response", "A IA não retornou dados estruturados válidos.", warnings);
+    throw new HttpError(
+      502,
+      "ai_invalid_response",
+      "A IA não retornou dados estruturados válidos.",
+      warnings,
+    );
   }
 
   const docxBuffer = await gerarMapaPlantaoDocx(result.data, setor, data);
   const filename = sanitizeFilename(`MAPA_PASSAGEM_${setor}_${data.replace(/\//g, "-")}.docx`);
 
-  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  );
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.setHeader("Content-Length", String(docxBuffer.length));
   res.setHeader("X-Pacientes-Count", String(result.data.pacientes.length));

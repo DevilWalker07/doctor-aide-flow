@@ -31,3 +31,20 @@ export type LabExtractionResult = {
   campos_nao_encontrados?: string[];
   [key: string]: unknown;
 };
+
+/**
+ * Laudo de imagem organizado pelo agente. Os achados e a conclusão são do
+ * radiologista — o agente compacta, não interpreta.
+ */
+export type LaudoImagemResult = {
+  tipo_exame?: string | null;
+  regiao?: string | null;
+  data_exame?: string | null;
+  achados?: string[];
+  conclusao?: string | null;
+  comparacao?: string | null;
+  texto_formatado?: string;
+  alertas?: string[];
+  achados_incertos?: string[];
+  campos_nao_encontrados?: string[];
+};

@@ -4,7 +4,9 @@ import { formatarLaboratorio } from "./laboratorio";
 import { calcularCKDEPI2021, classificarDRC } from "./renal";
 
 export function gerarEvolucaoLocal(patient: Patient, data: PatientData = patient.data || {}) {
-  const creat = Number(String(data.lab?.raw?.Creatinina || data.lab?.raw?.Cr || "0").replace(",", "."));
+  const creat = Number(
+    String(data.lab?.raw?.Creatinina || data.lab?.raw?.Cr || "0").replace(",", "."),
+  );
   const tfge = calcularCKDEPI2021(creat, patient.age, patient.sex);
   const drc = classificarDRC(tfge);
   const hgt = calcularHgtStats([data.hgt?.h06, data.hgt?.h12, data.hgt?.h18, data.hgt?.h00]);

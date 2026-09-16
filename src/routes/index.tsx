@@ -1,14 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Copy, LogOut, RefreshCw, Settings2, Stethoscope, X } from "lucide-react";
+import { Copy, LogIn, LogOut, RefreshCw, Settings2, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AmbienteMatrix } from "@/components/hub/AmbienteMatrix";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LocalPicker } from "@/components/hub/LocalPicker";
 import { PlantaoPanel, type PlantaoAtivoCtx } from "@/components/hub/PlantaoPanel";
 import { QuickActions } from "@/components/hub/QuickActions";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnsureProfile } from "@/hooks/useEnsureProfile";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { closeShift, getActiveShift, getClosedShifts, getHandoffsByShift, getProfile, updateShift, type Shift } from "@/lib/db";
+import {
+  closeShift,
+  getActiveShift,
+  getClosedShifts,
+  getHandoffsByShift,
+  getProfile,
+  updateShift,
+  type Shift,
+} from "@/lib/db";
+import { nomeExibicao } from "@/lib/format";
 import { storage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -32,19 +42,38 @@ function saudacao() {
 function HubPage() {
   const { userId } = useSupabaseUser();
   const nav = useNavigate();
-  const { signOut } = useAuth();
+  const auth = useAuth();
+  const { signOut } = auth;
   useEnsureProfile();
 
   const [nomeMedico, setNomeMedico] = useState(() => storage.getNomeMedico());
-  const [plantaoAtivo, setPlantaoAtivo] = useState<PlantaoAtivoCtx | null>(null);
+  // Lê o cache local de forma síncrona: assim a tela já nasce preenchida e o
+  // esqueleto não fica eterno quando a rede pendura (não rejeita, só não volta).
+  const [plantaoAtivo, setPlantaoAtivo] = useState<PlantaoAtivoCtx | null>(() => {
+    try {
+      const raw = localStorage.getItem("da_plantao_ativo");
+      return raw ? (JSON.parse(raw) as PlantaoAtivoCtx) : null;
+    } catch {
+      return null;
+    }
+  });
   const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
   const [selectedHandoff, setSelectedHandoff] = useState<string | null>(null);
   const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [ultimoAmbiente] = useState(() => {
+    try {
+      return storage.getUltimoAmbiente();
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
-    if (!userId) return;
+    // Sem conta não existe plantão a carregar.
+    if (!userId || (auth.configured && !auth.session)) return;
     let cancelled = false;
 
     async function load() {
@@ -62,7 +91,14 @@ function HubPage() {
         const shift = await getActiveShift(userId!);
         if (cancelled) return;
         if (shift) {
-          const ctx: PlantaoAtivoCtx = { id: shift.id, data: shift.date, data_formatada: formatDate(shift.date), hospital: shift.hospital, setor: shift.sector || null, tipo: shift.type || null };
+          const ctx: PlantaoAtivoCtx = {
+            id: shift.id,
+            data: shift.date,
+            data_formatada: formatDate(shift.date),
+            hospital: shift.hospital,
+            setor: shift.sector || null,
+            tipo: shift.type || null,
+          };
           setPlantaoAtivo(ctx);
           localStorage.setItem("da_plantao_ativo", JSON.stringify({ ...ctx, status: "active" }));
           storage.setShiftId(shift.id);
@@ -72,6 +108,8 @@ function HubPage() {
           localStorage.removeItem("da_plantao_ativo");
         }
       } catch {
+        // Supabase fora do ar: o app continua, só avisa que está local.
+        if (!cancelled) setOffline(true);
         const raw = localStorage.getItem("da_plantao_ativo");
         if (raw && !cancelled) setPlantaoAtivo(JSON.parse(raw));
       }
@@ -86,21 +124,32 @@ function HubPage() {
       const activeId = storage.getShiftId();
       if (activeId && !activeId.startsWith("temp_")) {
         try {
-          const { data: pats } = await supabase.from("patients").select("id, pending_issues").eq("shift_id", activeId).eq("user_id", userId!);
+          const { data: pats } = await supabase
+            .from("patients")
+            .select("id, pending_issues")
+            .eq("shift_id", activeId)
+            .eq("user_id", userId!);
           if (pats && !cancelled) {
-            setStats({ pacientes: pats.length, pendencias: pats.reduce((acc, p) => acc + (p.pending_issues?.length || 0), 0) });
+            setStats({
+              pacientes: pats.length,
+              pendencias: pats.reduce((acc, p) => acc + (p.pending_issues?.length || 0), 0),
+            });
           }
         } catch {
-          /* offline */
+          if (!cancelled) setOffline(true);
         }
       }
     }
 
+    // Não há estado de carregamento: a tela nasce com o que está em cache e o
+    // card só aparece quando há plantão de verdade. Um esqueleto aqui prometia
+    // conteúdo que pode não existir — e ficava preso quando o cliente do
+    // Supabase pendurava sem rejeitar.
     load();
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, auth.configured, auth.session]);
 
   const handleViewHandoff = async (shiftId: string) => {
     try {
@@ -119,7 +168,18 @@ function HubPage() {
       if (plantaoAtivo) await closeShift(plantaoAtivo.id, userId);
       await updateShift(shift.id, { status: "active" }, userId);
       storage.setShiftId(shift.id);
-      localStorage.setItem("da_plantao_ativo", JSON.stringify({ id: shift.id, data: shift.date, data_formatada: formatDate(shift.date), hospital: shift.hospital, setor: shift.sector, tipo: shift.type, status: "active" }));
+      localStorage.setItem(
+        "da_plantao_ativo",
+        JSON.stringify({
+          id: shift.id,
+          data: shift.date,
+          data_formatada: formatDate(shift.date),
+          hospital: shift.hospital,
+          setor: shift.sector,
+          tipo: shift.type,
+          status: "active",
+        }),
+      );
       if (shift.type) storage.setTipo(shift.type);
       toast.success("Plantão reaberto!");
       nav({ to: "/dashboard" });
@@ -138,77 +198,131 @@ function HubPage() {
     nav({ to: "/login", search: {} });
   };
 
-  const primeiroNome = nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0] || "Doutor(a)";
+  const primeiroNome =
+    nomeExibicao(nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0]) || "Doutor(a)";
+  // Sem conta o médico usa documentos, copiloto e exames; o plantão é que
+  // exige login, porque é ali que entram dados de paciente.
+  const precisaDeConta = auth.configured && !auth.session;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-primary/15 blur-[140px]" />
-        <div className="absolute -bottom-40 -left-40 h-[420px] w-[420px] rounded-full bg-violet-500/10 blur-[120px]" />
-      </div>
-
-      <header className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-2 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-11 w-11 shrink-0 rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30">
-            <Stethoscope className="h-5 w-5" />
-          </div>
+    <div className="bg-background min-h-screen">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-5 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <img
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="h-11 w-11 shrink-0 rounded-2xl object-cover"
+          />
           <div className="min-w-0">
-            <span className="block font-black tracking-tight text-lg leading-none">MEDFLUXO</span>
-            <span className="block text-[9px] font-black tracking-[0.3em] uppercase text-slate-500 mt-1 truncate">Central de atendimento</span>
+            <span className="t-title text-foreground block">Medfluxo</span>
+            <span className="t-label text-muted-foreground block truncate font-normal">
+              Assistente de plantão
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/configuracoes" aria-label="Configurações" className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-slate-100 hover:border-slate-600 transition-colors">
-            <Settings2 className="h-5 w-5" />
+          <ThemeToggle />
+          <Link
+            to="/configuracoes"
+            aria-label="Configurações"
+            className="touch-target border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <Settings2 className="h-5 w-5" aria-hidden="true" />
           </Link>
-          <button onClick={handleLogout} aria-label="Sair" className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-rose-300 hover:border-rose-500/50 transition-colors">
-            <LogOut className="h-5 w-5" />
-          </button>
+          {precisaDeConta ? (
+            <Link
+              to="/login"
+              search={{}}
+              data-testid="hub-entrar"
+              className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl px-4 text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <LogIn className="h-5 w-5" aria-hidden="true" /> Entrar
+            </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              aria-label="Sair da conta"
+              className="touch-target border-border bg-card text-muted-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors hover:text-rose-600 dark:hover:text-rose-300 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <LogOut className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">{saudacao()}</p>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-black tracking-tight">
-            Dr(a). {primeiroNome}
-            <span className="text-slate-500 font-medium">, o que vamos fazer?</span>
+          <p className="t-eyebrow text-primary">{saudacao()}</p>
+          <h1 className="t-display text-foreground mt-1">
+            {precisaDeConta ? "Bem-vindo ao Medfluxo" : `Dr(a). ${primeiroNome}`}
           </h1>
         </div>
 
-        <QuickActions />
+        {offline && (
+          <div
+            role="status"
+            data-testid="hub-offline"
+            className="border-border bg-secondary text-muted-foreground flex items-center gap-3 rounded-2xl border px-4 py-3"
+          >
+            <WifiOff className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <p className="t-body">Trabalhando offline — seus dados ficam neste aparelho.</p>
+          </div>
+        )}
 
-        <PlantaoPanel plantaoAtivo={plantaoAtivo} stats={stats} closedShifts={closedShifts} onViewHandoff={handleViewHandoff} onReopen={setShowReopenModal} formatDate={formatDate} />
+        {/* 1. Retomar o que já estava acontecendo — o caminho mais usado. */}
+        <PlantaoPanel
+          plantaoAtivo={plantaoAtivo}
+          stats={stats}
+          closedShifts={closedShifts}
+          ultimoAmbiente={ultimoAmbiente}
+          onViewHandoff={handleViewHandoff}
+          onReopen={setShowReopenModal}
+          formatDate={formatDate}
+        />
 
-        <AmbienteMatrix />
+        {/* 2. As quatro ações. As três primeiras funcionam sem conta. */}
+        <QuickActions precisaDeConta={precisaDeConta} />
+
+        {/* 3. Abrir um plantão novo. */}
+        <LocalPicker precisaDeConta={precisaDeConta} />
       </main>
 
-      <footer className="relative z-10 py-8 text-center">
-        <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">Medfluxo · HNAS Assist</p>
+      <footer className="py-8 text-center">
+        <p className="t-label text-muted-foreground font-normal">Medfluxo</p>
       </footer>
 
       {selectedHandoff && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="p-5 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Arquivo de passagem</h2>
-              <button onClick={() => setSelectedHandoff(null)} aria-label="Fechar" className="p-2 hover:bg-slate-800 rounded-full">
-                <X className="h-4 w-4" />
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm sm:p-6">
+          <div className="bg-card border-border w-full max-w-lg overflow-hidden rounded-3xl border shadow-2xl">
+            <div className="border-border flex items-center justify-between border-b p-5">
+              <h2 className="t-title text-foreground">Arquivo de passagem</h2>
+              <button
+                onClick={() => setSelectedHandoff(null)}
+                aria-label="Fechar"
+                className="touch-target hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
             <div className="p-5">
-              <pre className="w-full bg-slate-950 p-5 rounded-2xl text-[10px] font-bold overflow-y-auto max-h-[40vh] whitespace-pre-wrap font-mono leading-relaxed text-slate-200">{selectedHandoff}</pre>
-              <div className="flex gap-3 mt-5">
+              <pre className="bg-background text-foreground max-h-[40vh] w-full overflow-y-auto rounded-2xl p-5 font-mono text-[0.8125rem] leading-relaxed whitespace-pre-wrap">
+                {selectedHandoff}
+              </pre>
+              <div className="mt-5 flex gap-3">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(selectedHandoff);
                     toast.success("Copiado!");
                   }}
-                  className="flex-1 py-3.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                  className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <Copy className="h-4 w-4" /> Copiar texto
+                  <Copy className="h-5 w-5" aria-hidden="true" /> Copiar texto
                 </button>
-                <button onClick={() => setSelectedHandoff(null)} className="flex-1 py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  onClick={() => setSelectedHandoff(null)}
+                  className="bg-secondary text-foreground focus-visible:ring-ring min-h-[3rem] flex-1 rounded-2xl text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
+                >
                   Fechar
                 </button>
               </div>
@@ -218,23 +332,38 @@ function HubPage() {
       )}
 
       {showReopenModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] w-full max-w-sm p-8 text-center space-y-6 shadow-2xl">
-            <div className="h-16 w-16 rounded-[1.5rem] bg-primary/15 text-primary flex items-center justify-center mx-auto">
-              <RefreshCw className={`h-8 w-8 ${isProcessing ? "animate-spin" : ""}`} />
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm sm:p-6">
+          <div className="bg-card border-border w-full max-w-sm space-y-6 rounded-3xl border p-8 text-center shadow-2xl">
+            <div className="bg-primary/15 text-primary mx-auto flex h-16 w-16 items-center justify-center rounded-3xl">
+              <RefreshCw
+                className={`h-8 w-8 ${isProcessing ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight mb-2">Reabrir plantão?</h2>
-              <p className="text-xs text-slate-400 font-bold uppercase">
+              <h2 className="t-display text-foreground">Reabrir plantão?</h2>
+              <p className="t-body text-muted-foreground mt-2">
                 {showReopenModal.sector} · {formatDate(showReopenModal.date)}
               </p>
-              {plantaoAtivo && <p className="mt-4 text-[10px] text-rose-300 font-black uppercase tracking-widest bg-rose-500/10 p-3 rounded-xl">O plantão atual será encerrado.</p>}
+              {plantaoAtivo && (
+                <p className="t-body mt-4 rounded-xl bg-rose-500/10 p-3 text-rose-700 dark:text-rose-300">
+                  O plantão atual será encerrado.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-3">
-              <button disabled={isProcessing} onClick={() => handleReopen(showReopenModal)} className="w-full py-3.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50">
+              <button
+                disabled={isProcessing}
+                onClick={() => handleReopen(showReopenModal)}
+                className="bg-primary text-primary-foreground focus-visible:ring-ring min-h-[3rem] w-full rounded-2xl text-base font-bold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+              >
                 {isProcessing ? "Processando..." : "Sim, reabrir"}
               </button>
-              <button disabled={isProcessing} onClick={() => setShowReopenModal(null)} className="w-full py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest">
+              <button
+                disabled={isProcessing}
+                onClick={() => setShowReopenModal(null)}
+                className="bg-secondary text-foreground focus-visible:ring-ring min-h-[3rem] w-full rounded-2xl text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
+              >
                 Cancelar
               </button>
             </div>

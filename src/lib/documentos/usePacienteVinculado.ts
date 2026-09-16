@@ -15,7 +15,9 @@ export interface PacienteVinculado extends PacienteDocumento {
 type LocalPaciente = Record<string, unknown> & { id?: string };
 
 function normalizeSexo(v: unknown): "M" | "F" | "" {
-  const s = String(v ?? "").trim().toUpperCase();
+  const s = String(v ?? "")
+    .trim()
+    .toUpperCase();
   if (s.startsWith("M")) return "M";
   if (s.startsWith("F")) return "F";
   return "";
@@ -23,7 +25,15 @@ function normalizeSexo(v: unknown): "M" | "F" | "" {
 
 function strList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
-  return v.map((x) => (typeof x === "string" ? x : x && typeof x === "object" ? formatObjItem(x as Record<string, unknown>) : String(x ?? ""))).filter(Boolean);
+  return v
+    .map((x) =>
+      typeof x === "string"
+        ? x
+        : x && typeof x === "object"
+          ? formatObjItem(x as Record<string, unknown>)
+          : String(x ?? ""),
+    )
+    .filter(Boolean);
 }
 
 function formatObjItem(o: Record<string, unknown>): string {
@@ -73,7 +83,9 @@ export function usePacienteVinculado(pacienteId: string | undefined) {
         }
       }
       if (!found) {
-        const local = (storage.getLocalPacientes() as LocalPaciente[]).find((x) => x.id === pacienteId);
+        const local = (storage.getLocalPacientes() as LocalPaciente[]).find(
+          (x) => x.id === pacienteId,
+        );
         if (local) found = fromLocal(local);
       }
       if (cancelled) return;

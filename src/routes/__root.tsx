@@ -6,7 +6,30 @@ export interface RouterContext {
   auth: AuthApi;
 }
 
-const PUBLIC_PATHS = new Set(["/login", "/cadastro", "/recuperar-senha", "/nova-senha"]);
+/**
+ * Telas que funcionam sem conta. O médico abre o app e resolve um documento,
+ * tira uma dúvida no copiloto ou organiza um laudo sem precisar de login. A
+ * conta é exigida onde entram dados de paciente: plantão, ficha, evolução.
+ */
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/documentos",
+  "/atestado",
+  "/prescricao-alta",
+  "/encaminhamento",
+  "/orientacoes-paciente",
+  "/copiloto",
+  "/resumo-exames",
+  "/recuperar-senha",
+  "/nova-senha",
+]);
+
+/**
+ * Telas que só fazem sentido para quem NÃO tem sessão. Ficavam no mesmo
+ * conjunto das públicas, e por isso qualquer caminho público com sessão ativa
+ * era jogado para o dashboard — o que agora tiraria o médico logado do hub.
+ */
+const AUTH_ONLY_PATHS = new Set(["/login", "/cadastro"]);
 
 function NotFoundComponent() {
   return (
@@ -34,11 +57,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: ({ context, location }) => {
     const { auth } = context;
     if (!auth.configured) return;
-    const isPublic = PUBLIC_PATHS.has(location.pathname);
-    if (!isPublic && !auth.session) {
+    const { pathname } = location;
+    const aberta = PUBLIC_PATHS.has(pathname) || AUTH_ONLY_PATHS.has(pathname);
+
+    if (!aberta && !auth.session) {
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
-    if (isPublic && auth.session && location.pathname !== "/nova-senha") {
+    if (AUTH_ONLY_PATHS.has(pathname) && auth.session) {
       throw redirect({ to: "/dashboard" });
     }
   },

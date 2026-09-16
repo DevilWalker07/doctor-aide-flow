@@ -1,60 +1,106 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FlaskConical, MessageSquareText, Pill } from "lucide-react";
+import { ArrowUpRight, FlaskConical, Lock, MessageSquareText, Stethoscope } from "lucide-react";
+import { FileStack } from "lucide-react";
 
-const ACTIONS = [
+/**
+ * As quatro ações da tela inicial.
+ *
+ * As três primeiras não exigem conta — o médico abre o app e resolve. A quarta
+ * é o plantão, que mexe com dados de paciente e por isso pede login.
+ * A descrição diz QUANDO usar, não o que a tela é.
+ */
+const ACOES = [
   {
-    to: "/prescricao-alta" as const,
-    label: "Receituário de Alta",
-    descricao: "Receita ilustrada, encaminhamento e orientações — sem plantão ativo.",
-    icon: Pill,
-    accent: "from-emerald-500/20 to-emerald-500/0 text-emerald-300 border-emerald-500/30",
-    testid: "hub-receituario",
+    to: "/documentos" as const,
+    label: "Documentos",
+    descricao: "Receita, atestado, encaminhamento e orientações",
+    icon: FileStack,
+    tom: "text-emerald-700 dark:text-emerald-300",
+    fundo: "bg-emerald-500/10",
+    testid: "hub-documentos",
   },
   {
     to: "/copiloto" as const,
-    label: "Copiloto Clínico",
-    descricao: "Chat com os agentes de IA para dúvidas rápidas à beira-leito.",
+    label: "Copiloto clínico",
+    descricao: "Dose, diluição e conduta em segundos",
     icon: MessageSquareText,
-    accent: "from-violet-500/20 to-violet-500/0 text-violet-300 border-violet-500/30",
+    tom: "text-violet-700 dark:text-violet-300",
+    fundo: "bg-violet-500/10",
     testid: "hub-copiloto",
   },
   {
     to: "/resumo-exames" as const,
-    label: "Resumo de Exames",
-    descricao: "Cole o laudo e receba os valores organizados com alertas.",
+    label: "Resumo de exames",
+    descricao: "Cole o laudo de laboratório ou de imagem",
     icon: FlaskConical,
-    accent: "from-sky-500/20 to-sky-500/0 text-sky-300 border-sky-500/30",
+    tom: "text-sky-700 dark:text-sky-300",
+    fundo: "bg-sky-500/10",
     testid: "hub-resumo-exames",
   },
 ];
 
-export function QuickActions() {
+export function QuickActions({ precisaDeConta = false }: { precisaDeConta?: boolean }) {
   return (
     <section aria-labelledby="hub-acoes" className="space-y-3">
-      <h2 id="hub-acoes" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-        Ações rápidas · sem selecionar plantão
+      <h2 id="hub-acoes" className="t-eyebrow text-muted-foreground">
+        Ações rápidas
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {ACTIONS.map((a) => (
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {ACOES.map((a) => (
           <Link
             key={a.to}
             to={a.to}
             search={{}}
             data-testid={a.testid}
-            className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br ${a.accent} bg-slate-900/70 p-5 transition-all hover:-translate-y-0.5 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+            className="group border-border bg-card hover:border-ring/50 focus-visible:ring-ring flex min-h-[6.5rem] flex-col rounded-3xl border p-4 transition-colors hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="h-11 w-11 rounded-2xl bg-slate-950/60 border border-white/5 flex items-center justify-center">
-                <a.icon className="h-5 w-5" />
+              <div
+                className={`h-10 w-10 rounded-xl ${a.fundo} ${a.tom} flex items-center justify-center`}
+              >
+                <a.icon className="h-5 w-5" aria-hidden="true" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-500 group-hover:text-slate-200 transition-colors" />
+              <ArrowUpRight
+                className="text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors"
+                aria-hidden="true"
+              />
             </div>
-            <div className="mt-4">
-              <div className="text-sm font-black uppercase tracking-wide text-slate-100">{a.label}</div>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">{a.descricao}</p>
+            <div className="mt-3">
+              <p className="t-title text-foreground">{a.label}</p>
+              <p className="t-body text-muted-foreground mt-1">{a.descricao}</p>
             </div>
           </Link>
         ))}
+
+        {/* A quarta ação leva à lista de locais, logo abaixo na mesma tela —
+            não faz sentido navegar para escolher onde se está. */}
+        <a
+          href="#locais"
+          data-testid="hub-plantao-acao"
+          className="group border-border bg-card hover:border-ring/50 focus-visible:ring-ring flex min-h-[6.5rem] flex-col rounded-3xl border p-4 transition-colors hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl">
+              <Stethoscope className="h-5 w-5" aria-hidden="true" />
+            </div>
+            {precisaDeConta ? (
+              <span className="t-eyebrow text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="h-3 w-3" aria-hidden="true" /> Conta
+              </span>
+            ) : (
+              <ArrowUpRight
+                className="text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          <div className="mt-3">
+            <p className="t-title text-foreground">Plantão</p>
+            <p className="t-body text-muted-foreground mt-1">
+              Abrir um plantão no seu local de atendimento
+            </p>
+          </div>
+        </a>
       </div>
     </section>
   );

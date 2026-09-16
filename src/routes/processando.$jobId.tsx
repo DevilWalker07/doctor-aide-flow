@@ -1,6 +1,14 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { Loader2, CheckCircle2, AlertCircle, FileText, X, RefreshCw, ClipboardList } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  X,
+  RefreshCw,
+  ClipboardList,
+} from "lucide-react";
 import { getClinicalExtractionJob } from "@/lib/documentExtractor";
 import { storage } from "@/lib/storage";
 import { toast } from "sonner";
@@ -12,8 +20,22 @@ export const Route = createFileRoute("/processando/$jobId")({
 
 const STEPS = [
   { id: "queued", label: "Arquivo recebido", stages: ["Arquivo recebido"] },
-  { id: "prep", label: "Preparando imagem / documento", stages: ["Preparando imagem", "Lendo documento", "Lendo PDF", "Lendo texto", "Processando páginas"] },
-  { id: "ai", label: "Lendo com IA", stages: ["Lendo com IA", "Lendo com OpenAI Vision", "Lendo com IA (OpenAI)"] },
+  {
+    id: "prep",
+    label: "Preparando imagem / documento",
+    stages: [
+      "Preparando imagem",
+      "Lendo documento",
+      "Lendo PDF",
+      "Lendo texto",
+      "Processando páginas",
+    ],
+  },
+  {
+    id: "ai",
+    label: "Lendo com IA",
+    stages: ["Lendo com IA", "Lendo com OpenAI Vision", "Lendo com IA (OpenAI)"],
+  },
   { id: "org", label: "Organizando dados clínicos", stages: ["Organizando dados clínicos"] },
   { id: "done", label: "Pronto para revisão", stages: ["Pronto para revisão"] },
 ];
@@ -21,7 +43,7 @@ const STEPS = [
 function ProcessandoRoute() {
   const params = Route.useParams();
   const nav = useNavigate();
-  
+
   // Safari resistance: use storage job_id if it exists and differs from URL
   const [jobId] = useState(() => {
     const activeJob = storage.getJobAtivo();
@@ -44,7 +66,7 @@ function ProcessandoRoute() {
     finishedRef.current = false;
 
     const timerInterval = setInterval(() => {
-      setElapsed(prev => prev + 1);
+      setElapsed((prev) => prev + 1);
     }, 1000);
 
     const scheduleNext = (ms: number) => {
@@ -73,15 +95,15 @@ function ProcessandoRoute() {
           finishedRef.current = true;
           storage.setExtracaoResultado(JSON.stringify(job.result));
           storage.clearJobAtivo();
-          
+
           const storedPatientId = storage.getUploadPatientId();
           if (storedPatientId) {
-             storage.clearUploadPatientId();
-             nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
+            storage.clearUploadPatientId();
+            nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
           } else {
-             nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
+            nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
           }
-          
+
           toast.success("Processamento concluído!");
           return;
         }
@@ -132,9 +154,9 @@ function ProcessandoRoute() {
   const getCurrentStepIndex = () => {
     if (status === "done") return 4;
     if (status === "error") return -1;
-    
-    const index = STEPS.findIndex(step => 
-      step.stages.some(s => currentStage.toLowerCase().includes(s.toLowerCase()))
+
+    const index = STEPS.findIndex((step) =>
+      step.stages.some((s) => currentStage.toLowerCase().includes(s.toLowerCase())),
     );
     return index === -1 ? 0 : index;
   };
@@ -149,122 +171,129 @@ function ProcessandoRoute() {
   const currentStepIndex = getCurrentStepIndex();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-ai/5 rounded-full blur-[120px]" />
-
-      <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative z-10">
-        <div className="text-center mb-10">
-          <h1 className="text-xs font-extrabold tracking-[0.3em] uppercase text-ai mb-4">PROCESSANDO DOCUMENTO</h1>
-          <div className="flex items-center justify-center gap-3 bg-secondary/50 py-3 px-6 rounded-2xl border border-border w-fit mx-auto mb-4">
-            <FileText className="h-5 w-5 text-ai" />
-            <span className="font-bold text-sm truncate max-w-[200px]">{fileName}</span>
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
+      <div className="bg-card border-border w-full max-w-lg rounded-3xl border p-6 sm:p-8">
+        <div className="text-center">
+          <h1 className="t-eyebrow text-ai">Lendo documento</h1>
+          <div className="bg-secondary border-border mx-auto mt-3 flex w-fit max-w-full items-center gap-2 rounded-2xl border px-4 py-2.5">
+            <FileText className="text-ai h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className="t-body text-foreground truncate">{fileName}</span>
           </div>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest animate-pulse">
-            Tempo decorrido: {elapsed}s
-          </p>
+          <p className="t-label text-muted-foreground mt-3 font-normal">{elapsed}s decorridos</p>
         </div>
 
         {status === "error" ? (
-          <div className="animate-in fade-in zoom-in duration-300">
-            <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6 text-destructive">
-              <AlertCircle className="h-10 w-10" />
+          <div className="mt-8">
+            <div className="bg-destructive/10 text-destructive mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full">
+              <AlertCircle className="h-8 w-8" aria-hidden="true" />
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-4 text-center">Falha no Processamento</h2>
-            <div className="bg-destructive/5 border border-destructive/10 rounded-2xl p-6 mb-8">
-              <p className="text-sm text-destructive font-medium text-center leading-relaxed">
-                {errorMsg}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <h2 className="t-display text-foreground text-center">Não consegui ler</h2>
+            <p role="alert" className="t-body text-destructive mt-4 text-center">
+              {errorMsg}
+            </p>
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* O rótulo era "Tentar Novamente", mas levava a outra tela.
+                  Agora diz para onde vai. */}
               <button
-                onClick={() => nav({ to: "/paciente-internado" })}
-                className="py-4 rounded-xl bg-secondary text-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-border transition-colors"
+                onClick={() =>
+                  nav({
+                    to: "/upload-ia",
+                    search: { tipo: storage.getTipo(), engine: "docling", patient_id: undefined },
+                  })
+                }
+                className="bg-secondary text-foreground hover:bg-border focus-visible:ring-ring inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                <RefreshCw className="h-4 w-4" /> Tentar Novamente
+                <RefreshCw className="h-5 w-5" aria-hidden="true" /> Enviar outro arquivo
               </button>
               <button
                 onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
-                className="py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
               >
-                <ClipboardList className="h-4 w-4" /> Preencher Manual
+                <ClipboardList className="h-5 w-5" aria-hidden="true" /> Preencher à mão
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-8">
-            <div className="space-y-6">
+          <div className="mt-8 space-y-6">
+            <ol className="space-y-4" aria-live="polite">
               {STEPS.map((step, index) => {
-                const isCompleted = index < currentStepIndex || status === "done";
-                const isCurrent = index === currentStepIndex && status !== "done";
-                
+                const concluido = index < currentStepIndex || status === "done";
+                const atual = index === currentStepIndex && status !== "done";
+
                 return (
-                  <div key={step.id} className="flex items-center gap-4 group">
-                    <div className={`
-                      h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-500
-                      ${isCompleted ? "bg-green-500 border-green-500 text-white" : 
-                        isCurrent ? "border-ai bg-ai/10 text-ai" : "border-border text-muted-foreground"}
-                    `}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="h-6 w-6 animate-in zoom-in duration-300" />
-                      ) : isCurrent ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                  <li key={step.id} className="flex items-center gap-4">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                        concluido
+                          ? "bg-success border-success text-success-foreground"
+                          : atual
+                            ? "border-ai bg-ai/10 text-ai"
+                            : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {concluido ? (
+                        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                      ) : atual ? (
+                        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                       ) : (
-                        <div className="h-2 w-2 rounded-full bg-current" />
+                        <span className="h-2 w-2 rounded-full bg-current" aria-hidden="true" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <p className={`text-sm font-bold tracking-tight ${isCompleted ? "text-foreground" : isCurrent ? "text-ai" : "text-muted-foreground"}`}>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`t-body ${concluido ? "text-foreground" : atual ? "text-ai font-bold" : "text-muted-foreground"}`}
+                      >
                         {step.label}
+                        <span className="sr-only">
+                          {concluido ? " — concluído" : atual ? " — em andamento" : " — aguardando"}
+                        </span>
                       </p>
-                      {isCurrent && (
-                        <p className="text-[10px] uppercase tracking-widest font-extrabold text-ai/60 mt-1">
+                      {atual && (
+                        <p className="t-label text-muted-foreground font-normal">
                           {getDynamicMessage()}
                         </p>
                       )}
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
 
-            <div className="pt-8 border-t border-border mt-10">
+            <div className="border-border border-t pt-6">
               {elapsed > 90 ? (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
+                <div className="space-y-3">
+                  <p className="t-body text-muted-foreground text-center">
+                    Documentos longos podem levar até 3 minutos. Dá para esperar ou preencher à mão
+                    — o processamento continua em segundo plano.
+                  </p>
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <button
                       onClick={() => window.location.reload()}
-                      className="flex-1 py-4 rounded-xl bg-ai text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-ai/20 flex items-center justify-center gap-2"
+                      className="bg-ai focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold text-white focus-visible:ring-2 focus-visible:outline-none"
                     >
-                      <RefreshCw className="h-3.5 w-3.5" /> Aguardar mais
+                      <RefreshCw className="h-5 w-5" aria-hidden="true" /> Continuar esperando
                     </button>
                     <button
                       onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
-                      className="flex-1 py-4 rounded-xl bg-secondary text-foreground font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                      className="bg-secondary text-foreground focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
                     >
-                      <ClipboardList className="h-3.5 w-3.5" /> Digitar Manual
+                      <ClipboardList className="h-5 w-5" aria-hidden="true" /> Preencher à mão
                     </button>
                   </div>
-                  <p className="text-[9px] text-center text-muted-foreground font-bold uppercase tracking-widest px-4">
-                    Documentos complexos podem levar até 3 minutos.
-                  </p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-ai/5 rounded-2xl p-4 mb-8">
-                    <p className="text-[11px] font-bold text-ai uppercase tracking-widest text-center">
-                      Você pode minimizar o app. O resultado será salvo.
-                    </p>
-                  </div>
-                  
+                  <p className="t-body text-muted-foreground text-center">
+                    Pode sair desta tela ou bloquear o celular. O resultado fica salvo.
+                  </p>
                   <button
                     onClick={() => {
                       pollingRef.current = false;
                       nav({ to: "/dashboard" });
                     }}
-                    className="w-full py-4 rounded-xl border border-border text-muted-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+                    className="border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring mt-4 inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <X className="h-4 w-4" /> Cancelar Processamento
+                    <X className="h-5 w-5" aria-hidden="true" /> Cancelar leitura
                   </button>
                 </>
               )}

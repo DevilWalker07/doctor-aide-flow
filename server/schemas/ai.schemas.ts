@@ -52,6 +52,8 @@ export const EvolucaoBody = z.object({
   tipo_unidade: z.string().optional(),
   template: z.string().optional(),
   data_plantao: z.string().optional(),
+  /** Anotações ditadas ou digitadas livremente, para a IA reestruturar. */
+  raw_notes: z.string().max(20_000).optional(),
   preferences: z
     .object({
       uppercase: z.boolean().optional(),
@@ -84,16 +86,25 @@ export type EncaminhamentoBody = z.infer<typeof EncaminhamentoBody>;
 export const SugerirReceitaBody = z.object({
   patient: z.record(z.unknown()),
   itensAtuais: z.array(z.record(z.unknown())).default([]),
-  catalogo: z.array(z.object({ id: z.string(), nome: z.string(), apresentacao: z.string() })).default([]),
+  catalogo: z
+    .array(z.object({ id: z.string(), nome: z.string(), apresentacao: z.string() }))
+    .default([]),
 });
 export type SugerirReceitaBody = z.infer<typeof SugerirReceitaBody>;
 
 export const CopilotoBody = z.object({
   messages: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(4000) }))
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().trim().min(1).max(4000),
+      }),
+    )
     .min(1)
     .max(20),
   ambiente: z.string().max(60).optional(),
+  /** Especialidade que enquadra a resposta; reusa os prompts já existentes. */
+  agente: z.enum(["geral", "clinica-medica", "pediatria", "uti"]).optional(),
 });
 export type CopilotoBody = z.infer<typeof CopilotoBody>;
 
@@ -124,7 +135,9 @@ export const ClinicalPatientSchema = z
     sexo: z
       .union([z.string(), z.null(), z.undefined()])
       .transform((v) => {
-        const s = String(v ?? "").trim().toUpperCase();
+        const s = String(v ?? "")
+          .trim()
+          .toUpperCase();
         return s === "M" || s === "F" ? s : "";
       })
       .catch(""),
@@ -149,7 +162,15 @@ export type ClinicalExtractionOutput = z.infer<typeof ClinicalExtractionOutputSc
 
 export const OrquestradorOutputSchema = z.object({
   agent: z
-    .enum(["orquestrador", "clinica-medica", "pediatria", "uti", "gerador-evolucao", "mapa-plantao", "briefing"])
+    .enum([
+      "orquestrador",
+      "clinica-medica",
+      "pediatria",
+      "uti",
+      "gerador-evolucao",
+      "mapa-plantao",
+      "briefing",
+    ])
     .catch("clinica-medica"),
   patients: z.array(ClinicalPatientSchema).catch([]),
   globalAlerts: strArr,
@@ -163,13 +184,19 @@ export const DocumentExtractionSchema = z.object({
   sexo: z
     .union([z.string(), z.null(), z.undefined()])
     .transform((v) => {
-      const s = String(v ?? "").trim().toUpperCase();
+      const s = String(v ?? "")
+        .trim()
+        .toUpperCase();
       return s === "M" || s === "F" ? (s as "M" | "F") : null;
     })
     .catch(null),
   leito: nullableStr,
   setor: nullableStr,
-  data_admissao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null),
+  data_admissao: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .catch(null),
   hda: nullableStr,
   lista_de_problemas: strArr,
   antibioticos: strArr,
@@ -195,8 +222,15 @@ function normalizePrioridade(v: unknown): Prioridade {
   return "!! URGENTE";
 }
 
-export const QUADRO_PREFIXOS = ["ESTÁVEL", "EM MELHORA", "INSTÁVEL", "CRÍTICO", "PALIATIVO"] as const;
-const QUADRO_RE = /^(ESTÁVEL|ESTAVEL|EM MELHORA|INSTÁVEL|INSTAVEL|CRÍTICO|CRITICO|PALIATIVO)\s*[—–-]/i;
+export const QUADRO_PREFIXOS = [
+  "ESTÁVEL",
+  "EM MELHORA",
+  "INSTÁVEL",
+  "CRÍTICO",
+  "PALIATIVO",
+] as const;
+const QUADRO_RE =
+  /^(ESTÁVEL|ESTAVEL|EM MELHORA|INSTÁVEL|INSTAVEL|CRÍTICO|CRITICO|PALIATIVO)\s*[—–-]/i;
 
 function normalizeQuadro(raw: string): string {
   const s = raw.trim();
@@ -253,9 +287,12 @@ export type EvolutionReview = z.infer<typeof EvolutionReviewSchema>;
 export const LabExtractionSchema = z.object({
   data_exame: nullableStr,
   tipo_exame: nullableStr,
-  valores: z.record(z.union([z.string(), z.number(), z.null()])).transform((r) =>
-    Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v == null ? null : String(v)])),
-  ).catch({}),
+  valores: z
+    .record(z.union([z.string(), z.number(), z.null()]))
+    .transform((r) =>
+      Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v == null ? null : String(v)])),
+    )
+    .catch({}),
   texto_formatado: str(""),
   eas_formatado: nullableStr,
   alertas: strArr,
@@ -263,6 +300,30 @@ export const LabExtractionSchema = z.object({
   campos_nao_encontrados: strArr,
 });
 export type LabExtraction = z.infer<typeof LabExtractionSchema>;
+
+/**
+ * Laudo de imagem organizado. Achados e conclusão são do radiologista — o
+ * agente compacta, não interpreta, e `achados_incertos` guarda o que veio
+ * ambíguo no texto em vez de adivinhar.
+ */
+export const LaudoImagemSchema = z.object({
+  tipo_exame: nullableStr,
+  regiao: nullableStr,
+  data_exame: nullableStr,
+  achados: strArr,
+  conclusao: nullableStr,
+  comparacao: nullableStr,
+  texto_formatado: str(""),
+  alertas: strArr,
+  achados_incertos: strArr,
+  campos_nao_encontrados: strArr,
+});
+export type LaudoImagem = z.infer<typeof LaudoImagemSchema>;
+
+export const LaudoImagemBody = z.object({
+  inputText: z.string().trim().min(10).max(30_000),
+});
+export type LaudoImagemBody = z.infer<typeof LaudoImagemBody>;
 
 export const HORARIOS = ["manha", "almoco", "tarde", "noite", "ao_deitar"] as const;
 export const SugestaoReceitaSchema = z.object({

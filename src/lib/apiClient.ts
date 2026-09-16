@@ -37,16 +37,25 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 async function readError(response: Response): Promise<ApiError> {
   const payload = await response.json().catch(() => null);
   const message =
-    (payload && typeof payload === "object" && (payload.message || payload.error)) || `Erro ${response.status}`;
+    (payload && typeof payload === "object" && (payload.message || payload.error)) ||
+    `Erro ${response.status}`;
   const code = (payload && typeof payload === "object" && payload.error) || "http_error";
-  return new ApiError(response.status, String(code), String(message), payload?.details ?? payload?.issues);
+  return new ApiError(
+    response.status,
+    String(code),
+    String(message),
+    payload?.details ?? payload?.issues,
+  );
 }
 
 export async function apiJson<T>(path: string, body: unknown, init: RequestInit = {}): Promise<T> {
   const response = await apiFetch(path, {
     method: "POST",
     ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers as Record<string, string> | undefined) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers as Record<string, string> | undefined),
+    },
     body: JSON.stringify(body),
   });
   if (!response.ok) throw await readError(response);

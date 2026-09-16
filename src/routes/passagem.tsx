@@ -66,7 +66,9 @@ function PassagemPage() {
 
   const getAtbText = (p: any) => {
     const atb = p.antibiotics || p.antibioticos || [];
-    return atb.map((a: any) => `${a.nome || a.name} (${calculateDValue(a.data_inicio || a.dataInicio)})`).join(", ");
+    return atb
+      .map((a: any) => `${a.nome || a.name} (${calculateDValue(a.data_inicio || a.dataInicio)})`)
+      .join(", ");
   };
 
   const getPendenciasText = (p: any) => {
@@ -85,7 +87,7 @@ function PassagemPage() {
 
   const generateText = () => {
     let text = `PASSAGEM DE PLANTÃO — ${shiftData?.setor || "Setor"} — ${format(new Date(), "dd/MM/yyyy")}\n\n`;
-    sortedPacientes.forEach(p => {
+    sortedPacientes.forEach((p) => {
       text += `LEITO ${p.bed || p.leito} - ${p.name || p.nome}\n`;
       text += `Admissão: ${p.admission_date || p.data_admissao || "-"}\n`;
       text += `Problemas: ${getProblemListText(p) || "Nenhum"}\n`;
@@ -111,7 +113,11 @@ function PassagemPage() {
     } catch (error) {
       console.warn("Salvando passagem localmente", error);
       const existing = JSON.parse(localStorage.getItem("da_passagens") || "[]");
-      existing.push({ shift_id: shiftId, content: textoPassagem, created_at: new Date().toISOString() });
+      existing.push({
+        shift_id: shiftId,
+        content: textoPassagem,
+        created_at: new Date().toISOString(),
+      });
       localStorage.setItem("da_passagens", JSON.stringify(existing));
       toast.success("Passagem salva localmente!");
     } finally {
@@ -121,19 +127,23 @@ function PassagemPage() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF("landscape", "mm", "a4");
-    
+
     // Header
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     const dataFormatada = format(new Date(), "dd/MM/yyyy");
-    doc.text(`PASSAGEM DE PLANTÃO — ${shiftData?.setor || "Setor"} — ${dataFormatada} — Dr(a). ${shiftData?.medico || "Médico"}`, 14, 15);
-    
-    const tableData = sortedPacientes.map(p => [
+    doc.text(
+      `PASSAGEM DE PLANTÃO — ${shiftData?.setor || "Setor"} — ${dataFormatada} — Dr(a). ${shiftData?.medico || "Médico"}`,
+      14,
+      15,
+    );
+
+    const tableData = sortedPacientes.map((p) => [
       `${p.name || p.nome}\nLeito: ${p.bed || p.leito}`,
       getProblemListText(p),
       getAtbText(p),
       p.admission_date || p.data_admissao || "-",
-      getPendenciasText(p)
+      getPendenciasText(p),
     ]);
 
     autoTable(doc, {
@@ -148,53 +158,81 @@ function PassagemPage() {
         1: { cellWidth: 60 },
         2: { cellWidth: 40 },
         3: { cellWidth: 25 },
-        4: { cellWidth: "auto" }
-      }
+        4: { cellWidth: "auto" },
+      },
     });
 
     // Footer
     const totalPatients = sortedPacientes.length;
-    const totalAtb = sortedPacientes.filter(p => getAtbText(p).length > 0).length;
-    const totalPend = sortedPacientes.filter(p => getPendenciasText(p).length > 0).length;
-    
+    const totalAtb = sortedPacientes.filter((p) => getAtbText(p).length > 0).length;
+    const totalPend = sortedPacientes.filter((p) => getPendenciasText(p).length > 0).length;
+
     doc.setFontSize(10);
     const finalY = (doc as any).lastAutoTable.finalY || 25;
-    doc.text(`Total: ${totalPatients} pacientes · ${totalAtb} com ATB · ${totalPend} pendências`, 14, finalY + 10);
+    doc.text(
+      `Total: ${totalPatients} pacientes · ${totalAtb} com ATB · ${totalPend} pendências`,
+      14,
+      finalY + 10,
+    );
 
     doc.save(`passagem_${format(new Date(), "yyyy-MM-dd")}.pdf`);
     toast.success("PDF gerado com sucesso!");
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-             <button onClick={() => nav({ to: "/dashboard" })} className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary">
-                <ChevronLeft className="h-5 w-5" />
-             </button>
-             <div>
-                <h1 className="text-xl font-black text-foreground uppercase tracking-tight">MAPA DE PASSAGEM</h1>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{shiftData?.setor || "Setor"} · {format(new Date(), "dd/MM/yyyy")}</p>
-             </div>
+            <button
+              onClick={() => nav({ to: "/dashboard" })}
+              className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black text-foreground uppercase tracking-tight">
+                MAPA DE PASSAGEM
+              </h1>
+              <p className="t-eyebrow text-muted-foreground">
+                {shiftData?.setor || "Setor"} · {format(new Date(), "dd/MM/yyyy")}
+              </p>
+            </div>
           </div>
           <div className="flex gap-3">
-             <button onClick={handleExportPDF} className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2">
-                <Download className="h-3 w-3" /> EXPORTAR PDF
-             </button>
-             <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50">
-                {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} SALVAR PASSAGEM
-             </button>
+            <button
+              onClick={handleExportPDF}
+              className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Download className="h-3 w-3" /> EXPORTAR PDF
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-5 text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Save className="h-3 w-3" />
+              )}{" "}
+              SALVAR PASSAGEM
+            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="bg-white border border-border rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="bg-card border-border overflow-hidden rounded-3xl border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-secondary/50 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+            <thead className="bg-secondary t-label text-muted-foreground">
               <tr>
                 <th className="p-4 border-b border-border">Paciente/Leito</th>
                 <th className="p-4 border-b border-border">Problemas</th>
@@ -206,7 +244,9 @@ function PassagemPage() {
             <tbody className="divide-y divide-border">
               {sortedPacientes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground italic text-xs">Nenhum paciente cadastrado no plantão.</td>
+                  <td colSpan={5} className="p-8 text-center text-muted-foreground italic text-xs">
+                    Nenhum paciente cadastrado no plantão.
+                  </td>
                 </tr>
               ) : (
                 sortedPacientes.map((p, idx) => (
@@ -215,10 +255,18 @@ function PassagemPage() {
                       <div className="font-bold text-foreground uppercase">{p.name || p.nome}</div>
                       <div className="text-xs text-muted-foreground">LEITO {p.bed || p.leito}</div>
                     </td>
-                    <td className="p-4 text-xs font-medium max-w-[200px] truncate uppercase">{getProblemListText(p) || "-"}</td>
-                    <td className="p-4 text-xs font-bold text-ai uppercase">{getAtbText(p) || "-"}</td>
-                    <td className="p-4 text-xs text-muted-foreground">{p.admission_date || p.data_admissao || "-"}</td>
-                    <td className="p-4 text-xs font-medium text-amber-600 max-w-[200px] truncate uppercase">{getPendenciasText(p) || "-"}</td>
+                    <td className="p-4 text-xs font-medium max-w-[200px] truncate uppercase">
+                      {getProblemListText(p) || "-"}
+                    </td>
+                    <td className="p-4 text-xs font-bold text-ai uppercase">
+                      {getAtbText(p) || "-"}
+                    </td>
+                    <td className="p-4 text-xs text-muted-foreground">
+                      {p.admission_date || p.data_admissao || "-"}
+                    </td>
+                    <td className="p-4 text-xs font-medium text-amber-600 max-w-[200px] truncate uppercase">
+                      {getPendenciasText(p) || "-"}
+                    </td>
                   </tr>
                 ))
               )}

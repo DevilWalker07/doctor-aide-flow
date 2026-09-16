@@ -1,11 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { formatEncaminhamentoWhatsApp, formatOrientacoesWhatsApp, formatReceitaWhatsApp, horariosAtivos, unidadeLabel } from "../../src/lib/documentos/formatters";
+import {
+  formatEncaminhamentoWhatsApp,
+  formatOrientacoesWhatsApp,
+  formatReceitaWhatsApp,
+  horariosAtivos,
+  unidadeLabel,
+} from "../../src/lib/documentos/formatters";
 import type { MedicoDocumento, ReceitaDocumento } from "../../src/lib/documentos/types";
 import { montarEncaminhamento } from "../../src/lib/medical/encaminhamentoTemplates";
-import { buscarMedicamentos, CLASSES_POR_ESPECIALIDADE, getMedicamento, HORARIOS, MEDICAMENTOS } from "../../src/lib/medical/medicamentos";
+import {
+  buscarMedicamentos,
+  CLASSES_POR_ESPECIALIDADE,
+  getMedicamento,
+  HORARIOS,
+  MEDICAMENTOS,
+} from "../../src/lib/medical/medicamentos";
 import { ORIENTACOES } from "../../src/lib/medical/orientacoes";
 
-const medico: MedicoDocumento = { nome: "LUAN CARVALHO", crm: "12345-BA", especialidade: "CLÍNICA MÉDICA", hospital: "H" };
+const medico: MedicoDocumento = {
+  nome: "LUAN CARVALHO",
+  crm: "12345-BA",
+  especialidade: "CLÍNICA MÉDICA",
+  hospital: "H",
+};
 
 describe("catálogo de medicamentos", () => {
   it("ids únicos, presets completos e horários válidos", () => {
@@ -17,14 +34,21 @@ describe("catálogo de medicamentos", () => {
       for (const p of m.presets) {
         expect(p.instrucao.length, `${m.id}/${p.id}`).toBeGreaterThan(10);
         expect(p.quantidade.length, `${m.id}/${p.id}`).toBeGreaterThan(0);
-        for (const h of Object.keys(p.horarios)) expect(validos.has(h as never), `${m.id}/${p.id}/${h}`).toBe(true);
+        for (const h of Object.keys(p.horarios))
+          expect(validos.has(h as never), `${m.id}/${p.id}/${h}`).toBe(true);
       }
     }
   });
   it("busca sem acento e filtra por especialidade/classe/FP", () => {
     expect(buscarMedicamentos("espiro").map((m) => m.id)).toEqual(["espironolactona-25"]);
-    expect(buscarMedicamentos("", { especialidade: "Endocrinologia", classe: "Insulina" }).every((m) => m.classe === "Insulina")).toBe(true);
-    expect(buscarMedicamentos("", { farmaciaPopular: true }).every((m) => m.farmaciaPopular)).toBe(true);
+    expect(
+      buscarMedicamentos("", { especialidade: "Endocrinologia", classe: "Insulina" }).every(
+        (m) => m.classe === "Insulina",
+      ),
+    ).toBe(true);
+    expect(buscarMedicamentos("", { farmaciaPopular: true }).every((m) => m.farmaciaPopular)).toBe(
+      true,
+    );
     expect(CLASSES_POR_ESPECIALIDADE["Cardiologia/Nefrologia"]).toContain("Diurético");
     expect(getMedicamento("losartana-50")?.presets[0].horarios).toEqual({ manha: 1 });
   });
@@ -70,7 +94,16 @@ describe("formatters WhatsApp", () => {
     expect(horariosAtivos({ noite: 1, manha: 2 }).map((h) => h.id)).toEqual(["manha", "noite"]);
   });
   it("orientações: ✅ itens e 🚨 sinais de alerta", () => {
-    const t = formatOrientacoesWhatsApp({ paciente: { nome: "A" }, orientacaoIds: ["diabetes"], extras: ["Beber água"], retorno: "UBS 7 dias", data: "15/09/2026" }, medico);
+    const t = formatOrientacoesWhatsApp(
+      {
+        paciente: { nome: "A" },
+        orientacaoIds: ["diabetes"],
+        extras: ["Beber água"],
+        retorno: "UBS 7 dias",
+        data: "15/09/2026",
+      },
+      medico,
+    );
     expect(t).toContain("*CUIDADOS COM O DIABETES*");
     expect(t).toContain("✅ ");
     expect(t).toContain("🚨 ");
@@ -79,7 +112,15 @@ describe("formatters WhatsApp", () => {
   });
   it("encaminhamento: monta texto estruturado", () => {
     const texto = montarEncaminhamento(
-      { destino: "Nefrologia", prioridade: "urgente", hipoteses: ["DRC 3"], resumoClinico: "HAS.", justificativa: "Piora renal.", exames: ["Creatinina / Ureia"], solicitacao: "" },
+      {
+        destino: "Nefrologia",
+        prioridade: "urgente",
+        hipoteses: ["DRC 3"],
+        resumoClinico: "HAS.",
+        justificativa: "Piora renal.",
+        exames: ["Creatinina / Ureia"],
+        solicitacao: "",
+      },
       { nome: "JOAO", idade: "58", sexo: "Masculino" },
       "15/09/2026",
     );
@@ -87,7 +128,12 @@ describe("formatters WhatsApp", () => {
     expect(texto).toContain("Prioridade: Urgente");
     expect(texto).toContain("- DRC 3");
     expect(texto).toContain("Solicito avaliação e conduta.");
-    expect(formatEncaminhamentoWhatsApp({ paciente: { nome: "JOAO" }, form: {} as never, texto, data: "15/09/2026" }, medico)).toContain("📄 *ENCAMINHAMENTO MÉDICO*");
+    expect(
+      formatEncaminhamentoWhatsApp(
+        { paciente: { nome: "JOAO" }, form: {} as never, texto, data: "15/09/2026" },
+        medico,
+      ),
+    ).toContain("📄 *ENCAMINHAMENTO MÉDICO*");
   });
 });
 

@@ -11,11 +11,19 @@ import {
   runPatientGuardrails,
   validateVitals,
 } from "../../server/services/clinicalGuardrails.js";
-import { classifyLab, normalizeLabKey, renderThresholdsForPrompt } from "../../shared/medical/labThresholds.js";
+import {
+  classifyLab,
+  normalizeLabKey,
+  renderThresholdsForPrompt,
+} from "../../shared/medical/labThresholds.js";
 
 describe("parseLabString", () => {
   it("entende vírgula decimal, milhar com ponto, setas e !!", () => {
-    expect(parseLabString("HB 9,2 / HT 28 / LEUCO 14.400 / CR 1,8 / PCR 87↑!! / K 5.8↑!! / Na 128↓ / PLAQ 45.000")).toEqual({
+    expect(
+      parseLabString(
+        "HB 9,2 / HT 28 / LEUCO 14.400 / CR 1,8 / PCR 87↑!! / K 5.8↑!! / Na 128↓ / PLAQ 45.000",
+      ),
+    ).toEqual({
       HB: 9.2,
       HT: 28,
       LEUCO: 14400,
@@ -38,7 +46,15 @@ describe("parseLabString", () => {
 
 describe("parseVitalsFromText", () => {
   it("extrai PA, FC, FR, SpO2, temperatura e glicemia", () => {
-    expect(parseVitalsFromText("REG, PA 120x80 FC 88 FR 20 SAT 94% TAX 37,8 HGT 180")).toEqual({ pas: 120, pad: 80, fc: 88, fr: 20, spo2: 94, temp: 37.8, glicemia: 180 });
+    expect(parseVitalsFromText("REG, PA 120x80 FC 88 FR 20 SAT 94% TAX 37,8 HGT 180")).toEqual({
+      pas: 120,
+      pad: 80,
+      fc: 88,
+      fr: 20,
+      spo2: 94,
+      temp: 37.8,
+      glicemia: 180,
+    });
   });
   it("aceita PA com barra", () => {
     expect(parseVitalsFromText("PA: 90/50")).toEqual({ pas: 90, pad: 50 });
@@ -52,14 +68,20 @@ describe("validateVitals", () => {
     expect(f.every((x) => x.severity === "critical")).toBe(true);
   });
   it("não reclama de valores normais", () => {
-    expect(validateVitals({ pas: 120, pad: 80, fc: 70, fr: 16, spo2: 97, temp: 36.5, glicemia: 100 })).toEqual([]);
+    expect(
+      validateVitals({ pas: 120, pad: 80, fc: 70, fr: 16, spo2: 97, temp: 36.5, glicemia: 100 }),
+    ).toEqual([]);
   });
 });
 
 describe("flagLabOutliers / classifyLab", () => {
   it("usa os limiares únicos (crítico e atenção)", () => {
     const f = flagLabOutliers("K 5,7 / CR 1,5 / HB 6,8 / NA 140");
-    expect(f.map((x) => `${x.severity}:${x.field}`)).toEqual(["critical:lab.K", "warning:lab.CR", "critical:lab.HB"]);
+    expect(f.map((x) => `${x.severity}:${x.field}`)).toEqual([
+      "critical:lab.K",
+      "warning:lab.CR",
+      "critical:lab.HB",
+    ]);
   });
   it("classifyLab respeita as faixas", () => {
     expect(classifyLab("NA", 128)).toEqual({ severity: "critical", direction: "low" });
@@ -79,14 +101,33 @@ describe("flagLabOutliers / classifyLab", () => {
 
 describe("antibióticos", () => {
   it("parseAtbString reconhece nome, dose, via, frequência e dia", () => {
-    const [a, b, c] = parseAtbString("MEROPENEM 1G EV 8/8H - D5/10\nAmoxicilina 500mg 8/8h (VO) — D2/7\nCIPROFLOXACINO D9");
-    expect(a).toMatchObject({ nome: "MEROPENEM", doseValor: 1, doseUnidade: "g", via: "EV", frequencia: "8/8H", dia: 5, duracao: 10 });
-    expect(b).toMatchObject({ nome: "Amoxicilina", doseValor: 500, doseUnidade: "mg", via: "VO", dia: 2, duracao: 7 });
+    const [a, b, c] = parseAtbString(
+      "MEROPENEM 1G EV 8/8H - D5/10\nAmoxicilina 500mg 8/8h (VO) — D2/7\nCIPROFLOXACINO D9",
+    );
+    expect(a).toMatchObject({
+      nome: "MEROPENEM",
+      doseValor: 1,
+      doseUnidade: "g",
+      via: "EV",
+      frequencia: "8/8H",
+      dia: 5,
+      duracao: 10,
+    });
+    expect(b).toMatchObject({
+      nome: "Amoxicilina",
+      doseValor: 500,
+      doseUnidade: "mg",
+      via: "VO",
+      dia: 2,
+      duracao: 7,
+    });
     expect(c).toMatchObject({ nome: "CIPROFLOXACINO", dia: 9 });
     expect(parseAtbString("SEM ATB")).toEqual([]);
   });
   it("checkDoseAnomalies sinaliza dose alta, duração > 21 d, D além do plano e D≥7 sem plano", () => {
-    const msgs = checkDoseAnomalies("Vancomicina 8g EV 12/12h — D25/20\nCipro D9").map((f) => f.message);
+    const msgs = checkDoseAnomalies("Vancomicina 8g EV 12/12h — D25/20\nCipro D9").map(
+      (f) => f.message,
+    );
     expect(msgs.some((m) => m.includes("acima do usual"))).toBe(true);
     expect(msgs.some((m) => m.includes("ultrapassa a duração"))).toBe(true);
     expect(msgs.some((m) => m.includes("sem duração planejada"))).toBe(true);
@@ -104,7 +145,14 @@ describe("cockcroftGault", () => {
 
 describe("runPatientGuardrails / findingsToAlerts / mergeAlerts", () => {
   it("combina lab, ATB, sinais vitais e ClCr", () => {
-    const f = runPatientGuardrails({ laboratorio: "CR 2,4 / K 6,1", antibioticos: "Vanco 8g EV", quadro: "PA 70x110", idade: 82, peso: 55, sexo: "F" });
+    const f = runPatientGuardrails({
+      laboratorio: "CR 2,4 / K 6,1",
+      antibioticos: "Vanco 8g EV",
+      quadro: "PA 70x110",
+      idade: 82,
+      peso: 55,
+      sexo: "F",
+    });
     const alerts = findingsToAlerts(f);
     expect(alerts.some((a) => a.startsWith("[CRÍTICO] POTÁSSIO"))).toBe(true);
     expect(alerts.some((a) => a.includes("CLCR ESTIMADO"))).toBe(true);

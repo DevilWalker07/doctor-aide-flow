@@ -3,7 +3,7 @@ import { ChevronLeft, Loader2, MessageSquareText, SendHorizontal, Trash2 } from 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { apiJson } from "@/lib/apiClient";
-import { AMBIENTES } from "@/lib/ambientes";
+import { LOCAIS } from "@/lib/ambientes";
 import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/copiloto")({
@@ -16,13 +16,29 @@ interface Msg {
   content: string;
 }
 
-const SUGESTOES = ["Ajuste de dose de vancomicina para ClCr 25", "Critérios de sepse e bundle da 1ª hora", "Como corrigir Na 122 com segurança?", "Checklist de alta para IC descompensada"];
+/** Espelha o enum de `agente` em server/schemas/ai.schemas.ts. */
+const AGENTES = [
+  { id: "geral", label: "Geral" },
+  { id: "clinica-medica", label: "Clínica médica" },
+  { id: "pediatria", label: "Pediatria" },
+  { id: "uti", label: "Terapia intensiva" },
+] as const;
+
+type AgenteId = (typeof AGENTES)[number]["id"];
+
+const SUGESTOES = [
+  "Ajuste de dose de vancomicina para ClCr 25",
+  "Critérios de sepse e bundle da 1ª hora",
+  "Como corrigir Na 122 com segurança?",
+  "Checklist de alta para IC descompensada",
+];
 
 function CopilotoPage() {
   const [mensagens, setMensagens] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [ambiente, setAmbiente] = useState<string>(() => storage.getTipo());
+  const [agente, setAgente] = useState<AgenteId>("geral");
   const fim = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +53,11 @@ function CopilotoPage() {
     setInput("");
     setLoading(true);
     try {
-      const res = await apiJson<{ reply: string }>("/api/ai/copiloto", { messages: proximo.slice(-12), ambiente });
+      const res = await apiJson<{ reply: string }>("/api/ai/copiloto", {
+        messages: proximo.slice(-12),
+        ambiente,
+        agente,
+      });
       setMensagens([...proximo, { role: "assistant", content: res.reply }]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao falar com o copiloto.");
@@ -54,35 +74,82 @@ function CopilotoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <header className="max-w-4xl w-full mx-auto px-4 sm:px-6 pt-6 flex items-center gap-3">
-        <Link to="/" aria-label="Voltar ao hub" className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-slate-100 transition-colors">
-          <ChevronLeft className="h-5 w-5" />
+    <div className="bg-background flex min-h-screen flex-col">
+      <header className="border-border mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-4 pt-5 sm:px-6">
+        <Link
+          to="/"
+          aria-label="Voltar para a central"
+          className="touch-target border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-black tracking-tight flex items-center gap-2">
-            <MessageSquareText className="h-5 w-5 text-violet-300" /> Copiloto Clínico
+        <div className="min-w-0 flex-1">
+          <h1 className="t-title text-foreground flex items-center gap-2">
+            <MessageSquareText className="text-ai h-5 w-5 shrink-0" aria-hidden="true" /> Copiloto
+            clínico
           </h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Apoio à decisão · não substitui julgamento médico</p>
+          <p className="t-label text-muted-foreground font-normal">
+            Apoio à decisão — não substitui julgamento médico
+          </p>
         </div>
-        <select value={ambiente} onChange={(e) => setAmbiente(e.target.value)} aria-label="Contexto de atendimento" className="max-w-[45%] rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 text-[11px] font-bold text-slate-200">
-          {AMBIENTES.flatMap((a) => a.subs.map((s) => ({ v: s.tipoEvolucao, l: `${a.curto} · ${s.label}` }))).map((o) => (
-            <option key={o.v + o.l} value={o.v}>
-              {o.l}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <div>
+            <label htmlFor="copiloto-agente" className="sr-only">
+              Agente de IA
+            </label>
+            <select
+              id="copiloto-agente"
+              value={agente}
+              onChange={(e) => setAgente(e.target.value as AgenteId)}
+              data-testid="copiloto-agente"
+              className="t-label bg-card border-border text-foreground focus-visible:ring-ring min-h-[2.75rem] rounded-xl border px-3 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              {AGENTES.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label htmlFor="copiloto-contexto" className="sr-only">
+            Contexto de atendimento
+          </label>
+          <select
+            id="copiloto-contexto"
+            value={ambiente}
+            onChange={(e) => setAmbiente(e.target.value)}
+            className="t-label bg-card border-border text-foreground focus-visible:ring-ring min-h-[2.75rem] max-w-[13rem] rounded-xl border px-3 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {LOCAIS.map((local) => (
+              <option key={local.id} value={local.tipoEvolucao}>
+                {local.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </header>
 
-      <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col">
-        <div className="flex-1 rounded-[1.75rem] border border-slate-800 bg-slate-900/60 p-4 sm:p-6 space-y-4 overflow-y-auto min-h-[50vh]" data-testid="copiloto-thread" aria-live="polite">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-5 sm:px-6">
+        <div
+          className="border-border bg-card min-h-[50vh] flex-1 space-y-3 overflow-y-auto rounded-3xl border p-4 sm:p-5"
+          data-testid="copiloto-thread"
+          aria-live="polite"
+        >
           {mensagens.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center gap-4 py-10">
-              <p className="text-sm text-slate-400 max-w-md">Pergunte sobre doses, ajustes renais, critérios diagnósticos ou peça um checklist. As respostas trazem fontes e limites — confira antes de agir.</p>
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
+              <p className="t-body text-muted-foreground max-w-md">
+                Pergunte sobre doses, ajuste renal, critérios diagnósticos ou peça um checklist. As
+                respostas trazem fontes e limites — confira antes de agir.
+              </p>
               <div className="flex flex-wrap justify-center gap-2">
-                {SUGESTOES.map((s) => (
-                  <button key={s} type="button" onClick={() => void enviar(s)} className="rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-xs font-bold text-slate-300 hover:border-violet-400/60 hover:text-violet-200 transition-colors">
-                    {s}
+                {SUGESTOES.map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => void enviar(sug)}
+                    className="t-label border-border bg-background text-foreground hover:border-ai hover:text-ai focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    {sug}
                   </button>
                 ))}
               </div>
@@ -90,15 +157,22 @@ function CopilotoPage() {
           )}
           {mensagens.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-white" : "bg-slate-950 border border-slate-800 text-slate-100"}`} data-testid={`copiloto-msg-${m.role}`}>
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-[0.9375rem] leading-relaxed whitespace-pre-wrap ${
+                  m.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary border-border text-foreground border"
+                }`}
+                data-testid={`copiloto-msg-${m.role}`}
+              >
                 {m.content}
               </div>
             </div>
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl px-4 py-3 bg-slate-950 border border-slate-800 text-slate-400 text-xs flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" /> pensando…
+              <div className="bg-secondary border-border text-muted-foreground t-body flex items-center gap-2 rounded-2xl border px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Pensando…
               </div>
             </div>
           )}
@@ -106,20 +180,35 @@ function CopilotoPage() {
         </div>
 
         <form onSubmit={onSubmit} className="mt-4 flex gap-2">
+          <label htmlFor="copiloto-input" className="sr-only">
+            Sua dúvida clínica
+          </label>
           <input
+            id="copiloto-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Escreva sua dúvida clínica…"
             data-testid="copiloto-input"
-            className="flex-1 rounded-2xl bg-slate-900 border border-slate-800 px-4 py-4 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+            className="bg-card border-border text-foreground placeholder:text-muted-foreground focus:ring-ring min-h-[3rem] flex-1 rounded-2xl border px-4 text-base focus:ring-2 focus:outline-none"
           />
           {mensagens.length > 0 && (
-            <button type="button" onClick={() => setMensagens([])} aria-label="Limpar conversa" className="h-14 w-14 rounded-2xl border border-slate-800 text-slate-400 hover:text-rose-300 flex items-center justify-center">
-              <Trash2 className="h-4 w-4" />
+            <button
+              type="button"
+              onClick={() => setMensagens([])}
+              aria-label="Limpar conversa"
+              className="border-border text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
-          <button type="submit" disabled={loading || !input.trim()} data-testid="copiloto-send" aria-label="Enviar" className="h-14 w-14 rounded-2xl bg-violet-500 text-white flex items-center justify-center hover:bg-violet-400 disabled:opacity-50 transition-colors">
-            <SendHorizontal className="h-5 w-5" />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            data-testid="copiloto-send"
+            aria-label="Enviar pergunta"
+            className="bg-ai focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          >
+            <SendHorizontal className="h-5 w-5" aria-hidden="true" />
           </button>
         </form>
       </main>

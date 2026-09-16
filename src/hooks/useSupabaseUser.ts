@@ -7,7 +7,10 @@ function getLocalUserId(): string {
   try {
     let id = localStorage.getItem(LOCAL_USER_ID_KEY);
     if (!id) {
-      id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `local-${Date.now()}`;
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `local-${Date.now()}`;
       localStorage.setItem(LOCAL_USER_ID_KEY, id);
     }
     return id;
@@ -20,7 +23,13 @@ export function useSupabaseUser() {
   const { user, loading, configured } = useAuth();
 
   if (!configured) {
-    return { userId: getLocalUserId(), userEmail: null as string | null, userName: "Doutor", isLoaded: true, localMode: true };
+    return {
+      userId: getLocalUserId(),
+      userEmail: null as string | null,
+      userName: "Doutor",
+      isLoaded: true,
+      localMode: true,
+    };
   }
 
   const meta = (user?.user_metadata ?? {}) as { name?: string };

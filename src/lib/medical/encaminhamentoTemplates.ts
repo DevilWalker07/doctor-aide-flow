@@ -59,9 +59,17 @@ export function destinoLabel(form: Pick<EncaminhamentoForm, "destino" | "destino
   return form.destino === "Outro" ? form.destinoOutro?.trim() || "Outro serviço" : form.destino;
 }
 
-export function montarEncaminhamento(form: EncaminhamentoForm, paciente: { nome: string; idade?: string; sexo?: string }, data: string): string {
+export function montarEncaminhamento(
+  form: EncaminhamentoForm,
+  paciente: { nome: string; idade?: string; sexo?: string },
+  data: string,
+): string {
   const prioridade = PRIORIDADES_ENCAMINHAMENTO.find((p) => p.id === form.prioridade);
-  const identificacao = [paciente.nome || "NÃO INFORMADO", paciente.idade ? `${paciente.idade} anos` : null, paciente.sexo || null]
+  const identificacao = [
+    paciente.nome || "NÃO INFORMADO",
+    paciente.idade ? `${paciente.idade} anos` : null,
+    paciente.sexo || null,
+  ]
     .filter(Boolean)
     .join(", ");
 

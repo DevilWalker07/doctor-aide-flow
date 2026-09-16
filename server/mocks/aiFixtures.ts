@@ -87,7 +87,12 @@ export const aiFixtures = {
       },
     ],
     alertasCriticos: [
-      { prioridade: "!! URGENTE", leito: "L02", paciente: "PACIENTE TESTE DOIS", acao: "REPETIR POTÁSSIO EM 6H E AJUSTAR CIPROFLOXACINO PARA CLCR" },
+      {
+        prioridade: "!! URGENTE",
+        leito: "L02",
+        paciente: "PACIENTE TESTE DOIS",
+        acao: "REPETIR POTÁSSIO EM 6H E AJUSTAR CIPROFLOXACINO PARA CLCR",
+      },
     ],
   },
   evolucao: `EVOLUÇÃO MÉDICA (MOCK)
@@ -106,7 +111,8 @@ CONDUTAS
 PENDÊNCIAS
 - RX TÓRAX`,
   mapa: "PASSAGEM DE PLANTÃO (MOCK)\n\nL01 - PACIENTE TESTE UM (72 ANOS)\nDIAGNÓSTICO: PAC\nANTIBIÓTICO: CEFTRIAXONA D3/7\n",
-  briefing: "BRIEFING DE PLANTÃO (MOCK)\n\nCENSO: 2 PACIENTES\nPACIENTES CRÍTICOS: L02 — HIPERCALEMIA\n",
+  briefing:
+    "BRIEFING DE PLANTÃO (MOCK)\n\nCENSO: 2 PACIENTES\nPACIENTES CRÍTICOS: L02 — HIPERCALEMIA\n",
   encaminhamento:
     "ENCAMINHAMENTO MÉDICO (MOCK)\n\nEncaminho o(a) paciente para avaliação especializada em NEFROLOGIA devido a piora de função renal em vigência de ITU complicada.\n\nHipóteses diagnósticas: DRC estágio 3 agudizada.\nSolicito avaliação e conduta.",
   evolutionReview: {
@@ -127,6 +133,22 @@ PENDÊNCIAS
   },
   copiloto:
     "RESPOSTA DO COPILOTO (MOCK)\n\n- Vancomicina com ClCr 25 mL/min: dose de ataque 20–25 mg/kg e manutenção guiada por nível sérico (vale 15–20 mg/L).\n- Reavaliar função renal a cada 48 h.\n\nConfira: peso real, ClCr atual e nível sérico antes da próxima dose.",
+  laudoImagem: {
+    tipo_exame: "TOMOGRAFIA DE TÓRAX",
+    regiao: "TÓRAX",
+    data_exame: "15/09/2026",
+    achados: [
+      "OPACIDADES EM VIDRO FOSCO PERIFÉRICAS BILATERAIS, PREDOMÍNIO EM LOBOS INFERIORES.",
+      "AUSÊNCIA DE DERRAME PLEURAL.",
+    ],
+    conclusao: "ACHADOS SUGESTIVOS DE PROCESSO INFLAMATÓRIO/INFECCIOSO EM ATIVIDADE.",
+    comparacao: null,
+    texto_formatado:
+      "TC DE TÓRAX (15/09/2026): VIDRO FOSCO PERIFÉRICO BILATERAL — SUGESTIVO DE PROCESSO INFECCIOSO.",
+    alertas: [],
+    achados_incertos: [],
+    campos_nao_encontrados: ["COMPARAÇÃO COM EXAME ANTERIOR"],
+  },
   receita: {
     itens: [
       {

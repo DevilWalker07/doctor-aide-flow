@@ -44,7 +44,9 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         VITE_CLINICAL_AGENTS_URL: "",
-        ...(withSupabase ? { VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY } : { VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "" }),
+        ...(withSupabase
+          ? { VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY }
+          : { VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "" }),
       },
     },
   ],

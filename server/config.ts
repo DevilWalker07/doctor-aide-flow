@@ -10,7 +10,9 @@ for (const rel of [".env", "../.env", "../../.env"]) {
 
 const bool = z
   .union([z.boolean(), z.string()])
-  .transform((v) => (typeof v === "boolean" ? v : ["1", "true", "yes", "on"].includes(v.toLowerCase())));
+  .transform((v) =>
+    typeof v === "boolean" ? v : ["1", "true", "yes", "on"].includes(v.toLowerCase()),
+  );
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -43,7 +45,9 @@ export const hasSupabase = () => Boolean(env.SUPABASE_URL && env.SUPABASE_SERVIC
 export const authRequired = () => !env.AUTH_OPTIONAL;
 
 if (authRequired() && !hasSupabase()) {
-  console.error("[config] Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).");
+  console.error(
+    "[config] Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).",
+  );
   process.exit(1);
 }
 export const allowedOrigins = () =>

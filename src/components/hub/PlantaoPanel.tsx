@@ -1,5 +1,15 @@
-import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ArrowRight, Clock, ExternalLink, History, RefreshCw, Users } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Clock,
+  ExternalLink,
+  History,
+  MapPin,
+  RefreshCw,
+  Users,
+} from "lucide-react";
+import { acentoDo, getLocal } from "@/lib/ambientes";
 import type { Shift } from "@/lib/db";
 
 export interface PlantaoAtivoCtx {
@@ -16,75 +26,136 @@ interface Props {
   plantaoAtivo: PlantaoAtivoCtx | null;
   stats: { pacientes: number; pendencias: number };
   closedShifts: Shift[];
+  /** Id do último local visitado, para retomar quando não há plantão aberto. */
+  ultimoAmbiente: string | null;
   onViewHandoff: (shiftId: string) => void;
   onReopen: (shift: Shift) => void;
   formatDate: (iso: string) => string;
 }
 
-export function PlantaoPanel({ plantaoAtivo, stats, closedShifts, onViewHandoff, onReopen, formatDate }: Props) {
+/**
+ * Retomada de contexto. O plantão em andamento é o caminho mais usado do app,
+ * então recebe o maior peso visual da tela. Sem plantão, mas com um ambiente
+ * já visitado, oferece voltar para lá. Sem nenhum dos dois, não ocupa espaço.
+ */
+export function PlantaoPanel({
+  plantaoAtivo,
+  stats,
+  closedShifts,
+  ultimoAmbiente,
+  onViewHandoff,
+  onReopen,
+  formatDate,
+}: Props) {
   const nav = useNavigate();
-  if (!plantaoAtivo && closedShifts.length === 0) return null;
+
+  const localAnterior = ultimoAmbiente ? getLocal(ultimoAmbiente) : undefined;
+
+  // Primeiro acesso: nada aqui, para a tela não abrir com espaço morto.
+  if (!plantaoAtivo && closedShifts.length === 0 && !localAnterior) return null;
 
   return (
     <section aria-labelledby="hub-plantao" className="space-y-3">
-      <h2 id="hub-plantao" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
-        Seus plantões
+      <h2 id="hub-plantao" className="t-eyebrow text-muted-foreground">
+        Continuar de onde parou
       </h2>
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
         {plantaoAtivo && (
-          <div className="relative rounded-[1.75rem] border border-emerald-500/30 bg-emerald-500/5 p-5 sm:p-6" data-testid="hub-plantao-ativo">
-            <span className="absolute top-5 right-5 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400" />
+          <div
+            className="relative rounded-3xl border border-emerald-500/40 bg-emerald-500/5 p-5 sm:p-6"
+            data-testid="hub-plantao-ativo"
+          >
+            <span className="absolute top-6 right-6 flex h-3 w-3" aria-hidden="true">
+              <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
             </span>
-            <div className="flex items-center gap-2 text-emerald-300">
-              <Clock className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Plantão em andamento</span>
+
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+              <Clock className="h-4 w-4" aria-hidden="true" />
+              <span className="t-eyebrow">Plantão em andamento</span>
             </div>
-            <h3 className="mt-3 text-xl font-black uppercase leading-tight text-slate-100">{plantaoAtivo.setor || plantaoAtivo.sector || "Clínica Médica"}</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase">
+
+            <h3 className="t-display text-foreground mt-3">
+              {plantaoAtivo.setor || plantaoAtivo.sector || "Clínica Médica"}
+            </h3>
+            <p className="t-body text-muted-foreground mt-1">
               {plantaoAtivo.data_formatada || plantaoAtivo.data}
               {plantaoAtivo.hospital ? ` · ${plantaoAtivo.hospital}` : ""}
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-5 text-xs font-black text-slate-200">
+
+            <div className="t-label text-foreground mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
               <span className="inline-flex items-center gap-2">
-                <Users className="h-4 w-4 text-slate-400" /> {stats.pacientes} pacientes
+                <Users className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+                {stats.pacientes} {stats.pacientes === 1 ? "paciente" : "pacientes"}
               </span>
-              <span className="inline-flex items-center gap-2 text-amber-300">
-                <AlertTriangle className="h-4 w-4" /> {stats.pendencias} pendências
+              <span className="inline-flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                {stats.pendencias} {stats.pendencias === 1 ? "pendência" : "pendências"}
               </span>
             </div>
+
             <button
               onClick={() => nav({ to: "/dashboard" })}
               data-testid="hub-continuar-plantao"
-              className="mt-5 w-full py-3.5 rounded-2xl bg-emerald-400 text-slate-950 font-black uppercase tracking-widest text-[10px] hover:bg-emerald-300 transition-colors flex items-center justify-center gap-2"
+              className="t-label focus-visible:ring-ring mt-5 inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-base font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:ring-2 focus-visible:outline-none"
             >
-              Continuar plantão <ArrowRight className="h-4 w-4" />
+              Continuar plantão <ArrowRight className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
         )}
 
+        {/* Sem plantão aberto: pelo menos leva de volta ao último ambiente. */}
+        {!plantaoAtivo && localAnterior && (
+          <Link
+            to="/local/$localId"
+            params={{ localId: localAnterior.id }}
+            data-testid="hub-continuar-ambiente"
+            className={`border-border bg-card hover:bg-secondary focus-visible:ring-ring flex items-center gap-4 rounded-3xl border p-5 transition-colors focus-visible:ring-2 focus-visible:outline-none`}
+          >
+            <div
+              className={`h-12 w-12 shrink-0 rounded-2xl ${acentoDo(localAnterior).bg} ${acentoDo(localAnterior).text} flex items-center justify-center`}
+            >
+              <MapPin className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="t-eyebrow text-muted-foreground">Continuar em</p>
+              <p className="t-title text-foreground mt-1 truncate">{localAnterior.label}</p>
+            </div>
+            <ArrowRight className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
+          </Link>
+        )}
+
         {closedShifts.length > 0 && (
-          <div className="rounded-[1.75rem] border border-slate-800 bg-slate-900/60 p-5">
-            <div className="flex items-center gap-2 mb-3 text-slate-400">
-              <History className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Plantões anteriores</span>
+          <div className="border-border bg-card rounded-3xl border p-5">
+            <div className="text-muted-foreground mb-3 flex items-center gap-2">
+              <History className="h-4 w-4" aria-hidden="true" />
+              <span className="t-eyebrow">Plantões anteriores</span>
             </div>
             <ul className="space-y-2">
               {closedShifts.map((s) => (
-                <li key={s.id} className="rounded-2xl bg-slate-950/50 border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-100 uppercase truncate">{s.sector || "Setor"}</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">
+                <li
+                  key={s.id}
+                  className="border-border bg-background flex flex-col gap-3 rounded-2xl border p-3 sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="t-label text-foreground truncate">{s.sector || "Setor"}</p>
+                    <p className="t-label text-muted-foreground font-normal">
                       {formatDate(s.date)} · {s.hospital}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => onViewHandoff(s.id)} className="px-3 py-2 rounded-lg border border-slate-700 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:bg-slate-800 flex items-center gap-1.5">
-                      <ExternalLink className="h-3 w-3" /> Passagem
+                    <button
+                      onClick={() => onViewHandoff(s.id)}
+                      className="t-label border-border text-foreground hover:bg-secondary focus-visible:ring-ring touch-target inline-flex items-center gap-1.5 rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" /> Passagem
                     </button>
-                    <button onClick={() => onReopen(s)} className="px-3 py-2 rounded-lg border border-primary/40 text-primary text-[10px] font-black uppercase tracking-wider hover:bg-primary/10 flex items-center gap-1.5">
-                      <RefreshCw className="h-3 w-3" /> Reabrir
+                    <button
+                      onClick={() => onReopen(s)}
+                      className="t-label border-primary/50 text-primary hover:bg-primary/10 focus-visible:ring-ring touch-target inline-flex items-center gap-1.5 rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <RefreshCw className="h-4 w-4" aria-hidden="true" /> Reabrir
                     </button>
                   </div>
                 </li>

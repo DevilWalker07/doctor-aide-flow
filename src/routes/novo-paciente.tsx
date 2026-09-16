@@ -1,99 +1,148 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus, BedDouble, X, ArrowRight, ChevronLeft } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, FileUp, Keyboard, type LucideIcon } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/novo-paciente")({
-  component: NovoPacienteTriage,
-  head: () => ({ meta: [{ title: "Novo Paciente — MEDFLUXO" }] }),
+  component: NovoPacientePage,
+  head: () => ({ meta: [{ title: "Novo paciente — MEDFLUXO" }] }),
 });
 
-function NovoPacienteTriage() {
-  const nav = useNavigate();
+type Situacao = "admissao" | "internado";
 
-  const handleSelect = (tipo: "nova" | "internado") => {
-    localStorage.setItem("da_tipo_admissao", tipo);
-    if (tipo === "nova") {
-      nav({ to: "/admissao-nova" });
+const SITUACOES: Array<{ id: Situacao; label: string; descricao: string }> = [
+  { id: "admissao", label: "Admissão nova", descricao: "Paciente chegou agora" },
+  { id: "internado", label: "Já internado", descricao: "Assumindo o leito de outro plantão" },
+];
+
+interface Opcao {
+  label: string;
+  descricao: string;
+  icon: LucideIcon;
+  testid: string;
+  /** Quando ausente, a opção abre o formulário manual. */
+  engine?: "vision" | "docling";
+}
+
+const OPCOES: Opcao[] = [
+  {
+    label: "Digitar os dados",
+    descricao: "Formulário completo, sem depender da IA",
+    icon: Keyboard,
+    testid: "patient-card-manual",
+  },
+  {
+    label: "Fotografar o prontuário",
+    descricao: "Abre a câmera; a IA lê evolução, prescrição ou anotação",
+    icon: Camera,
+    testid: "patient-card-foto",
+    engine: "vision",
+  },
+  {
+    label: "Enviar arquivo",
+    descricao: "PDF, DOCX ou imagem já salva no aparelho",
+    icon: FileUp,
+    testid: "patient-card-arquivo",
+    engine: "docling",
+  },
+];
+
+/**
+ * Antes o cadastro passava por três telas de escolha em sequência:
+ * /novo-paciente → /admissao-nova ou /paciente-internado → /cadastro-manual
+ * ou /upload-ia. Eram três toques e três carregamentos para chegar a duas
+ * ações reais — digitar ou enviar documento —, sendo que a diferença entre os
+ * cinco caminhos era apenas dois parâmetros de busca. Agora é uma tela: a
+ * situação do paciente é um seletor, não um passo.
+ */
+function NovoPacientePage() {
+  const nav = useNavigate();
+  const [situacao, setSituacao] = useState<Situacao>("admissao");
+
+  const abrir = (opcao: Opcao) => {
+    localStorage.setItem("da_tipo_admissao", situacao);
+    if (opcao.engine) {
+      nav({
+        to: "/upload-ia",
+        search: { tipo: situacao, engine: opcao.engine, patient_id: undefined },
+      });
     } else {
-      nav({ to: "/paciente-internado" });
+      nav({ to: "/cadastro-manual", search: { tipo: situacao } as never });
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border">
+    <div className="bg-background min-h-screen">
+      <header className="mx-auto flex max-w-3xl items-center gap-3 px-4 pt-5 sm:px-6">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+          aria-label="Voltar ao plantão"
+          className="touch-target border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
-          <ChevronLeft className="h-4 w-4" /> VOLTAR
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-        <span className="text-xs font-extrabold tracking-[0.2em] uppercase text-primary">
-          NOVO PACIENTE
-        </span>
-        <div className="w-16" />
+        <span className="t-eyebrow text-muted-foreground">Novo paciente</span>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 flex-1 w-full flex flex-col items-center justify-center">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4 uppercase">
-            NOVO PACIENTE
-          </h1>
-          <p className="text-lg text-muted-foreground font-medium">
-            Qual é a situação deste paciente?
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+        <div>
+          <h1 className="t-display text-foreground">Como quer cadastrar?</h1>
+          <p className="t-body text-muted-foreground mt-2">
+            Qualquer caminho leva à mesma ficha — dá para completar depois.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
-          {/* Admissão Nova */}
-          <button
-            onClick={() => handleSelect("nova")}
-            data-testid="patient-card-admissao"
-            className="group relative bg-white border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden"
+        <section aria-labelledby="situacao-titulo">
+          <h2 id="situacao-titulo" className="t-eyebrow text-muted-foreground">
+            Situação do paciente
+          </h2>
+          <div
+            role="radiogroup"
+            aria-labelledby="situacao-titulo"
+            className="bg-secondary mt-2 flex gap-1.5 rounded-2xl p-1.5"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-8 group-hover:scale-110 transition-transform duration-500 shadow-sm">
-              <Plus className="h-10 w-10" />
-            </div>
-            
-            <h3 className="relative font-extrabold text-foreground tracking-tight text-2xl mb-4">
-              🆕 ADMISSÃO NOVA
-            </h3>
-            <div className="relative space-y-1 mb-8">
-              <p className="text-sm text-muted-foreground leading-relaxed">Paciente chegou agora.</p>
-              <p className="text-sm text-muted-foreground leading-relaxed font-bold">Vou preencher os dados iniciais.</p>
-            </div>
-            
-            <div className="relative flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
-              Selecionar <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
+            {SITUACOES.map((s) => (
+              <button
+                key={s.id}
+                role="radio"
+                aria-checked={situacao === s.id}
+                onClick={() => setSituacao(s.id)}
+                data-testid={`patient-situacao-${s.id}`}
+                className={`focus-visible:ring-ring flex min-h-[3.5rem] flex-1 flex-col items-center justify-center rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                  situacao === s.id
+                    ? "bg-card text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="text-base font-bold">{s.label}</span>
+                <span className="t-label font-normal">{s.descricao}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-          {/* Já Internado */}
-          <button
-            onClick={() => handleSelect("internado")}
-            data-testid="patient-card-internado"
-            className="group relative bg-white border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative h-20 w-20 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-8 group-hover:scale-110 transition-transform duration-500 shadow-sm">
-              <BedDouble className="h-10 w-10" />
-            </div>
-            
-            <h3 className="relative font-extrabold text-foreground tracking-tight text-2xl mb-4">
-              📋 PACIENTE JÁ INTERNADO
-            </h3>
-            <div className="relative space-y-1 mb-8">
-              <p className="text-sm text-muted-foreground leading-relaxed">Paciente já está na enfermaria.</p>
-              <p className="text-sm text-muted-foreground leading-relaxed font-bold">Tenho evolução, prescrição ou foto de prontuário anterior.</p>
-            </div>
-            
-            <div className="relative flex items-center gap-2 text-ai text-xs font-bold uppercase tracking-widest">
-              Selecionar <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        </div>
+        <ul className="space-y-3">
+          {OPCOES.map((o) => (
+            <li key={o.testid}>
+              <button
+                onClick={() => abrir(o)}
+                data-testid={o.testid}
+                className="border-border bg-card hover:bg-secondary focus-visible:ring-ring flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <div className="bg-secondary text-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+                  <o.icon className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="t-title text-foreground">{o.label}</p>
+                  <p className="t-body text-muted-foreground">{o.descricao}</p>
+                </div>
+                <ChevronRight
+                  className="text-muted-foreground h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
       </main>
     </div>
   );

@@ -28,7 +28,16 @@ export const Route = createFileRoute("/encaminhamento")({
   head: () => ({ meta: [{ title: "Encaminhamento — MEDFLUXO" }] }),
 });
 
-const FORM_INICIAL: EncaminhamentoForm = { destino: "Cardiologia", destinoOutro: "", prioridade: "eletivo", hipoteses: [], resumoClinico: "", justificativa: "", exames: [], solicitacao: "" };
+const FORM_INICIAL: EncaminhamentoForm = {
+  destino: "Cardiologia",
+  destinoOutro: "",
+  prioridade: "eletivo",
+  hipoteses: [],
+  resumoClinico: "",
+  justificativa: "",
+  exames: [],
+  solicitacao: "",
+};
 
 function EncaminhamentoPage() {
   const { paciente: pacienteId } = Route.useSearch();
@@ -43,15 +52,45 @@ function EncaminhamentoPage() {
   useEffect(() => {
     if (!base.vinculado) return;
     const v = base.vinculado;
-    const resumo = [v.problemas.length ? `Problemas ativos: ${v.problemas.join("; ")}.` : "", v.medicacoes.length ? `Medicações em uso: ${v.medicacoes.join("; ")}.` : "", v.antibioticos.length ? `Antibióticos: ${v.antibioticos.join("; ")}.` : ""]
+    const resumo = [
+      v.problemas.length ? `Problemas ativos: ${v.problemas.join("; ")}.` : "",
+      v.medicacoes.length ? `Medicações em uso: ${v.medicacoes.join("; ")}.` : "",
+      v.antibioticos.length ? `Antibióticos: ${v.antibioticos.join("; ")}.` : "",
+    ]
       .filter(Boolean)
       .join(" ");
-    setForm((f) => ({ ...f, resumoClinico: f.resumoClinico || resumo, hipoteses: f.hipoteses.length ? f.hipoteses : v.problemas.slice(0, 4) }));
+    setForm((f) => ({
+      ...f,
+      resumoClinico: f.resumoClinico || resumo,
+      hipoteses: f.hipoteses.length ? f.hipoteses : v.problemas.slice(0, 4),
+    }));
   }, [base.vinculado]);
 
-  const textoGerado = useMemo(() => montarEncaminhamento(form, { nome: base.pacienteForm.nome, idade: base.pacienteForm.idade, sexo: base.pacienteForm.sexo === "M" ? "Masculino" : base.pacienteForm.sexo === "F" ? "Feminino" : undefined }, base.data), [form, base.pacienteForm, base.data]);
+  const textoGerado = useMemo(
+    () =>
+      montarEncaminhamento(
+        form,
+        {
+          nome: base.pacienteForm.nome,
+          idade: base.pacienteForm.idade,
+          sexo:
+            base.pacienteForm.sexo === "M"
+              ? "Masculino"
+              : base.pacienteForm.sexo === "F"
+                ? "Feminino"
+                : undefined,
+        },
+        base.data,
+      ),
+    [form, base.pacienteForm, base.data],
+  );
   const texto = textoManual ?? textoGerado;
-  const doc: EncaminhamentoDocumento = { paciente: base.pacienteForm, form, texto, data: base.data };
+  const doc: EncaminhamentoDocumento = {
+    paciente: base.pacienteForm,
+    form,
+    texto,
+    data: base.data,
+  };
 
   const addHipotese = () => {
     const h = hipoteseInput.trim();
@@ -68,7 +107,11 @@ function EncaminhamentoPage() {
     setSuggesting(true);
     try {
       const res = await apiJson<{ referral_text: string }>("/api/ai/gerar-encaminhamento", {
-        patient: base.vinculado?.raw ?? { name: base.pacienteForm.nome, age: base.pacienteForm.idade, sex: base.pacienteForm.sexo },
+        patient: base.vinculado?.raw ?? {
+          name: base.pacienteForm.nome,
+          age: base.pacienteForm.idade,
+          sex: base.pacienteForm.sexo,
+        },
         destinations: [destinoLabel(form)],
         specialty: destinoLabel(form),
         reason: form.justificativa,
@@ -89,7 +132,12 @@ function EncaminhamentoPage() {
       toast.error("Informe o nome do paciente.");
       return;
     }
-    await base.salvar({ type: "encaminhamento", title: `Encaminhamento — ${destinoLabel(form)} — ${base.pacienteForm.nome}`, patientId: base.pacienteForm.pacienteId ?? null, content: doc });
+    await base.salvar({
+      type: "encaminhamento",
+      title: `Encaminhamento — ${destinoLabel(form)} — ${base.pacienteForm.nome}`,
+      patientId: base.pacienteForm.pacienteId ?? null,
+      content: doc,
+    });
   };
 
   return (
@@ -99,67 +147,157 @@ function EncaminhamentoPage() {
       pacienteId={pacienteId}
       paciente={base.vinculado}
       loadingPaciente={base.loading}
-      actions={<DocumentoActions onCopy={() => formatEncaminhamentoWhatsApp(doc, base.medico)} onSave={salvar} saving={base.saving} onSuggest={sugerir} suggesting={suggesting} />}
+      actions={
+        <DocumentoActions
+          onCopy={() => formatEncaminhamentoWhatsApp(doc, base.medico)}
+          onSave={salvar}
+          saving={base.saving}
+          onSuggest={sugerir}
+          suggesting={suggesting}
+        />
+      }
       editor={
         <>
-          <PacienteHeaderForm value={base.pacienteForm} onChange={base.setPacienteForm} vinculado={Boolean(base.vinculado)} />
+          <PacienteHeaderForm
+            value={base.pacienteForm}
+            onChange={base.setPacienteForm}
+            vinculado={Boolean(base.vinculado)}
+          />
 
-          <Section title="2. DESTINO E PRIORIDADE" icon={<Stethoscope className="h-4 w-4" />}>
+          <Section title="Destino e prioridade" icon={<Stethoscope className="h-4 w-4" />}>
             <div className="flex flex-wrap gap-2 mb-4">
               {ESPECIALIDADES_ENCAMINHAMENTO.map((e) => (
-                <Chip key={e} label={e} selected={form.destino === e} onClick={() => set({ destino: e })} testid={`doc-destino-${e.toLowerCase().replace(/[^a-z]+/g, "-")}`} />
+                <Chip
+                  key={e}
+                  label={e}
+                  selected={form.destino === e}
+                  onClick={() => set({ destino: e })}
+                  testid={`doc-destino-${e.toLowerCase().replace(/[^a-z]+/g, "-")}`}
+                />
               ))}
             </div>
-            {form.destino === "Outro" && <ControlledInput value={form.destinoOutro ?? ""} onValueChange={(v) => set({ destinoOutro: v })} placeholder="NOME DO SERVIÇO / ESPECIALIDADE" uppercase className="mb-4" />}
+            {form.destino === "Outro" && (
+              <ControlledInput
+                value={form.destinoOutro ?? ""}
+                onValueChange={(v) => set({ destinoOutro: v })}
+                placeholder="Nome do serviço ou especialidade"
+                uppercase
+                className="mb-4"
+              />
+            )}
             <div className="flex flex-wrap gap-2">
               {PRIORIDADES_ENCAMINHAMENTO.map((p) => (
-                <Chip key={p.id} label={`${p.label} — ${p.descricao}`} selected={form.prioridade === p.id} onClick={() => set({ prioridade: p.id })} />
+                <Chip
+                  key={p.id}
+                  label={`${p.label} — ${p.descricao}`}
+                  selected={form.prioridade === p.id}
+                  onClick={() => set({ prioridade: p.id })}
+                />
               ))}
             </div>
           </Section>
 
-          <Section title="3. CONTEÚDO CLÍNICO" icon={<FileText className="h-4 w-4" />}>
+          <Section title="Conteúdo clínico" icon={<FileText className="h-4 w-4" />}>
             <div className="space-y-4">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Hipóteses diagnósticas</div>
+                <div className="t-eyebrow text-muted-foreground mb-2">Hipóteses diagnósticas</div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {form.hipoteses.map((h, i) => (
-                    <button key={i} type="button" onClick={() => set({ hipoteses: form.hipoteses.filter((_, j) => j !== i) })} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold uppercase" aria-label={`Remover hipótese ${h}`}>
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => set({ hipoteses: form.hipoteses.filter((_, j) => j !== i) })}
+                      className="t-label bg-primary/10 text-primary inline-flex items-center rounded-lg px-3 py-1.5"
+                      aria-label={`Remover hipótese ${h}`}
+                    >
                       {h} ×
                     </button>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input value={hipoteseInput} onChange={(e) => setHipoteseInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addHipotese())} placeholder="Adicionar hipótese e Enter" className="flex-1 bg-secondary/40 border border-border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/40" data-testid="doc-hipotese-input" />
-                  <button type="button" onClick={addHipotese} className="px-4 rounded-xl border border-border text-[10px] font-black uppercase">Adicionar</button>
+                  <input
+                    value={hipoteseInput}
+                    onChange={(e) => setHipoteseInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addHipotese())}
+                    placeholder="Adicionar hipótese e Enter"
+                    className="flex-1 bg-secondary/40 border border-border rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    data-testid="doc-hipotese-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={addHipotese}
+                    className="t-label border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    Adicionar
+                  </button>
                 </div>
               </div>
-              <ControlledTextarea value={form.resumoClinico} onValueChange={(v) => set({ resumoClinico: v })} placeholder="Resumo clínico: história, comorbidades, medicações, exames relevantes" rows={4} className="text-sm font-semibold" />
-              <ControlledTextarea value={form.justificativa} onValueChange={(v) => set({ justificativa: v })} placeholder="Motivo / justificativa do encaminhamento" rows={3} className="text-sm font-semibold" data-testid="doc-justificativa" />
-              <ControlledTextarea value={form.solicitacao} onValueChange={(v) => set({ solicitacao: v })} placeholder="Solicitação ao serviço de destino (ex.: avaliação e seguimento ambulatorial)" rows={2} className="text-sm font-semibold" />
+              <ControlledTextarea
+                value={form.resumoClinico}
+                onValueChange={(v) => set({ resumoClinico: v })}
+                placeholder="Resumo clínico: história, comorbidades, medicações, exames relevantes"
+                rows={4}
+                className="text-sm font-semibold"
+              />
+              <ControlledTextarea
+                value={form.justificativa}
+                onValueChange={(v) => set({ justificativa: v })}
+                placeholder="Motivo / justificativa do encaminhamento"
+                rows={3}
+                className="text-sm font-semibold"
+                data-testid="doc-justificativa"
+              />
+              <ControlledTextarea
+                value={form.solicitacao}
+                onValueChange={(v) => set({ solicitacao: v })}
+                placeholder="Solicitação ao serviço de destino (ex.: avaliação e seguimento ambulatorial)"
+                rows={2}
+                className="text-sm font-semibold"
+              />
             </div>
           </Section>
 
-          <Section title="4. EXAMES EM ANEXO" icon={<ListChecks className="h-4 w-4" />}>
+          <Section title="Exames em anexo" icon={<ListChecks className="h-4 w-4" />}>
             <div className="flex flex-wrap gap-2">
               {EXAMES_COMUNS.map((e) => (
-                <Chip key={e} label={e} selected={form.exames.includes(e)} onClick={() => set({ exames: form.exames.includes(e) ? form.exames.filter((x) => x !== e) : [...form.exames, e] })} />
+                <Chip
+                  key={e}
+                  label={e}
+                  selected={form.exames.includes(e)}
+                  onClick={() =>
+                    set({
+                      exames: form.exames.includes(e)
+                        ? form.exames.filter((x) => x !== e)
+                        : [...form.exames, e],
+                    })
+                  }
+                />
               ))}
             </div>
           </Section>
 
           <Section
-            title="5. TEXTO FINAL"
+            title="Texto final"
             icon={<Sparkles className="h-4 w-4" />}
             right={
               textoManual !== null && (
-                <button type="button" onClick={() => setTextoManual(null)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => setTextoManual(null)}
+                  className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
                   Voltar ao texto automático
                 </button>
               )
             }
           >
-            <ControlledTextarea value={texto} onValueChange={setTextoManual} rows={14} className="font-mono text-xs leading-relaxed" data-testid="doc-texto-final" />
+            <ControlledTextarea
+              value={texto}
+              onValueChange={setTextoManual}
+              rows={14}
+              className="font-mono text-xs leading-relaxed"
+              data-testid="doc-texto-final"
+            />
           </Section>
         </>
       }

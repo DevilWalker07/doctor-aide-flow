@@ -6,25 +6,24 @@ import { format, parseISO, isValid } from "date-fns";
 import { z } from "zod";
 import { createShift } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { ambienteLabel, getAmbiente, getSubAmbiente } from "@/lib/ambientes";
+import { getLocal } from "@/lib/ambientes";
 import { storage } from "@/lib/storage";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
-  validateSearch: z.object({ ambiente: z.string().optional(), sub: z.string().optional() }),
+  validateSearch: z.object({ local: z.string().optional() }),
   head: () => ({ meta: [{ title: "Iniciar Plantão — MEDFLUXO" }] }),
 });
 
 function IniciarPlantaoPage() {
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
-  const { ambiente: ambienteId, sub: subId } = Route.useSearch();
-  const ambiente = getAmbiente(ambienteId);
-  const subAmbiente = getSubAmbiente(ambienteId, subId);
-  const setorPre = ambiente ? ambienteLabel(ambienteId, subId) : null;
-  const tipoPre = subAmbiente?.tipoEvolucao ?? null;
+  const { local: localId } = Route.useSearch();
+  const local = getLocal(localId);
+  const setorPre = local?.label ?? null;
+  const tipoPre = local?.tipoEvolucao ?? null;
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [hospital, setHospital] = useState("");
   const [saving, setSaving] = useState(false);
@@ -70,11 +69,14 @@ function IniciarPlantaoPage() {
 
     try {
       // Try Supabase first
-      const shift = await createShift({
-        date: data || new Date().toISOString().slice(0, 10),
-        hospital: hospitalValue,
-        ...(setorPre ? { sector: setorPre, type: tipoPre ?? undefined } : {}),
-      }, userId);
+      const shift = await createShift(
+        {
+          date: data || new Date().toISOString().slice(0, 10),
+          hospital: hospitalValue,
+          ...(setorPre ? { sector: setorPre, type: tipoPre ?? undefined } : {}),
+        },
+        userId,
+      );
 
       // Sync to localStorage
       const localShift = {
@@ -116,71 +118,84 @@ function IniciarPlantaoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
-      {/* Background simplificado com pointer-events-none para evitar travar inputs */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-ai/5 rounded-full blur-[100px]" />
-      </div>
-
-      <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative z-10">
-        <div className="text-center mb-10">
-           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">
-              <Stethoscope className="h-7 w-7" />
-           </div>
-           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-2">INICIAR PLANTÃO</h1>
-           <p className="text-muted-foreground text-xs md:text-sm">Configure os dados básicos para começar seu dia.</p>
-           {setorPre && (
-             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary" data-testid="shift-ambiente">
-               {ambiente?.emoji} {setorPre}
-             </div>
-           )}
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
+      <div className="bg-card border-border w-full max-w-md rounded-3xl border p-6 sm:p-8">
+        <div className="text-center">
+          <div className="bg-primary/10 text-primary mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <Stethoscope className="h-7 w-7" aria-hidden="true" />
+          </div>
+          <h1 className="t-display text-foreground">Iniciar plantão</h1>
+          <p className="t-body text-muted-foreground mt-2">
+            Dois campos e você está dentro. Dá para ajustar depois.
+          </p>
+          {setorPre && (
+            <div
+              className="bg-primary/10 text-primary t-label mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2"
+              data-testid="shift-ambiente"
+            >
+              {local && <local.icon className="h-4 w-4" aria-hidden="true" />} {setorPre}
+            </div>
+          )}
         </div>
 
-        <div className="space-y-6 md:space-y-8">
-           <div className="space-y-2">
-              <label htmlFor="shift-date" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <Calendar className="h-3 w-3" /> DATA DO PLANTÃO
-              </label>
-              <ControlledInput 
-                id="shift-date"
-                type="date" 
-                value={data} 
-                onValueChange={setData}
-                className="appearance-none"
-              />
-           </div>
+        <div className="mt-8 space-y-5">
+          <div>
+            <label
+              htmlFor="shift-date"
+              className="t-label text-muted-foreground mb-1.5 flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" aria-hidden="true" /> Data do plantão
+            </label>
+            <ControlledInput
+              id="shift-date"
+              type="date"
+              value={data}
+              onValueChange={setData}
+              className="appearance-none"
+            />
+          </div>
 
-           <div className="space-y-2">
-              <label htmlFor="hospital-name" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <Building2 className="h-3 w-3" /> HOSPITAL / UNIDADE
-              </label>
-              <ControlledInput 
-                id="hospital-name"
-                type="text" 
-                value={hospital} 
-                onValueChange={setHospital}
-                placeholder="Ex: Hospital Nair Alves de Souza"
-              />
-           </div>
+          <div>
+            <label
+              htmlFor="hospital-name"
+              className="t-label text-muted-foreground mb-1.5 flex items-center gap-2"
+            >
+              <Building2 className="h-4 w-4" aria-hidden="true" /> Hospital ou unidade
+            </label>
+            <ControlledInput
+              id="hospital-name"
+              type="text"
+              value={hospital}
+              onValueChange={setHospital}
+              placeholder="Ex.: Hospital Nair Alves de Souza"
+            />
+          </div>
 
-
-           <div className="pt-4">
-              <button 
-                onClick={handleContinue}
-                disabled={saving}
-                data-testid="shift-submit"
-                className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>CONTINUAR <ArrowRight className="h-5 w-5" /></>}
-              </button>
-           </div>
+          <button
+            onClick={handleContinue}
+            disabled={saving}
+            data-testid="shift-submit"
+            className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Abrindo plantão…
+              </>
+            ) : (
+              <>
+                Continuar <ArrowRight className="h-5 w-5" aria-hidden="true" />
+              </>
+            )}
+          </button>
         </div>
 
-        <div className="mt-10 text-center">
-           <Link to="/" className="text-[10px] font-extrabold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest flex items-center justify-center gap-2">
-              <ChevronLeft className="h-3 w-3" /> CANCELAR E VOLTAR
-           </Link>
+        <div className="mt-6 text-center">
+          <Link
+            to="/"
+            className="t-label text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Cancelar e voltar
+          </Link>
         </div>
       </div>
     </div>

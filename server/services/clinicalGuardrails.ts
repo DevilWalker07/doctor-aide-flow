@@ -1,4 +1,9 @@
-import { classifyLab, LAB_THRESHOLDS, normalizeLabKey, type LabKey } from "../../shared/medical/labThresholds.js";
+import {
+  classifyLab,
+  LAB_THRESHOLDS,
+  normalizeLabKey,
+  type LabKey,
+} from "../../shared/medical/labThresholds.js";
 
 export type GuardrailSeverity = "critical" | "warning";
 
@@ -36,11 +41,21 @@ export function validateVitals(v: Vitals, fieldPrefix = "vitals"): GuardrailFind
     if (value == null || Number.isNaN(value)) continue;
     const [min, max, label] = VITAL_RANGES[key];
     if (value < min || value > max) {
-      findings.push({ severity: "critical", field: `${fieldPrefix}.${key}`, message: `${label} ${value} fisiologicamente implausível (esperado ${min}–${max})`, value });
+      findings.push({
+        severity: "critical",
+        field: `${fieldPrefix}.${key}`,
+        message: `${label} ${value} fisiologicamente implausível (esperado ${min}–${max})`,
+        value,
+      });
     }
   }
   if (v.pas != null && v.pad != null && v.pad >= v.pas) {
-    findings.push({ severity: "critical", field: `${fieldPrefix}.pa`, message: `PA ${v.pas}x${v.pad}: diastólica ≥ sistólica (valor implausível)`, value: `${v.pas}x${v.pad}` });
+    findings.push({
+      severity: "critical",
+      field: `${fieldPrefix}.pa`,
+      message: `PA ${v.pas}x${v.pad}: diastólica ≥ sistólica (valor implausível)`,
+      value: `${v.pas}x${v.pad}`,
+    });
   }
   return findings;
 }
@@ -49,7 +64,13 @@ function parseNumber(raw: string): number | null {
   const s = raw.trim();
   if (!s) return null;
   if (/^\d{1,3}(\.\d{3})+$/.test(s)) return Number(s.replace(/\./g, ""));
-  const n = Number(s.replace(/\./g, (m, offset, str) => (str.indexOf(",") === -1 && /^\d{1,3}\.\d{3}$/.test(str) ? "" : m)).replace(",", "."));
+  const n = Number(
+    s
+      .replace(/\./g, (m, offset, str) =>
+        str.indexOf(",") === -1 && /^\d{1,3}\.\d{3}$/.test(str) ? "" : m,
+      )
+      .replace(",", "."),
+  );
   return Number.isFinite(n) ? n : null;
 }
 
@@ -88,7 +109,10 @@ export function parseVitalsFromText(s: string): Vitals {
   return v;
 }
 
-export function flagLabOutliers(labs: Partial<Record<LabKey, number>> | string, fieldPrefix = "lab"): GuardrailFinding[] {
+export function flagLabOutliers(
+  labs: Partial<Record<LabKey, number>> | string,
+  fieldPrefix = "lab",
+): GuardrailFinding[] {
   const values = typeof labs === "string" ? parseLabString(labs) : labs;
   const findings: GuardrailFinding[] = [];
   for (const key of Object.keys(values) as LabKey[]) {
@@ -97,11 +121,19 @@ export function flagLabOutliers(labs: Partial<Record<LabKey, number>> | string, 
     const { severity, direction } = classifyLab(key, value);
     if (!severity) continue;
     const t = LAB_THRESHOLDS[key];
-    const limit = direction === "low" ? (severity === "critical" ? t.critLow : t.warnLow) : severity === "critical" ? t.critHigh : t.warnHigh;
+    const limit =
+      direction === "low"
+        ? severity === "critical"
+          ? t.critLow
+          : t.warnLow
+        : severity === "critical"
+          ? t.critHigh
+          : t.warnHigh;
     findings.push({
       severity,
       field: `${fieldPrefix}.${key}`,
-      message: `${t.label} ${String(value).replace(".", ",")} ${direction === "low" ? "<" : ">"} ${String(limit).replace(".", ",")} ${t.unit}`.trim(),
+      message:
+        `${t.label} ${String(value).replace(".", ",")} ${direction === "low" ? "<" : ">"} ${String(limit).replace(".", ",")} ${t.unit}`.trim(),
       value,
     });
   }
@@ -129,7 +161,9 @@ export function parseAtbString(s: string): AtbInput[] {
     .filter((part) => part && !/^sem atb$/i.test(part) && !/^n[aã]o referido$/i.test(part))
     .map((raw) => {
       const atb: AtbInput = { nome: raw, raw };
-      const nome = raw.match(/^([A-Za-zÀ-ú][A-Za-zÀ-ú\-\s]*?)(?=\s+\d|\s+\(|\s+[—–-]\s|\s+D\d|\s+D\?|$)/);
+      const nome = raw.match(
+        /^([A-Za-zÀ-ú][A-Za-zÀ-ú\-\s]*?)(?=\s+\d|\s+\(|\s+[—–-]\s|\s+D\d|\s+D\?|$)/,
+      );
       if (nome) atb.nome = nome[1].trim();
       const dose = raw.match(/(\d+(?:[.,]\d+)?)\s*(g|mg)\b/i);
       if (dose) {
@@ -137,7 +171,8 @@ export function parseAtbString(s: string): AtbInput[] {
         atb.doseUnidade = dose[2].toLowerCase() as "g" | "mg";
       }
       const via = raw.match(VIA_RE);
-      if (via) atb.via = (via[1].toUpperCase() === "IV" ? "EV" : via[1].toUpperCase()) as AtbInput["via"];
+      if (via)
+        atb.via = (via[1].toUpperCase() === "IV" ? "EV" : via[1].toUpperCase()) as AtbInput["via"];
       const freq = raw.match(/(\d{1,2}\s*\/\s*\d{1,2}\s*h|\d+x\/dia|1x\/dia|dose única)/i);
       if (freq) atb.frequencia = freq[1].replace(/\s+/g, "");
       const dia = raw.match(/\bD\s*(\d{1,2})(?:\s*\/\s*(\d{1,2}))?/i);
@@ -151,7 +186,10 @@ export function parseAtbString(s: string): AtbInput[] {
 
 const MAX_DOSE_G: Record<NonNullable<AtbInput["via"]>, number> = { EV: 6, VO: 4, IM: 2, SC: 1 };
 
-export function checkDoseAnomalies(atb: AtbInput[] | string, fieldPrefix = "atb"): GuardrailFinding[] {
+export function checkDoseAnomalies(
+  atb: AtbInput[] | string,
+  fieldPrefix = "atb",
+): GuardrailFinding[] {
   const list = typeof atb === "string" ? parseAtbString(atb) : atb;
   const findings: GuardrailFinding[] = [];
   list.forEach((a, i) => {
@@ -159,22 +197,48 @@ export function checkDoseAnomalies(atb: AtbInput[] | string, fieldPrefix = "atb"
     if (a.doseValor != null && a.doseUnidade) {
       const grams = a.doseUnidade === "g" ? a.doseValor : a.doseValor / 1000;
       const limit = MAX_DOSE_G[a.via ?? "EV"];
-      if (grams > limit) findings.push({ severity: "warning", field, message: `${a.nome}: dose ${a.doseValor}${a.doseUnidade} por tomada acima do usual para via ${a.via ?? "EV"} (> ${limit} g) — conferir`, value: a.raw });
+      if (grams > limit)
+        findings.push({
+          severity: "warning",
+          field,
+          message: `${a.nome}: dose ${a.doseValor}${a.doseUnidade} por tomada acima do usual para via ${a.via ?? "EV"} (> ${limit} g) — conferir`,
+          value: a.raw,
+        });
     }
     if (a.dia != null && a.duracao != null && a.dia > a.duracao) {
-      findings.push({ severity: "warning", field, message: `${a.nome}: D${a.dia} ultrapassa a duração planejada de ${a.duracao} dias — revisar suspensão`, value: a.raw });
+      findings.push({
+        severity: "warning",
+        field,
+        message: `${a.nome}: D${a.dia} ultrapassa a duração planejada de ${a.duracao} dias — revisar suspensão`,
+        value: a.raw,
+      });
     }
     if (a.duracao != null && a.duracao > 21) {
-      findings.push({ severity: "warning", field, message: `${a.nome}: duração planejada de ${a.duracao} dias (> 21) — confirmar indicação`, value: a.raw });
+      findings.push({
+        severity: "warning",
+        field,
+        message: `${a.nome}: duração planejada de ${a.duracao} dias (> 21) — confirmar indicação`,
+        value: a.raw,
+      });
     }
     if (a.dia != null && a.dia >= 7 && a.duracao == null) {
-      findings.push({ severity: "warning", field, message: `${a.nome}: D${a.dia} sem duração planejada registrada — definir tempo de tratamento`, value: a.raw });
+      findings.push({
+        severity: "warning",
+        field,
+        message: `${a.nome}: D${a.dia} sem duração planejada registrada — definir tempo de tratamento`,
+        value: a.raw,
+      });
     }
   });
   return findings;
 }
 
-export function cockcroftGault(idadeAnos: number, pesoKg: number, creatinina: number, sexo: "M" | "F"): number {
+export function cockcroftGault(
+  idadeAnos: number,
+  pesoKg: number,
+  creatinina: number,
+  sexo: "M" | "F",
+): number {
   if (!(idadeAnos > 0) || !(pesoKg > 0) || !(creatinina > 0)) return NaN;
   const base = ((140 - idadeAnos) * pesoKg) / (72 * creatinina);
   return Math.round(base * (sexo === "F" ? 0.85 : 1) * 10) / 10;
@@ -201,8 +265,20 @@ export function runPatientGuardrails(input: PatientGuardrailInput): GuardrailFin
 
   if (labs.CR != null && input.idade && input.peso && (input.sexo === "M" || input.sexo === "F")) {
     const clcr = cockcroftGault(input.idade, input.peso, labs.CR, input.sexo);
-    if (clcr < 30) findings.push({ severity: "critical", field: "renal.clcr", message: `ClCr estimado ${clcr} mL/min (Cockcroft-Gault) — ajuste renal obrigatório`, value: clcr });
-    else if (clcr < 60) findings.push({ severity: "warning", field: "renal.clcr", message: `ClCr estimado ${clcr} mL/min — verificar doses de eliminação renal`, value: clcr });
+    if (clcr < 30)
+      findings.push({
+        severity: "critical",
+        field: "renal.clcr",
+        message: `ClCr estimado ${clcr} mL/min (Cockcroft-Gault) — ajuste renal obrigatório`,
+        value: clcr,
+      });
+    else if (clcr < 60)
+      findings.push({
+        severity: "warning",
+        field: "renal.clcr",
+        message: `ClCr estimado ${clcr} mL/min — verificar doses de eliminação renal`,
+        value: clcr,
+      });
   }
   return findings;
 }
@@ -210,7 +286,9 @@ export function runPatientGuardrails(input: PatientGuardrailInput): GuardrailFin
 export function findingsToAlerts(findings: GuardrailFinding[], onlyCritical = false): string[] {
   return findings
     .filter((f) => !onlyCritical || f.severity === "critical")
-    .map((f) => `${f.severity === "critical" ? "[CRÍTICO]" : "[ATENÇÃO]"} ${f.message}`.toUpperCase());
+    .map((f) =>
+      `${f.severity === "critical" ? "[CRÍTICO]" : "[ATENÇÃO]"} ${f.message}`.toUpperCase(),
+    );
 }
 
 export function mergeAlerts(existing: string[], incoming: string[]): string[] {

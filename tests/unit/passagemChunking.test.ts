@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { PassagemPlantaoBatchSchema } from "../../server/schemas/ai.schemas.js";
-import { applyLabGuardrails, chunkEvolucoes, mergeBatchResults, normalizeLeito } from "../../server/services/passagemPlantao.service.js";
+import {
+  applyLabGuardrails,
+  chunkEvolucoes,
+  mergeBatchResults,
+  normalizeLeito,
+} from "../../server/services/passagemPlantao.service.js";
 
 const item = (n: number, size = 100) => ({ fileName: `ev${n}.txt`, text: "x".repeat(size) });
 
@@ -10,7 +15,9 @@ describe("chunkEvolucoes", () => {
     expect(batches.map((b) => b.length)).toEqual([6, 2]);
   });
   it("respeita o máximo de caracteres por lote", () => {
-    const batches = chunkEvolucoes([item(1, 7000), item(2, 7000), item(3, 1000)], { maxCharsPerBatch: 12_000 });
+    const batches = chunkEvolucoes([item(1, 7000), item(2, 7000), item(3, 1000)], {
+      maxCharsPerBatch: 12_000,
+    });
     expect(batches.map((b) => b.length)).toEqual([1, 2]);
   });
   it("trunca itens gigantes", () => {
@@ -23,7 +30,9 @@ describe("chunkEvolucoes", () => {
 });
 
 describe("mergeBatchResults", () => {
-  const row = (leito: string, extra: Partial<Record<string, unknown>> = {}) => PassagemPlantaoBatchSchema.parse({ pacientes: [{ leito, ...extra }], alertasCriticos: [] }).pacientes[0];
+  const row = (leito: string, extra: Partial<Record<string, unknown>> = {}) =>
+    PassagemPlantaoBatchSchema.parse({ pacientes: [{ leito, ...extra }], alertasCriticos: [] })
+      .pacientes[0];
 
   it("normaliza leitos e ordena numericamente", () => {
     expect(normalizeLeito("cmf 03")).toBe("CMF03");
@@ -40,7 +49,13 @@ describe("mergeBatchResults", () => {
     const a = { prioridade: "!! URGENTE" as const, leito: "L1", paciente: "X", acao: "Repetir K" };
     const merged = mergeBatchResults([
       { pacientes: [], alertasCriticos: [a] },
-      { pacientes: [], alertasCriticos: [{ ...a, acao: "repetir k" }, { ...a, acao: "Outra" }] },
+      {
+        pacientes: [],
+        alertasCriticos: [
+          { ...a, acao: "repetir k" },
+          { ...a, acao: "Outra" },
+        ],
+      },
     ]);
     expect(merged.alertasCriticos).toHaveLength(2);
   });
@@ -49,11 +64,20 @@ describe("mergeBatchResults", () => {
 describe("applyLabGuardrails", () => {
   it("insere !! na linha e alerta urgente para lab crítico, sem duplicar", () => {
     const base = PassagemPlantaoBatchSchema.parse({
-      pacientes: [{ leito: "L5", paciente: "A", ultimoLab: "K 6,2 / CR 1,0", alertasPendencias: "! RX pendente" }],
+      pacientes: [
+        {
+          leito: "L5",
+          paciente: "A",
+          ultimoLab: "K 6,2 / CR 1,0",
+          alertasPendencias: "! RX pendente",
+        },
+      ],
       alertasCriticos: [],
     });
     const once = applyLabGuardrails(base);
-    expect(once.pacientes[0].alertasPendencias.startsWith("!! LAB CRÍTICO: Potássio 6,2")).toBe(true);
+    expect(once.pacientes[0].alertasPendencias.startsWith("!! LAB CRÍTICO: Potássio 6,2")).toBe(
+      true,
+    );
     expect(once.alertasCriticos).toHaveLength(1);
     expect(once.alertasCriticos[0]).toMatchObject({ prioridade: "!! URGENTE", leito: "L5" });
     const twice = applyLabGuardrails(once);
@@ -61,7 +85,10 @@ describe("applyLabGuardrails", () => {
     expect(twice.pacientes[0].alertasPendencias.match(/LAB CRÍTICO/g)).toHaveLength(1);
   });
   it("não altera linhas com lab normal", () => {
-    const base = PassagemPlantaoBatchSchema.parse({ pacientes: [{ leito: "L1", ultimoLab: "HB 12 / K 4,0" }], alertasCriticos: [] });
+    const base = PassagemPlantaoBatchSchema.parse({
+      pacientes: [{ leito: "L1", ultimoLab: "HB 12 / K 4,0" }],
+      alertasCriticos: [],
+    });
     expect(applyLabGuardrails(base)).toEqual(base);
   });
 });

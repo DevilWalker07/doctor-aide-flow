@@ -1,7 +1,12 @@
-import type { LabExtractionResult } from "../types/lab";
+import type { LabExtractionResult, LaudoImagemResult } from "../types/lab";
 import type { MotorLuanDocumentResult } from "../types/motorLuan";
 import type { ImportedRoundPatient } from "../types/round";
-import { fallbackEvolution, fallbackLabExtraction, gerarBriefingLocal, gerarMapaPassagemPlantao } from "./localFallbacks";
+import {
+  fallbackEvolution,
+  fallbackLabExtraction,
+  gerarBriefingLocal,
+  gerarMapaPassagemPlantao,
+} from "./localFallbacks";
 import { mockImportedPatients } from "./mocks";
 
 import { apiJson } from "../apiClient";
@@ -15,22 +20,35 @@ export interface EvolutionReview {
   sugestoes: string[];
 }
 
-export function reviewEvolution(evolutionText: string, patient?: unknown): Promise<EvolutionReview> {
+export function reviewEvolution(
+  evolutionText: string,
+  patient?: unknown,
+): Promise<EvolutionReview> {
   return postBackend<EvolutionReview>("/api/ai/revisar-evolucao", { evolutionText, patient });
 }
 
-export async function processDocumentsWithMotorLuan(rawText: string, context?: unknown): Promise<MotorLuanDocumentResult> {
+export async function processDocumentsWithMotorLuan(
+  rawText: string,
+  context?: unknown,
+): Promise<MotorLuanDocumentResult> {
   try {
     return await postBackend<MotorLuanDocumentResult>("/api/ai/orquestrador", { rawText, context });
   } catch (error) {
     console.warn("Motor Luan indisponível, usando mock local.", error);
-    return { agent: "orquestrador", patients: mockImportedPatients(), globalAlerts: ["MODO MOCK LOCAL"] };
+    return {
+      agent: "orquestrador",
+      patients: mockImportedPatients(),
+      globalAlerts: ["MODO MOCK LOCAL"],
+    };
   }
 }
 
 export async function generateEvolutionWithMotorLuan(payload: unknown): Promise<string> {
   try {
-    const response = await postBackend<{ text?: string; evolutionText?: string }>("/api/ai/gerar-evolucao", payload);
+    const response = await postBackend<{ text?: string; evolutionText?: string }>(
+      "/api/ai/gerar-evolucao",
+      payload,
+    );
     return (response.text || response.evolutionText || fallbackEvolution(payload)).toUpperCase();
   } catch (error) {
     console.warn("Gerador de evolução indisponível, usando fallback local.", error);
@@ -40,38 +58,73 @@ export async function generateEvolutionWithMotorLuan(payload: unknown): Promise<
 
 export async function importYesterdayEvolutions(rawText: string, context?: unknown) {
   try {
-    return await postBackend<{ patients: ImportedRoundPatient[]; globalAlerts: string[] }>("/api/ai/importar-evolucoes-ontem", { rawText, context });
+    return await postBackend<{ patients: ImportedRoundPatient[]; globalAlerts: string[] }>(
+      "/api/ai/importar-evolucoes-ontem",
+      { rawText, context },
+    );
   } catch (error) {
     console.warn("Importação de evoluções indisponível, usando mock local.", error);
     return { patients: mockImportedPatients(), globalAlerts: ["MODO MOCK LOCAL"] };
   }
 }
 
-export async function generateRoundMap(patients: ImportedRoundPatient[], sector: string, date: string) {
+export async function generateRoundMap(
+  patients: ImportedRoundPatient[],
+  sector: string,
+  date: string,
+) {
   try {
-    const response = await postBackend<{ text?: string }>("/api/ai/gerar-mapa-plantao", { patients, sector, date });
+    const response = await postBackend<{ text?: string }>("/api/ai/gerar-mapa-plantao", {
+      patients,
+      sector,
+      date,
+    });
     return response.text || gerarMapaPassagemPlantao(patients, sector, date);
   } catch {
     return gerarMapaPassagemPlantao(patients, sector, date);
   }
 }
 
-export async function generateBriefing(patients: ImportedRoundPatient[], sector: string, date: string) {
+export async function generateBriefing(
+  patients: ImportedRoundPatient[],
+  sector: string,
+  date: string,
+) {
   try {
-    const response = await postBackend<{ text?: string }>("/api/ai/gerar-briefing", { patients, sector, date });
+    const response = await postBackend<{ text?: string }>("/api/ai/gerar-briefing", {
+      patients,
+      sector,
+      date,
+    });
     return response.text || gerarBriefingLocal(patients, sector, date);
   } catch {
     return gerarBriefingLocal(patients, sector, date);
   }
 }
 
-export async function extractLabWithAI(inputText: string, patientContext?: unknown): Promise<LabExtractionResult> {
+export async function extractLabWithAI(
+  inputText: string,
+  patientContext?: unknown,
+): Promise<LabExtractionResult> {
   try {
-    return await postBackend<LabExtractionResult>("/api/ai/extrair-clinica-medica", { inputText, patientContext, task: "lab-extractor" });
+    return await postBackend<LabExtractionResult>("/api/ai/extrair-clinica-medica", {
+      inputText,
+      patientContext,
+      task: "lab-extractor",
+    });
   } catch (error) {
     console.warn("Extração de laboratório indisponível, usando fallback local.", error);
     return fallbackLabExtraction(inputText);
   }
+}
+
+/**
+ * Organiza um laudo de imagem. Diferente do laboratório, aqui NÃO há fallback
+ * local: extrair achados de um laudo por heurística geraria texto clínico que
+ * ninguém escreveu. Falha da IA falha a chamada.
+ */
+export async function organizarLaudoImagem(inputText: string): Promise<LaudoImagemResult> {
+  return postBackend<LaudoImagemResult>("/api/ai/organizar-laudo-imagem", { inputText });
 }
 
 export const generateEvolutionWithAI = generateEvolutionWithMotorLuan;

@@ -78,7 +78,7 @@ function PassagemPlantaoPage() {
       setIsDragging(false);
       addFiles(e.dataTransfer.files);
     },
-    [addFiles]
+    [addFiles],
   );
 
   const handleRemove = (id: string) => {
@@ -135,7 +135,12 @@ function PassagemPlantaoPage() {
         } catch {
           /* header já legível */
         }
-        setWarnings(decoded.split(";").map((s) => s.trim()).filter(Boolean));
+        setWarnings(
+          decoded
+            .split(";")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        );
       }
 
       setStats({ pacientes: pacientesCount, alertas: alertasCount });
@@ -157,20 +162,19 @@ function PassagemPlantaoPage() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => nav({ to: "/dashboard" })}
-              className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+              aria-label="Voltar ao plantão"
+              className="touch-target border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-xl font-black text-foreground uppercase tracking-tight">
-                PASSAGEM DE PLANTÃO IA
-              </h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+              <h1 className="t-title text-foreground">Passagem de plantão</h1>
+              <p className="t-label text-muted-foreground font-normal">
                 Gerar mapa consolidado a partir dos DOCX dos leitos
               </p>
             </div>
@@ -178,27 +182,24 @@ function PassagemPlantaoPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+      <main className="mx-auto max-w-4xl space-y-5 px-4 py-6 sm:px-6">
         {/* Config row */}
-        <div className="bg-white border border-border rounded-2xl p-6 shadow-sm">
-          <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-widest mb-4">
-            Configuração do Plantão
-          </h2>
+        <div className="bg-card border-border rounded-3xl border p-5">
+          <h2 className="t-title text-foreground mb-4">Configuração do plantão</h2>
           <div className="flex flex-wrap gap-6">
             {/* Setor */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                Setor
-              </label>
+              <label className="t-label text-muted-foreground">Setor</label>
               <div className="flex gap-2">
                 {(["CMF", "CMM", "CMF/CMM"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setSetor(s)}
-                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                    aria-pressed={setor === s}
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                       setor === s
-                        ? "bg-[#1F4E79] text-white border-[#1F4E79] shadow-md"
-                        : "bg-white text-muted-foreground border-border hover:bg-secondary"
+                        ? "bg-navy text-navy-foreground border-navy"
+                        : "bg-card text-muted-foreground border-border hover:bg-secondary"
                     }`}
                   >
                     {s}
@@ -209,15 +210,13 @@ function PassagemPlantaoPage() {
 
             {/* Data */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                Data do Plantão
-              </label>
+              <label className="t-label text-muted-foreground">Data do Plantão</label>
               <input
                 type="text"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
                 placeholder="DD/MM/YYYY"
-                className="h-10 px-3 rounded-xl border border-border text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-[#1F4E79]/20 w-36"
+                className="bg-card border-border text-foreground focus:ring-ring min-h-[2.75rem] w-40 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
               />
             </div>
           </div>
@@ -225,19 +224,24 @@ function PassagemPlantaoPage() {
 
         {/* Drop zone */}
         <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
             isDragging
-              ? "border-[#1F4E79] bg-[#1F4E79]/5"
-              : "border-border hover:border-[#1F4E79]/40 hover:bg-secondary/30"
+              ? "border-navy bg-navy/5"
+              : "border-border hover:border-navy/40 hover:bg-secondary/30"
           }`}
         >
-          <Upload className={`h-8 w-8 ${isDragging ? "text-[#1F4E79]" : "text-muted-foreground"}`} />
+          <Upload className={`h-8 w-8 ${isDragging ? "text-navy" : "text-muted-foreground"}`} />
           <p className="text-sm font-bold text-foreground">
-            {isDragging ? "Solte os arquivos aqui" : "Arraste os DOCX dos leitos ou clique para selecionar"}
+            {isDragging
+              ? "Solte os arquivos aqui"
+              : "Arraste os DOCX dos leitos ou clique para selecionar"}
           </p>
           <p className="text-xs text-muted-foreground">
             Suporte a DOCX, TXT e PDF — até 30 arquivos — 20MB cada
@@ -255,9 +259,9 @@ function PassagemPlantaoPage() {
 
         {/* File list */}
         {files.length > 0 && (
-          <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-card border-border overflow-hidden rounded-3xl border">
             <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+              <span className="t-label text-muted-foreground">
                 {readyFiles.length} arquivo{readyFiles.length !== 1 ? "s" : ""} prontos
                 {files.length - readyFiles.length > 0 && (
                   <span className="text-destructive ml-2">
@@ -267,7 +271,7 @@ function PassagemPlantaoPage() {
               </span>
               <button
                 onClick={handleClearAll}
-                className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:text-destructive flex items-center gap-1 transition-colors"
+                className="t-label text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <Trash2 className="h-3 w-3" /> Limpar tudo
               </button>
@@ -275,13 +279,15 @@ function PassagemPlantaoPage() {
             <ul className="divide-y divide-border max-h-72 overflow-y-auto">
               {files.map((f) => (
                 <li key={f.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className={`h-4 w-4 flex-shrink-0 ${f.status === "error" ? "text-destructive" : "text-[#1F4E79]"}`} />
+                  <FileText
+                    className={`h-4 w-4 flex-shrink-0 ${f.status === "error" ? "text-destructive" : "text-navy"}`}
+                  />
                   <span className="flex-1 text-xs font-medium truncate">{f.file.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="t-label text-muted-foreground font-normal">
                     {(f.file.size / 1024).toFixed(0)} KB
                   </span>
                   {f.status === "error" && (
-                    <span className="text-[10px] text-destructive font-medium">{f.errorMsg}</span>
+                    <span className="t-label text-destructive font-normal">{f.errorMsg}</span>
                   )}
                   {f.status === "ready" && (
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
@@ -303,12 +309,12 @@ function PassagemPlantaoPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
             <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-1">
-                Arquivos com problema (ignorados):
-              </p>
+              <p className="t-body text-foreground mb-1">Arquivos com problema (ignorados):</p>
               <ul className="space-y-0.5">
                 {warnings.map((w, i) => (
-                  <li key={i} className="text-xs text-amber-700">{w}</li>
+                  <li key={i} className="text-xs text-amber-700">
+                    {w}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -321,17 +327,18 @@ function PassagemPlantaoPage() {
             onClick={handleGenerate}
             disabled={isGenerating || readyFiles.length === 0}
             data-testid="handoff-generate"
-            className="flex-1 h-14 rounded-2xl bg-[#1F4E79] text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-[#1F4E79]/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                 Processando {readyFiles.length} leito{readyFiles.length !== 1 ? "s" : ""}…
               </>
             ) : (
               <>
-                <FileText className="h-4 w-4" />
-                Gerar Mapa de Passagem ({readyFiles.length} leito{readyFiles.length !== 1 ? "s" : ""})
+                <FileText className="h-5 w-5" aria-hidden="true" />
+                Gerar mapa ({readyFiles.length} leito
+                {readyFiles.length !== 1 ? "s" : ""})
               </>
             )}
           </button>
@@ -341,12 +348,12 @@ function PassagemPlantaoPage() {
               href={downloadUrl}
               download={downloadName}
               data-testid="handoff-download"
-              className="flex-1 h-14 rounded-2xl bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-emerald-600/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+              className="focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-5 w-5" aria-hidden="true" />
               Baixar DOCX
               {stats && (
-                <span className="ml-1 font-normal normal-case tracking-normal text-emerald-100 text-[10px]">
+                <span className="t-label ml-1 font-normal text-emerald-50">
                   ({stats.pacientes} pac · {stats.alertas} alertas)
                 </span>
               )}
@@ -356,10 +363,8 @@ function PassagemPlantaoPage() {
 
         {/* How to use */}
         {files.length === 0 && (
-          <div className="bg-[#1F4E79]/5 border border-[#1F4E79]/10 rounded-2xl p-6">
-            <h3 className="text-[11px] font-black text-[#1F4E79] uppercase tracking-widest mb-3">
-              Como usar
-            </h3>
+          <div className="bg-card border-border rounded-3xl border p-5">
+            <h3 className="t-title text-foreground mb-3">Como usar</h3>
             <ol className="space-y-2">
               {[
                 "Selecione o setor (CMF, CMM ou ambos) e a data do plantão",
@@ -368,16 +373,16 @@ function PassagemPlantaoPage() {
                 "Aguarde o processamento — a IA extrai e consolida todos os leitos",
                 "Baixe o DOCX gerado com o mapa completo + tabela de alertas críticos",
               ].map((step, i) => (
-                <li key={i} className="flex gap-3 text-sm text-muted-foreground">
-                  <span className="h-5 w-5 rounded-full bg-[#1F4E79] text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                <li key={i} className="t-body text-muted-foreground flex gap-3">
+                  <span className="bg-navy text-navy-foreground t-label mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                     {i + 1}
                   </span>
                   {step}
                 </li>
               ))}
             </ol>
-            <div className="mt-4 pt-4 border-t border-[#1F4E79]/10">
-              <p className="text-[10px] font-black text-[#1F4E79] uppercase tracking-widest mb-2">
+            <div className="mt-4 pt-4 border-t border-navy/10">
+              <p className="t-eyebrow text-muted-foreground mb-2">
                 Protocolos aplicados automaticamente
               </p>
               <ul className="grid grid-cols-2 gap-1">
@@ -389,8 +394,8 @@ function PassagemPlantaoPage() {
                   "Correção hiponatremia (máx 10 mEq/24h)",
                   "Alerta candidiase sem antifúngico",
                 ].map((p, i) => (
-                  <li key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
-                    <span className="text-[#1F4E79]">•</span> {p}
+                  <li key={i} className="t-body text-muted-foreground flex gap-1.5">
+                    <span className="text-navy">•</span> {p}
                   </li>
                 ))}
               </ul>
