@@ -44,16 +44,14 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
 
   return (
     <article
-      className="rounded-[2rem] border border-border bg-white p-5 sm:p-6 shadow-sm space-y-5"
+      className="border-border bg-card space-y-5 rounded-3xl border p-5 sm:p-6"
       data-testid={`doc-item-${index}`}
     >
       <header className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <AcaoIcon acao={item.acao} />
           <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Item {index + 1}
-            </div>
+            <div className="t-eyebrow text-muted-foreground">Item {index + 1}</div>
             <ControlledInput
               value={item.nome}
               onValueChange={(v) => set({ nome: v })}
@@ -87,7 +85,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
               key={p.id}
               type="button"
               onClick={() => aplicarPreset(p.id)}
-              className="px-3 py-1.5 rounded-lg border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:border-primary/40 hover:text-primary"
+              className="t-label border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-lg border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               {p.label}
             </button>
@@ -117,9 +115,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
       </div>
 
       <div>
-        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-          Horários (unidades por período)
-        </div>
+        <div className="t-eyebrow text-muted-foreground mb-2">Horários (unidades por período)</div>
         <div className="grid grid-cols-5 gap-2" role="group" aria-label="Horários">
           {HORARIOS.map((h) => {
             const n = item.horarios[h.id] ?? 0;
@@ -134,7 +130,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
                 )}
               >
                 <HorarioIcon horario={h.id} size="md" />
-                <span className="text-[9px] font-black uppercase tracking-wider">{h.curto}</span>
+                <span className="t-eyebrow">{h.curto}</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -190,7 +186,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
           <select
             value={item.acao}
             onChange={(e) => set({ acao: e.target.value as Acao })}
-            className="bg-secondary/40 border border-border rounded-xl px-3 py-3 text-[10px] font-black uppercase"
+            className="bg-secondary/40 border-border t-label text-foreground focus:ring-ring min-h-[2.75rem] rounded-xl border px-3 uppercase focus:ring-2 focus:outline-none"
             aria-label="Forma de uso"
           >
             {ACOES.map((a) => (
@@ -199,7 +195,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground px-2">
+          <label className="t-eyebrow text-muted-foreground flex items-center gap-2 px-2">
             <input
               type="checkbox"
               checked={item.farmaciaPopular}
@@ -212,7 +208,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
       </div>
 
       {med?.alertas?.length ? (
-        <p className="text-[10px] font-bold uppercase tracking-wide text-warning-foreground bg-warning/15 rounded-xl px-4 py-2">
+        <p className="t-body text-foreground bg-warning/15 rounded-xl px-4 py-2">
           ⚠ {med.alertas.join(" ")}
         </p>
       ) : null}

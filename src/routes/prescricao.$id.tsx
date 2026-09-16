@@ -217,7 +217,7 @@ function PrescricaoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
         <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -231,7 +231,7 @@ function PrescricaoPage() {
               <h1 className="text-xl font-black text-foreground tracking-tight uppercase">
                 PRESCRIÇÃO MÉDICA
               </h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+              <p className="t-eyebrow text-muted-foreground">
                 {paciente.name} · LEITO {paciente.bed} · {format(new Date(), "dd/MM/yyyy")}
               </p>
             </div>
@@ -240,13 +240,13 @@ function PrescricaoPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50"
+              className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               <Save className="h-3 w-3" /> {isSaving ? "SALVANDO..." : "SALVAR"}
             </button>
             <button
               onClick={handleCopy}
-              className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+              className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-5 text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
             >
               <Copy className="h-3 w-3" /> COPIAR
             </button>
@@ -285,7 +285,7 @@ function PrescricaoPage() {
                 }
               />
             ))}
-            <button className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground text-[10px] font-bold uppercase">
+            <button className="t-label bg-secondary text-muted-foreground inline-flex min-h-[2.75rem] items-center rounded-xl px-3">
               + ADICIONAR OUTRO
             </button>
           </div>
@@ -317,7 +317,7 @@ function PrescricaoPage() {
                 }
               />
             ))}
-            <button className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground text-[10px] font-bold uppercase">
+            <button className="t-label bg-secondary text-muted-foreground inline-flex min-h-[2.75rem] items-center rounded-xl px-3">
               + ADICIONAR
             </button>
           </div>
@@ -349,7 +349,7 @@ function PrescricaoPage() {
               onClick={() =>
                 setMedicacoes([...medicacoes, { id: Date.now().toString(), text: "" }])
               }
-              className="w-full py-4 border-2 border-dashed border-border rounded-xl text-[10px] font-bold text-muted-foreground uppercase"
+              className="t-body border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               + ADICIONAR MEDICAÇÃO
             </button>
@@ -380,7 +380,7 @@ function PrescricaoPage() {
                 </button>
               </div>
             ))}
-            <button className="w-full py-4 border-2 border-dashed border-ai/30 rounded-xl text-[10px] font-bold text-ai uppercase">
+            <button className="t-body border-ai/30 text-ai hover:border-ai focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none">
               + ADICIONAR ATB
             </button>
           </div>
@@ -427,19 +427,17 @@ function PrescricaoPage() {
         {/* 8. HIDRATAÇÃO */}
         <Section title="8. HIDRATAÇÃO" icon={<Activity className="h-4 w-4" />}>
           <div className="flex items-center gap-4 mb-4">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              ATIVAR:
-            </span>
+            <span className="t-eyebrow text-muted-foreground">ATIVAR:</span>
             <div className="flex bg-secondary rounded-lg p-1">
               <button
                 onClick={() => setHidratacao({ ...hidratacao, active: false })}
-                className={`px-4 py-1.5 rounded-md text-[10px] font-bold ${!hidratacao.active ? "bg-primary text-white" : "text-muted-foreground"}`}
+                className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-md px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${!hidratacao.active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 NÃO
               </button>
               <button
                 onClick={() => setHidratacao({ ...hidratacao, active: true })}
-                className={`px-4 py-1.5 rounded-md text-[10px] font-bold ${hidratacao.active ? "bg-primary text-white" : "text-muted-foreground"}`}
+                className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-md px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${hidratacao.active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 SIM
               </button>
@@ -493,7 +491,7 @@ function PrescricaoPage() {
             ))}
             <button
               onClick={() => setExames([...exames, ""])}
-              className="w-full py-4 border-2 border-dashed border-border rounded-xl text-[10px] font-bold text-muted-foreground uppercase"
+              className="t-body border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               + ADICIONAR EXAME
             </button>
@@ -532,7 +530,7 @@ function PrescricaoPage() {
                 ))}
                 <button
                   onClick={() => setDvas([...dvas, { id: Date.now().toString(), text: "" }])}
-                  className="w-full py-4 border-2 border-dashed border-border rounded-xl text-[10px] font-bold text-muted-foreground uppercase"
+                  className="t-body border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   + ADICIONAR DVA
                 </button>
@@ -562,7 +560,7 @@ function PrescricaoPage() {
                 ))}
                 <button
                   onClick={() => setSedacao([...sedacao, { id: Date.now().toString(), text: "" }])}
-                  className="w-full py-4 border-2 border-dashed border-border rounded-xl text-[10px] font-bold text-muted-foreground uppercase"
+                  className="t-body border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   + ADICIONAR SEDAÇÃO
                 </button>
@@ -574,7 +572,7 @@ function PrescricaoPage() {
         <div className="pt-12 text-center">
           <button
             onClick={() => nav({ to: "/dashboard" })}
-            className="text-[10px] font-black text-muted-foreground hover:text-foreground uppercase tracking-[0.2em] transition-all flex items-center gap-2 mx-auto border-b border-transparent hover:border-muted-foreground"
+            className="t-label text-muted-foreground hover:text-foreground focus-visible:ring-ring mx-auto inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
           </button>
@@ -591,11 +589,9 @@ function Section({ title, icon, children }: { title: string; icon: any; children
         <div className="h-8 w-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground">
           {icon}
         </div>
-        <h2 className="text-[10px] font-black tracking-[0.2em] uppercase text-foreground">
-          {title}
-        </h2>
+        <h2 className="t-title text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[2rem] p-8 shadow-sm">{children}</div>
+      <div className="bg-card border-border rounded-3xl border p-5 sm:p-6">{children}</div>
     </div>
   );
 }
@@ -612,7 +608,7 @@ function Chip({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${selected ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+      className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none ${selected ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"}`}
     >
       {label}
     </button>
@@ -652,4 +648,4 @@ function EditableList({
 }
 
 const inputCls =
-  "w-full bg-secondary/30 border border-border rounded-xl px-5 py-4 text-xs font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+  "w-full min-h-[3rem] bg-secondary/30 border border-border rounded-xl px-4 py-3 text-base font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card transition-colors uppercase";

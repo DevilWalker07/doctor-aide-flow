@@ -460,27 +460,27 @@ function CadastroManualPage() {
           </div>
         </div>
       )}
-      <header className="max-w-5xl mx-auto px-6 h-20 w-full flex items-center justify-between sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
-        <button
-          onClick={() => window.history.back()}
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ChevronLeft className="h-4 w-4" /> VOLTAR
-        </button>
-        <span className="text-xs font-extrabold tracking-[0.2em] uppercase text-primary">
-          {tipo === "admissao" ? "CADASTRO DE ADMISSÃO" : "CADASTRO MANUAL"}
-        </span>
-        <div className="w-16" />
+      <header className="bg-background/90 border-border sticky top-0 z-30 w-full border-b backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
+          <button
+            onClick={() => window.history.back()}
+            aria-label="Voltar"
+            className="touch-target border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <h1 className="t-title text-foreground">
+            {tipo === "admissao" ? "Cadastro de admissão" : "Cadastro manual"}
+          </h1>
+        </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
+      <main className="mx-auto max-w-4xl space-y-5 px-4 py-6 sm:px-6">
         {/* IDENTIFICAÇÃO */}
-        <Section title="IDENTIFICAÇÃO" icon={<User className="h-5 w-5" />}>
+        <Section title="Identificação" icon={<User className="h-5 w-5" />}>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                NOME COMPLETO *
-              </label>
+              <label className="t-label text-muted-foreground">Nome completo *</label>
               <ControlledInput
                 value={form.nome}
                 onValueChange={(v) => setForm({ ...form, nome: v })}
@@ -490,9 +490,7 @@ function CadastroManualPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                  IDADE
-                </label>
+                <label className="t-label text-muted-foreground">Idade</label>
                 <ControlledInput
                   type="number"
                   value={form.idade}
@@ -500,15 +498,13 @@ function CadastroManualPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                  SEXO
-                </label>
+                <label className="t-label text-muted-foreground">Sexo</label>
                 <div className="flex bg-secondary/50 rounded-xl p-1 h-[50px]">
                   {["F", "M"].map((s) => (
                     <button
                       key={s}
                       onClick={() => setForm({ ...form, sexo: s as any })}
-                      className={`flex-1 rounded-lg text-xs font-bold transition-all ${form.sexo === s ? "bg-white text-primary shadow-sm" : "text-muted-foreground"}`}
+                      className={`focus-visible:ring-ring min-h-[2.75rem] flex-1 rounded-lg text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none ${form.sexo === s ? "bg-card text-primary" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       {s === "F" ? "FEM" : "MASC"}
                     </button>
@@ -519,9 +515,7 @@ function CadastroManualPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                LEITO *
-              </label>
+              <label className="t-label text-muted-foreground">Leito *</label>
               <ControlledInput
                 value={form.leito}
                 onValueChange={(v) => setForm({ ...form, leito: v })}
@@ -530,9 +524,7 @@ function CadastroManualPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                SETOR
-              </label>
+              <label className="t-label text-muted-foreground">Setor</label>
               <ControlledInput
                 value={form.setor}
                 onValueChange={(v) => setForm({ ...form, setor: v })}
@@ -540,9 +532,7 @@ function CadastroManualPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                DATA DE ADMISSÃO
-              </label>
+              <label className="t-label text-muted-foreground">Data de admissão</label>
               <ControlledInput
                 type="date"
                 value={form.data_admissao}
@@ -552,9 +542,7 @@ function CadastroManualPage() {
           </div>
           {tipo === "admissao" && (
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-                PROCEDÊNCIA
-              </label>
+              <label className="t-label text-muted-foreground">Procedência</label>
               <ControlledInput
                 value={form.procedencia}
                 onValueChange={(v) => setForm({ ...form, procedencia: v })}
@@ -565,7 +553,7 @@ function CadastroManualPage() {
         </Section>
 
         {/* MOTIVO DA ADMISSÃO & HDA */}
-        <Section title="MOTIVO DA ADMISSÃO" icon={<FileText className="h-5 w-5" />}>
+        <Section title="Motivo da admissão" icon={<FileText className="h-5 w-5" />}>
           <ControlledTextarea
             value={form.motivo_admissao}
             onValueChange={(v) => setForm({ ...form, motivo_admissao: v })}
@@ -573,9 +561,7 @@ function CadastroManualPage() {
             rows={2}
           />
           <div className="space-y-2 pt-4">
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1">
-              HDA (HISTÓRIA DA DOENÇA ATUAL)
-            </label>
+            <label className="t-label text-muted-foreground">História da doença atual</label>
             <ControlledTextarea
               value={form.hda}
               onValueChange={(v) => setForm({ ...form, hda: v })}
@@ -586,20 +572,20 @@ function CadastroManualPage() {
         </Section>
 
         {/* COMORBIDADES */}
-        <Section title="COMORBIDADES" icon={<Stethoscope className="h-5 w-5" />}>
+        <Section title="Comorbidades" icon={<Stethoscope className="h-5 w-5" />}>
           <div className="flex flex-wrap gap-2">
             {PREDEFINED_COMORBIDITIES.map((c) => (
               <button
                 key={c}
                 onClick={() => toggleComorbidity(c)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${form.comorbidades.includes(c) ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-muted-foreground border-border hover:border-primary/40"}`}
+                className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none ${form.comorbidades.includes(c) ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"}`}
               >
                 {c}
               </button>
             ))}
             <button
               onClick={() => setShowCustomComorbidity(!showCustomComorbidity)}
-              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest bg-secondary text-muted-foreground border border-border"
+              className="t-label bg-secondary text-muted-foreground border-border inline-flex min-h-[2.75rem] items-center rounded-xl border px-3"
             >
               + OUTRA
             </button>
@@ -624,7 +610,7 @@ function CadastroManualPage() {
         </Section>
 
         {/* LISTA DE PROBLEMAS */}
-        <Section title="LISTA DE PROBLEMAS" icon={<Activity className="h-5 w-5" />}>
+        <Section title="Lista de problemas" icon={<Activity className="h-5 w-5" />}>
           <div className="space-y-3">
             {form.lista_de_problemas.map((p) => (
               <div key={p.id} className="flex gap-2">
@@ -646,13 +632,14 @@ function CadastroManualPage() {
               onClick={() => addItem("lista_de_problemas")}
               className="w-full py-4 border-2 border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-primary transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4" /> ADICIONAR PROBLEMA
+              <Plus className="h-4 w-4" />
+              Adicionar problema
             </button>
           </div>
         </Section>
 
         {/* ANTIBIÓTICOS */}
-        <Section title="ANTIBIÓTICOS" icon={<Pill className="h-5 w-5" />}>
+        <Section title="Antibióticos" icon={<Pill className="h-5 w-5" />}>
           <div className="space-y-6">
             {form.antibioticos.map((atb, idx) => (
               <div
@@ -672,8 +659,8 @@ function CadastroManualPage() {
                 </button>
                 <div className="grid md:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                      NOME DO ATB
+                    <label className="t-label text-muted-foreground font-normal">
+                      Nome do antibiótico
                     </label>
                     <ControlledInput
                       value={atb.nome}
@@ -687,9 +674,7 @@ function CadastroManualPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                        DOSE
-                      </label>
+                      <label className="t-label text-muted-foreground font-normal">Dose</label>
                       <ControlledInput
                         value={atb.dose}
                         onValueChange={(v) => {
@@ -701,8 +686,8 @@ function CadastroManualPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                        DATA INÍCIO
+                      <label className="t-label text-muted-foreground font-normal">
+                        Data de início
                       </label>
                       <ControlledInput
                         type="date"
@@ -718,10 +703,8 @@ function CadastroManualPage() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                      VIA
-                    </label>
-                    <div className="flex bg-white rounded-xl p-1 border border-border">
+                    <label className="t-label text-muted-foreground font-normal">VIA</label>
+                    <div className="bg-secondary border-border flex rounded-xl border p-1">
                       {["EV", "VO", "IM", "SC", "Inalatória"].map((v) => (
                         <button
                           key={v}
@@ -730,7 +713,7 @@ function CadastroManualPage() {
                             newList[idx].via = v;
                             setForm({ ...form, antibioticos: newList });
                           }}
-                          className={`flex-1 py-2 rounded-lg text-[9px] font-bold transition-all ${atb.via === v ? "bg-primary text-white" : "text-muted-foreground hover:bg-secondary"}`}
+                          className={`t-label focus-visible:ring-ring min-h-[2.75rem] flex-1 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none ${atb.via === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
                         >
                           {v}
                         </button>
@@ -738,9 +721,7 @@ function CadastroManualPage() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                      FREQUÊNCIA
-                    </label>
+                    <label className="t-label text-muted-foreground font-normal">Frequência</label>
                     <select
                       value={atb.frequencia}
                       onChange={(e) => {
@@ -764,29 +745,29 @@ function CadastroManualPage() {
               onClick={addATB}
               className="w-full py-4 border-2 border-dashed border-ai/30 rounded-xl text-xs font-bold text-ai hover:bg-ai/5 transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4" /> ADICIONAR ANTIBIÓTICO
+              <Plus className="h-4 w-4" />
+              Adicionar antibiótico
             </button>
           </div>
         </Section>
 
         {/* MEDICAÇÕES */}
-        <Section title="MEDICAÇÕES EM USO" icon={<Pill className="h-5 w-5" />}>
+        <Section title="Medicações em uso" icon={<Pill className="h-5 w-5" />}>
           <div className="flex justify-between items-center mb-6">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              LISTA DE PRESCRIÇÃO
-            </p>
+            <p className="t-label text-muted-foreground">Lista de prescrição</p>
             <button
               onClick={() => triggerPhotoExtraction("medicacoes")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-ai/10 text-ai text-[10px] font-black uppercase tracking-widest border border-ai/20 hover:bg-ai/20 transition-all"
+              className="t-label bg-ai/10 text-ai border-ai/20 hover:bg-ai/20 focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Activity className="h-3.5 w-3.5" /> EXTRAIR DE FOTO/PRINT
+              <Activity className="h-3.5 w-3.5" />
+              Ler por foto ou print
             </button>
           </div>
 
           <div className="space-y-6">
             {PREDEFINED_MEDS.map((group) => (
               <div key={group.label} className="space-y-2">
-                <p className="text-[9px] font-bold text-slate-400 ml-1">{group.label}</p>
+                <p className="t-label text-muted-foreground font-normal">{group.label}</p>
                 <div className="flex flex-wrap gap-2">
                   {group.items.map((item) => (
                     <button
@@ -800,7 +781,7 @@ function CadastroManualPage() {
                           ],
                         }))
                       }
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 bg-white hover:border-primary/40 hover:bg-slate-50"
+                      className="t-label border-border bg-card text-foreground hover:border-primary/40 hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       + {item}
                     </button>
@@ -810,7 +791,7 @@ function CadastroManualPage() {
             ))}
           </div>
 
-          <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
+          <div className="border-border mt-6 space-y-3 border-t pt-6">
             {form.medicacoes.map((m) => (
               <div key={m.id} className="flex gap-2">
                 <ControlledInput
@@ -831,22 +812,22 @@ function CadastroManualPage() {
               onClick={() => addItem("medicacoes")}
               className="w-full py-4 border-2 border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground hover:border-primary/40 transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4" /> ADICIONAR MEDICAÇÃO MANUAL
+              <Plus className="h-4 w-4" />
+              Adicionar medicação
             </button>
           </div>
         </Section>
 
         {/* LABORATÓRIOS */}
-        <Section title="LABORATÓRIOS" icon={<Activity className="h-5 w-5" />}>
+        <Section title="Laboratório" icon={<Activity className="h-5 w-5" />}>
           <div className="flex justify-between items-center mb-6">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              RESULTADOS E EVOLUÇÃO
-            </p>
+            <p className="t-label text-muted-foreground">Resultados e evolução</p>
             <button
               onClick={() => triggerPhotoExtraction("laboratorios")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary/20 transition-all"
+              className="t-label bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <FlaskConical className="h-3.5 w-3.5" /> EXTRAIR DE EXAME (FOTO/PDF)
+              <FlaskConical className="h-3.5 w-3.5" />
+              Ler exame por foto ou PDF
             </button>
           </div>
 
@@ -908,27 +889,26 @@ function CadastroManualPage() {
               }
               className="w-full py-4 border-2 border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground hover:border-primary/40 transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4" /> ADICIONAR OUTRA DATA
+              <Plus className="h-4 w-4" />
+              Adicionar outra data
             </button>
           </div>
         </Section>
 
         {/* EXAME FÍSICO */}
-        <Section title="EXAME FÍSICO" icon={<Thermometer className="h-5 w-5" />}>
+        <Section title="Exame físico" icon={<Thermometer className="h-5 w-5" />}>
           <div className="space-y-8">
             {[
-              { key: "estado_geral", label: "ESTADO GERAL" },
-              { key: "acv", label: "ACV (CARDIO-VASCULAR)" },
-              { key: "ar", label: "AR (RESPIRATÓRIO)" },
-              { key: "abdome", label: "ABDOME" },
-              { key: "neuro", label: "NEUROLÓGICO" },
-              { key: "extremidades", label: "EXTREMIDADES / MMII" },
-              { key: "pele", label: "PELE / MUCOSAS" },
+              { key: "estado_geral", label: "Estado geral" },
+              { key: "acv", label: "ACV — cardiovascular" },
+              { key: "ar", label: "AR — respiratório" },
+              { key: "abdome", label: "Abdome" },
+              { key: "neuro", label: "Neurológico" },
+              { key: "extremidades", label: "Extremidades e MMII" },
+              { key: "pele", label: "Pele e mucosas" },
             ].map((field) => (
               <div key={field.key} className="space-y-3">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  {field.label}
-                </label>
+                <label className="t-label text-muted-foreground">{field.label}</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {(PREDEFINED_PHYSICAL as any)[field.key]?.map((phrase: string) => (
                     <button
@@ -939,9 +919,13 @@ function CadastroManualPage() {
                           exame_fisico: { ...form.exame_fisico, [field.key]: phrase.toUpperCase() },
                         })
                       }
-                      className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-500 bg-slate-50/50 hover:border-primary/30 transition-all"
+                      title={phrase}
+                      className="t-label border-border bg-secondary text-muted-foreground hover:border-primary/30 focus-visible:ring-ring inline-flex min-h-[2.75rem] max-w-full items-center rounded-xl border px-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
-                      + {phrase.split(",")[0]}...
+                      {/* Mostrava só o texto antes da primeira vírgula, então
+                          três frases começando com "REG" viravam três chips
+                          idênticos. Agora mostra a frase e deixa o CSS cortar. */}
+                      <span className="line-clamp-2">{phrase}</span>
                     </button>
                   ))}
                 </div>
@@ -960,32 +944,30 @@ function CadastroManualPage() {
 
         {/* CAMPOS EXTRAS (UTI / PEDIATRIA) */}
         {tipoEvolucao === "uti" && (
-          <Section title="CAMPOS UTI" icon={<Wind className="h-5 w-5" />}>
+          <Section title="Campos da UTI" icon={<Wind className="h-5 w-5" />}>
             <div className="space-y-10">
-              <div className="flex items-center justify-between bg-slate-50 p-6 rounded-3xl border border-slate-200">
+              <div className="bg-secondary border-border flex items-center justify-between rounded-3xl border p-5">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                  <div className="bg-card border-border text-primary flex h-12 w-12 items-center justify-center rounded-2xl border">
                     <Wind className="h-6 w-6" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 block mb-0.5">
-                      VENTILAÇÃO MECÂNICA
-                    </span>
-                    <p className="text-[9px] font-bold text-slate-400">
+                    <span className="t-label text-foreground mb-1 block">Ventilação mecânica</span>
+                    <p className="t-label text-muted-foreground font-normal">
                       Marque se o paciente está entubado ou em VNI
                     </p>
                   </div>
                 </div>
-                <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 shadow-sm">
+                <div className="bg-card border-border flex rounded-xl border p-1.5">
                   <button
                     onClick={() => setForm({ ...form, uti: { ...form.uti, vm: false } })}
-                    className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${!form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-lg px-5 transition-colors focus-visible:ring-2 focus-visible:outline-none ${!form.uti.vm ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     NÃO
                   </button>
                   <button
                     onClick={() => setForm({ ...form, uti: { ...form.uti, vm: true } })}
-                    className={`px-6 py-2.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${form.uti.vm ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400"}`}
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-lg px-5 transition-colors focus-visible:ring-2 focus-visible:outline-none ${form.uti.vm ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     SIM
                   </button>
@@ -999,7 +981,7 @@ function CadastroManualPage() {
                       <button
                         key={m}
                         onClick={() => setForm({ ...form, uti: { ...form.uti, modo: m } })}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${form.uti.modo === m ? "bg-primary text-white border-primary" : "bg-white text-slate-500 border-slate-200 hover:border-primary/30"}`}
+                        className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none ${form.uti.modo === m ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/30"}`}
                       >
                         {m}
                       </button>
@@ -1013,9 +995,7 @@ function CadastroManualPage() {
                       { k: "fr", l: "FR" },
                     ].map((v) => (
                       <div key={v.k} className="space-y-1.5">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                          {v.l}
-                        </label>
+                        <label className="t-label text-muted-foreground">{v.l}</label>
                         <ControlledInput
                           value={(form.uti as any)[v.k]}
                           onValueChange={(val) =>
@@ -1029,13 +1009,11 @@ function CadastroManualPage() {
                 </div>
               )}
 
-              <div className="grid md:grid-cols-2 gap-10 border-t border-slate-100 pt-10">
+              <div className="border-border grid gap-6 border-t pt-6 md:grid-cols-2">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                      DROGAS VASOATIVAS
-                    </label>
-                    <div className="h-px flex-1 bg-slate-100 mx-4" />
+                    <label className="t-label text-foreground">Drogas vasoativas</label>
+                    <div className="bg-border mx-4 h-px flex-1" />
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {PREDEFINED_DVA.map((d) => (
@@ -1053,7 +1031,7 @@ function CadastroManualPage() {
                             },
                           })
                         }
-                        className="px-3 py-1.5 rounded-lg border border-slate-100 text-[9px] font-bold text-slate-400 hover:text-primary hover:border-primary/30"
+                        className="t-label border-border text-muted-foreground hover:text-primary hover:border-primary/30 focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       >
                         + {d}
                       </button>
@@ -1088,7 +1066,7 @@ function CadastroManualPage() {
                               },
                             })
                           }
-                          className="p-4 rounded-xl bg-slate-50 text-slate-400 hover:text-destructive transition-colors"
+                          className="touch-target bg-secondary text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1104,7 +1082,7 @@ function CadastroManualPage() {
                           },
                         })
                       }
-                      className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 hover:text-primary hover:border-primary/40 transition-all"
+                      className="t-body border-border text-muted-foreground hover:text-primary hover:border-primary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-center rounded-2xl border-2 border-dashed transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       + ADICIONAR DVA MANUAL
                     </button>
@@ -1112,8 +1090,8 @@ function CadastroManualPage() {
                 </div>
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">
-                      BALANÇO HÍDRICO 24H (ML)
+                    <label className="t-label text-foreground mb-1 block">
+                      Balanço hídrico 24 h (mL)
                     </label>
                     <ControlledInput
                       type="number"
@@ -1123,8 +1101,8 @@ function CadastroManualPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-1">
-                      SEDAÇÃO / ANALGESIA
+                    <label className="t-label text-foreground mb-1 block">
+                      Sedação e analgesia
                     </label>
                     <ControlledInput
                       value={form.uti.sedacao}
@@ -1140,12 +1118,10 @@ function CadastroManualPage() {
         )}
 
         {tipoEvolucao === "enfermaria_pediatrica" && (
-          <Section title="CAMPOS PEDIATRIA" icon={<Baby className="h-5 w-5" />}>
+          <Section title="Campos da pediatria" icon={<Baby className="h-5 w-5" />}>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                  PESO (KG)
-                </label>
+                <label className="t-label text-muted-foreground font-normal">Peso (kg)</label>
                 <ControlledInput
                   type="number"
                   value={form.pediatria.peso}
@@ -1155,9 +1131,7 @@ function CadastroManualPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                  ALTURA (CM)
-                </label>
+                <label className="t-label text-muted-foreground font-normal">Altura (cm)</label>
                 <ControlledInput
                   type="number"
                   value={form.pediatria.altura}
@@ -1167,9 +1141,7 @@ function CadastroManualPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-muted-foreground uppercase">
-                  IDADE EM MESES
-                </label>
+                <label className="t-label text-muted-foreground font-normal">Idade em meses</label>
                 <ControlledInput
                   type="number"
                   value={form.pediatria.meses}
@@ -1181,15 +1153,13 @@ function CadastroManualPage() {
             </div>
             <div className="grid md:grid-cols-2 gap-8 pt-6">
               <div className="space-y-4">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-                  ALEITAMENTO MATERNO
-                </label>
+                <label className="t-label text-muted-foreground">Aleitamento materno</label>
                 <div className="flex bg-secondary/30 rounded-xl p-1 border border-border">
                   <button
                     onClick={() =>
                       setForm({ ...form, pediatria: { ...form.pediatria, aleitamento: false } })
                     }
-                    className={`flex-1 py-3 rounded-lg text-[10px] font-bold transition-all ${!form.pediatria.aleitamento ? "bg-primary text-white" : "text-muted-foreground"}`}
+                    className={`t-label focus-visible:ring-ring min-h-[2.75rem] flex-1 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none ${!form.pediatria.aleitamento ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     NÃO
                   </button>
@@ -1197,16 +1167,14 @@ function CadastroManualPage() {
                     onClick={() =>
                       setForm({ ...form, pediatria: { ...form.pediatria, aleitamento: true } })
                     }
-                    className={`flex-1 py-3 rounded-lg text-[10px] font-bold transition-all ${form.pediatria.aleitamento ? "bg-primary text-white" : "text-muted-foreground"}`}
+                    className={`t-label focus-visible:ring-ring min-h-[2.75rem] flex-1 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none ${form.pediatria.aleitamento ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     SIM
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-                  DESENVOLVIMENTO
-                </label>
+                <label className="t-label text-muted-foreground">Desenvolvimento</label>
                 <ControlledTextarea
                   value={form.pediatria.desenvolvimento}
                   onValueChange={(v) =>
@@ -1220,16 +1188,15 @@ function CadastroManualPage() {
         )}
 
         {/* CONDUTAS */}
-        <Section title="PLANO TERAPÊUTICO / CONDUTAS" icon={<Save className="h-5 w-5" />}>
+        <Section title="Plano terapêutico" icon={<Save className="h-5 w-5" />}>
           <div className="flex justify-between items-center mb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              DIGITE E DÊ ENTER PARA NUMERAR
-            </p>
+            <p className="t-label text-muted-foreground">Digite e dê Enter para numerar</p>
             <button
               onClick={handleAISuggestions}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-ai text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-0.5 transition-all"
+              className="t-label bg-ai focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl px-4 text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Activity className="h-3.5 w-3.5" /> IA SUGERIR CONDUTAS
+              <Activity className="h-3.5 w-3.5" />
+              Sugerir condutas com IA
             </button>
           </div>
           <ControlledTextarea
@@ -1240,16 +1207,16 @@ function CadastroManualPage() {
             placeholder="1. Vigiar balanço..."
             uppercase
           />
-          <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-3">
-            <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-            <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+          <div className="bg-secondary border-border mt-4 flex items-start gap-3 rounded-2xl border p-4">
+            <Info className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+            <p className="t-body text-muted-foreground">
               Dica: Pressione ENTER para criar automaticamente o próximo item da lista.
             </p>
           </div>
         </Section>
 
         {/* PENDÊNCIAS */}
-        <Section title="PENDÊNCIAS" icon={<AlertTriangle className="h-5 w-5" />}>
+        <Section title="Pendências" icon={<AlertTriangle className="h-5 w-5" />}>
           <div className="space-y-3">
             {form.pendencias.map((p) => (
               <div key={p.id} className="flex gap-2">
@@ -1274,7 +1241,8 @@ function CadastroManualPage() {
               onClick={() => addItem("pendencias")}
               className="w-full py-4 border-2 border-dashed border-amber-500/30 rounded-xl text-xs font-bold text-amber-600 hover:bg-amber-500/5 transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="h-4 w-4" /> ADICIONAR PENDÊNCIA
+              <Plus className="h-4 w-4" />
+              Adicionar pendência
             </button>
           </div>
         </Section>
@@ -1285,17 +1253,17 @@ function CadastroManualPage() {
             <button
               disabled={saving}
               onClick={() => handleSave(false)}
-              className="flex-1 py-5 rounded-2xl border border-border font-extrabold uppercase tracking-widest text-[10px] text-muted-foreground hover:bg-secondary transition-all disabled:opacity-50"
+              className="border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center rounded-2xl border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
-              {saving ? "SALVANDO..." : id ? "ATUALIZAR PACIENTE" : "SALVAR PACIENTE"}
+              {saving ? "Salvando…" : id ? "Atualizar paciente" : "Salvar paciente"}
             </button>
             <button
               disabled={saving}
               onClick={() => handleSave(true)}
-              className="flex-[2] py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] flex-[2] items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               <Save className="h-4 w-4" />{" "}
-              {id ? "ATUALIZAR E GERAR EVOLUÇÃO" : "SALVAR E GERAR EVOLUÇÃO"}
+              {id ? "Atualizar e gerar evolução" : "Salvar e gerar evolução"}
             </button>
           </div>
         </footer>
@@ -1313,11 +1281,9 @@ function Section({ title, icon, children }: { title: string; icon: any; children
         <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
           {icon}
         </div>
-        <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">
-          {title}
-        </h2>
+        <h2 className="t-title text-foreground">{title}</h2>
       </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm space-y-6">
+      <div className="bg-card border-border space-y-5 rounded-3xl border p-5 sm:p-6">
         {children}
       </div>
     </div>
@@ -1325,6 +1291,6 @@ function Section({ title, icon, children }: { title: string; icon: any; children
 }
 
 const inputCls =
-  "w-full bg-secondary/40 border border-border rounded-xl px-5 py-4 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white transition-all uppercase";
+  "w-full min-h-[3rem] bg-secondary/40 border border-border rounded-xl px-4 py-3 text-base font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card transition-colors uppercase";
 const textareaCls =
-  "w-full bg-secondary/40 border border-border rounded-2xl px-5 py-5 text-sm font-bold placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white leading-relaxed transition-all uppercase";
+  "w-full bg-secondary/40 border border-border rounded-2xl px-4 py-4 text-base font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card leading-relaxed transition-colors uppercase";

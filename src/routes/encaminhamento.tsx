@@ -200,16 +200,14 @@ function EncaminhamentoPage() {
           <Section title="Conteúdo clínico" icon={<FileText className="h-4 w-4" />}>
             <div className="space-y-4">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-                  Hipóteses diagnósticas
-                </div>
+                <div className="t-eyebrow text-muted-foreground mb-2">Hipóteses diagnósticas</div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {form.hipoteses.map((h, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => set({ hipoteses: form.hipoteses.filter((_, j) => j !== i) })}
-                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold uppercase"
+                      className="t-label bg-primary/10 text-primary inline-flex items-center rounded-lg px-3 py-1.5"
                       aria-label={`Remover hipótese ${h}`}
                     >
                       {h} ×
@@ -228,7 +226,7 @@ function EncaminhamentoPage() {
                   <button
                     type="button"
                     onClick={addHipotese}
-                    className="px-4 rounded-xl border border-border text-[10px] font-black uppercase"
+                    className="t-label border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Adicionar
                   </button>
@@ -286,7 +284,7 @@ function EncaminhamentoPage() {
                 <button
                   type="button"
                   onClick={() => setTextoManual(null)}
-                  className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                  className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Voltar ao texto automático
                 </button>

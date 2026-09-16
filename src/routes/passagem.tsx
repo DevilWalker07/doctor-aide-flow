@@ -188,7 +188,7 @@ function PassagemPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -201,7 +201,7 @@ function PassagemPage() {
               <h1 className="text-xl font-black text-foreground uppercase tracking-tight">
                 MAPA DE PASSAGEM
               </h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+              <p className="t-eyebrow text-muted-foreground">
                 {shiftData?.setor || "Setor"} · {format(new Date(), "dd/MM/yyyy")}
               </p>
             </div>
@@ -209,14 +209,14 @@ function PassagemPage() {
           <div className="flex gap-3">
             <button
               onClick={handleExportPDF}
-              className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2"
+              className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Download className="h-3 w-3" /> EXPORTAR PDF
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-5 text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               {isSaving ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -230,9 +230,9 @@ function PassagemPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="bg-white border border-border rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="bg-card border-border overflow-hidden rounded-3xl border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-secondary/50 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+            <thead className="bg-secondary t-label text-muted-foreground">
               <tr>
                 <th className="p-4 border-b border-border">Paciente/Leito</th>
                 <th className="p-4 border-b border-border">Problemas</th>

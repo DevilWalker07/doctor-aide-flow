@@ -359,7 +359,7 @@ function EvolucaoPage() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
         <div className="absolute top-0 left-0 w-1 bg-navy h-full" />
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -373,7 +373,7 @@ function EvolucaoPage() {
               <h1 className="text-xl font-black text-foreground tracking-tight uppercase">
                 {paciente.name}
               </h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+              <p className="t-eyebrow text-muted-foreground">
                 LEITO {paciente.bed} · D{dih} · {tipoUnidade.replace("_", " ").toUpperCase()}
               </p>
             </div>
@@ -383,7 +383,7 @@ function EvolucaoPage() {
               onClick={handleSave}
               disabled={!evolutionText || isSaving}
               data-testid="evolution-save"
-              className="px-6 py-2.5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all flex items-center gap-2 disabled:opacity-50"
+              className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               {isSaving ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -395,7 +395,7 @@ function EvolucaoPage() {
             <button
               onClick={handleCopy}
               disabled={!evolutionText}
-              className="px-6 py-2.5 rounded-xl bg-navy text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-5 text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               <Copy className="h-3 w-3" /> COPIAR
             </button>
@@ -410,33 +410,27 @@ function EvolucaoPage() {
             <SectionCard title="DADOS CLÍNICOS" icon={<Activity className="h-4 w-4" />}>
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2">
-                    LABS RECENTES
-                  </h4>
+                  <h4 className="t-eyebrow text-muted-foreground mb-2">LABS RECENTES</h4>
                   {paciente.data?.lab ? (
-                    <div className="p-4 bg-secondary/30 rounded-2xl border border-border text-[11px] font-bold text-foreground leading-relaxed uppercase">
+                    <div className="bg-secondary border-border t-body text-foreground rounded-2xl border p-4 uppercase">
                       {paciente.data.lab.formatted || "Aguardando resultados."}
                     </div>
                   ) : (
-                    <p className="text-[10px] italic text-muted-foreground">Nenhum laboratório.</p>
+                    <p className="t-body text-muted-foreground italic">Nenhum laboratório.</p>
                   )}
                 </div>
 
                 <div>
-                  <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2">
-                    ANTIBIÓTICOS
-                  </h4>
+                  <h4 className="t-eyebrow text-muted-foreground mb-2">ANTIBIÓTICOS</h4>
                   {paciente.data?.abx?.length > 0 ? (
                     <div className="space-y-2">
                       {paciente.data.abx.map((atb: any, i: number) => (
                         <div
                           key={i}
-                          className="flex justify-between items-center p-3 bg-white border border-border rounded-xl"
+                          className="bg-card border-border flex items-center justify-between rounded-xl border p-3"
                         >
-                          <span className="text-[10px] font-black text-foreground uppercase">
-                            {atb.name}
-                          </span>
-                          <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded">
+                          <span className="t-label text-foreground">{atb.name}</span>
+                          <span className="t-label text-primary bg-primary/10 rounded px-2 py-0.5">
                             {(() => {
                               try {
                                 const d = parseISO(atb.d0);
@@ -451,26 +445,24 @@ function EvolucaoPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[10px] italic text-muted-foreground">Sem ATB.</p>
+                    <p className="t-body text-muted-foreground italic">Sem ATB.</p>
                   )}
                 </div>
 
                 <div>
-                  <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2">
-                    PENDÊNCIAS
-                  </h4>
+                  <h4 className="t-eyebrow text-muted-foreground mb-2">PENDÊNCIAS</h4>
                   <div className="space-y-2">
                     {paciente.pendingIssues?.length > 0 ? (
                       paciente.pendingIssues.map((p: string, i: number) => (
                         <div
                           key={i}
-                          className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[10px] font-bold text-amber-900 uppercase"
+                          className="t-body text-foreground flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3"
                         >
                           <AlertTriangle className="h-3 w-3 text-amber-500" /> {p}
                         </div>
                       ))
                     ) : (
-                      <p className="text-[10px] italic text-muted-foreground text-emerald-600 font-bold uppercase tracking-widest flex items-center gap-2">
+                      <p className="t-body flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
                         <Check className="h-3 w-3" /> Nenhuma pendência.
                       </p>
                     )}
@@ -482,24 +474,24 @@ function EvolucaoPage() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => nav({ to: "/prescricao/$id", params: { id } })}
-                className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group"
+                className="border-border bg-card hover:border-primary hover:bg-primary/5 focus-visible:ring-ring group flex min-h-[5.5rem] flex-col items-center justify-center rounded-3xl border p-5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <Pill className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2" />
-                <span className="text-[9px] font-black uppercase tracking-widest">PRESCRIÇÃO</span>
+                <span className="t-eyebrow">PRESCRIÇÃO</span>
               </button>
               <button
                 onClick={() => nav({ to: "/dashboard" })}
-                className="flex flex-col items-center justify-center p-6 bg-white border border-border rounded-3xl hover:border-primary hover:bg-primary/5 transition-all group"
+                className="border-border bg-card hover:border-primary hover:bg-primary/5 focus-visible:ring-ring group flex min-h-[5.5rem] flex-col items-center justify-center rounded-3xl border p-5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <ArrowRight className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2" />
-                <span className="text-[9px] font-black uppercase tracking-widest">PASSAGEM</span>
+                <span className="t-eyebrow">PASSAGEM</span>
               </button>
             </div>
           </aside>
 
           {/* ÁREA PRINCIPAL */}
           <div className="space-y-6 order-1 lg:order-2">
-            <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm flex flex-col min-h-[600px]">
+            <div className="bg-card border-border flex min-h-[600px] flex-col rounded-3xl border p-5 sm:p-6">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-2xl bg-ai/10 flex items-center justify-center text-ai border border-ai/20">
@@ -509,7 +501,7 @@ function EvolucaoPage() {
                     <h2 className="text-xs font-black uppercase tracking-[0.2em]">
                       GERADOR DE EVOLUÇÃO IA
                     </h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    <p className="t-label text-muted-foreground font-normal">
                       {tipoUnidade.replace("_", " ")}
                     </p>
                   </div>
@@ -518,7 +510,7 @@ function EvolucaoPage() {
                   onClick={handleGenerate}
                   disabled={isGenerating}
                   data-testid="evolution-generate"
-                  className="px-8 py-4 rounded-2xl bg-ai text-white text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-ai/20 hover:shadow-ai/40 hover:-translate-y-1 transition-all disabled:opacity-50 flex items-center gap-3"
+                  className="bg-ai focus-visible:ring-ring inline-flex min-h-[3rem] items-center gap-2 rounded-2xl px-6 text-base font-bold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                 >
                   {isGenerating ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -616,7 +608,7 @@ function EvolucaoPage() {
 
               <div className="flex-1 relative">
                 {isGenerating && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-ai/40">
+                  <div className="bg-background/80 border-ai/40 absolute inset-0 z-10 flex flex-col items-center justify-center rounded-3xl border border-dashed backdrop-blur-sm">
                     <Loader2 className="h-12 w-12 text-ai animate-spin mb-6" />
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-ai animate-pulse">
                       ESTRUTURANDO PRONTUÁRIO...
@@ -653,12 +645,10 @@ function EvolucaoPage() {
 
 function SectionCard({ title, icon, children }: { title: string; icon: any; children: any }) {
   return (
-    <div className="bg-white border border-border rounded-[2rem] overflow-hidden shadow-sm">
+    <div className="bg-card border-border overflow-hidden rounded-3xl border">
       <header className="px-6 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
         <div className="text-muted-foreground">{icon}</div>
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">
-          {title}
-        </h3>
+        <h3 className="t-title text-foreground">{title}</h3>
       </header>
       <div className="p-6">{children}</div>
     </div>
@@ -667,10 +657,8 @@ function SectionCard({ title, icon, children }: { title: string; icon: any; chil
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white border border-border rounded-2xl p-4 text-center shadow-sm">
-      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-        {label}
-      </p>
+    <div className="bg-card border-border rounded-2xl border p-4 text-center">
+      <p className="t-eyebrow text-muted-foreground mb-1">{label}</p>
       <p className="text-lg font-black text-foreground">{value}</p>
     </div>
   );

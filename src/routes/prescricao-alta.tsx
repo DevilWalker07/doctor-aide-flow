@@ -209,7 +209,7 @@ function PrescricaoAltaPage() {
             className="p-0 bg-transparent border-0 shadow-none space-y-4"
           >
             {itens.length === 0 && (
-              <p className="text-xs font-bold text-muted-foreground uppercase text-center py-6 bg-white border border-dashed border-border rounded-[2rem]">
+              <p className="t-body text-muted-foreground border-border rounded-2xl border border-dashed py-6 text-center">
                 Nenhum medicamento ainda. Busque acima ou use "Sugerir com IA".
               </p>
             )}

@@ -92,9 +92,7 @@ function OrientacoesPage() {
                 if (!lista.length) return null;
                 return (
                   <div key={cat}>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-                      {cat}
-                    </div>
+                    <div className="t-eyebrow text-muted-foreground mb-2">{cat}</div>
                     <div className="flex flex-wrap gap-2">
                       {lista.map((o) => (
                         <Chip
@@ -142,7 +140,7 @@ function OrientacoesPage() {
               <button
                 type="button"
                 onClick={addExtra}
-                className="px-4 rounded-xl border border-border text-[10px] font-black uppercase"
+                className="t-label border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 Adicionar
               </button>
