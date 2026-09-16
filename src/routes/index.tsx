@@ -178,9 +178,7 @@ function HomePage() {
 
       <header className="relative px-8 py-10 flex items-center justify-between max-w-7xl mx-auto w-full z-10">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-navy text-white flex items-center justify-center shadow-2xl shadow-navy/20">
-            <Stethoscope className="h-6 w-6" />
-          </div>
+          <img src="/logo.png" alt="Medfluxo" className="h-12 w-12 rounded-2xl shadow-2xl shadow-navy/20" />
           <div>
             <span className="block font-black tracking-tight text-foreground text-xl leading-none">MEDFLUXO</span>
             <span className="text-[9px] font-black tracking-[0.3em] uppercase text-muted-foreground mt-1">SISTEMA MÉDICO INTELIGENTE</span>

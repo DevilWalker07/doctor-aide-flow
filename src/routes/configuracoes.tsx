@@ -317,9 +317,7 @@ function SettingsPage() {
          {/* 4. SOBRE O APP */}
          <Section title="SOBRE O APP" icon={<Info className="h-5 w-5" />}>
             <div className="text-center space-y-4">
-               <div className="h-20 w-20 bg-navy rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-navy/20">
-                  <span className="text-2xl font-black text-white italic">MF</span>
-               </div>
+               <img src="/logo.png" alt="Medfluxo" className="h-20 w-20 rounded-[2rem] mx-auto shadow-2xl shadow-navy/20" />
                <div>
                   <h3 className="text-lg font-black text-foreground tracking-tight">MEDFLUXO — FASE 2</h3>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ASSISTENTE CLÍNICO INTELIGENTE · VERSÃO 2.0</p>
