@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Copy, LogOut, RefreshCw, Settings2, WifiOff, X } from "lucide-react";
+import { Copy, LogIn, LogOut, RefreshCw, Settings2, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AmbienteMatrix } from "@/components/hub/AmbienteMatrix";
+import { LocalPicker } from "@/components/hub/LocalPicker";
 import { PlantaoPanel, type PlantaoAtivoCtx } from "@/components/hub/PlantaoPanel";
 import { QuickActions } from "@/components/hub/QuickActions";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,7 +42,8 @@ function saudacao() {
 function HubPage() {
   const { userId } = useSupabaseUser();
   const nav = useNavigate();
-  const { signOut } = useAuth();
+  const auth = useAuth();
+  const { signOut } = auth;
   useEnsureProfile();
 
   const [nomeMedico, setNomeMedico] = useState(() => storage.getNomeMedico());
@@ -61,13 +62,6 @@ function HubPage() {
   const [selectedHandoff, setSelectedHandoff] = useState<string | null>(null);
   const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [carregando, setCarregando] = useState(() => {
-    try {
-      return !localStorage.getItem("da_plantao_ativo");
-    } catch {
-      return true;
-    }
-  });
   const [offline, setOffline] = useState(false);
   const [ultimoAmbiente] = useState(() => {
     try {
@@ -78,10 +72,8 @@ function HubPage() {
   });
 
   useEffect(() => {
-    if (!userId) {
-      setCarregando(false);
-      return;
-    }
+    // Sem conta não existe plantão a carregar.
+    if (!userId || (auth.configured && !auth.session)) return;
     let cancelled = false;
 
     async function load() {
@@ -147,22 +139,17 @@ function HubPage() {
           if (!cancelled) setOffline(true);
         }
       }
-
-      if (!cancelled) setCarregando(false);
     }
 
+    // Não há estado de carregamento: a tela nasce com o que está em cache e o
+    // card só aparece quando há plantão de verdade. Um esqueleto aqui prometia
+    // conteúdo que pode não existir — e ficava preso quando o cliente do
+    // Supabase pendurava sem rejeitar.
     load();
-    // Rede pendurada não deixa o médico olhando esqueleto: depois de 6s a tela
-    // mostra o que tem em cache.
-    const destravar = setTimeout(() => {
-      if (!cancelled) setCarregando(false);
-    }, 6000);
-
     return () => {
       cancelled = true;
-      clearTimeout(destravar);
     };
-  }, [userId]);
+  }, [userId, auth.configured, auth.session]);
 
   const handleViewHandoff = async (shiftId: string) => {
     try {
@@ -213,8 +200,9 @@ function HubPage() {
 
   const primeiroNome =
     nomeExibicao(nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0]) || "Doutor(a)";
-  const primeiroAcesso =
-    !carregando && !plantaoAtivo && closedShifts.length === 0 && !ultimoAmbiente;
+  // Sem conta o médico usa documentos, copiloto e exames; o plantão é que
+  // exige login, porque é ali que entram dados de paciente.
+  const precisaDeConta = auth.configured && !auth.session;
 
   return (
     <div className="bg-background min-h-screen">
@@ -229,7 +217,7 @@ function HubPage() {
           <div className="min-w-0">
             <span className="t-title text-foreground block">Medfluxo</span>
             <span className="t-label text-muted-foreground block truncate font-normal">
-              Central de atendimento
+              Assistente de plantão
             </span>
           </div>
         </div>
@@ -242,20 +230,33 @@ function HubPage() {
           >
             <Settings2 className="h-5 w-5" aria-hidden="true" />
           </Link>
-          <button
-            onClick={handleLogout}
-            aria-label="Sair da conta"
-            className="touch-target border-border bg-card text-muted-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors hover:text-rose-600 dark:hover:text-rose-300 focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <LogOut className="h-5 w-5" aria-hidden="true" />
-          </button>
+          {precisaDeConta ? (
+            <Link
+              to="/login"
+              search={{}}
+              data-testid="hub-entrar"
+              className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl px-4 text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <LogIn className="h-5 w-5" aria-hidden="true" /> Entrar
+            </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              aria-label="Sair da conta"
+              className="touch-target border-border bg-card text-muted-foreground focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors hover:text-rose-600 dark:hover:text-rose-300 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <LogOut className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
         <div>
           <p className="t-eyebrow text-primary">{saudacao()}</p>
-          <h1 className="t-display text-foreground mt-1">Dr(a). {primeiroNome}</h1>
+          <h1 className="t-display text-foreground mt-1">
+            {precisaDeConta ? "Bem-vindo ao Medfluxo" : `Dr(a). ${primeiroNome}`}
+          </h1>
         </div>
 
         {offline && (
@@ -275,17 +276,16 @@ function HubPage() {
           stats={stats}
           closedShifts={closedShifts}
           ultimoAmbiente={ultimoAmbiente}
-          carregando={carregando}
           onViewHandoff={handleViewHandoff}
           onReopen={setShowReopenModal}
           formatDate={formatDate}
         />
 
-        {/* 2. O que não depende de plantão. */}
-        <QuickActions />
+        {/* 2. As quatro ações. As três primeiras funcionam sem conta. */}
+        <QuickActions precisaDeConta={precisaDeConta} />
 
         {/* 3. Abrir um plantão novo. */}
-        <AmbienteMatrix primeiroAcesso={primeiroAcesso} />
+        <LocalPicker precisaDeConta={precisaDeConta} />
       </main>
 
       <footer className="py-8 text-center">

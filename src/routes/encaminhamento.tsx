@@ -164,7 +164,7 @@ function EncaminhamentoPage() {
             vinculado={Boolean(base.vinculado)}
           />
 
-          <Section title="2. DESTINO E PRIORIDADE" icon={<Stethoscope className="h-4 w-4" />}>
+          <Section title="Destino e prioridade" icon={<Stethoscope className="h-4 w-4" />}>
             <div className="flex flex-wrap gap-2 mb-4">
               {ESPECIALIDADES_ENCAMINHAMENTO.map((e) => (
                 <Chip
@@ -180,7 +180,7 @@ function EncaminhamentoPage() {
               <ControlledInput
                 value={form.destinoOutro ?? ""}
                 onValueChange={(v) => set({ destinoOutro: v })}
-                placeholder="NOME DO SERVIÇO / ESPECIALIDADE"
+                placeholder="Nome do serviço ou especialidade"
                 uppercase
                 className="mb-4"
               />
@@ -197,7 +197,7 @@ function EncaminhamentoPage() {
             </div>
           </Section>
 
-          <Section title="3. CONTEÚDO CLÍNICO" icon={<FileText className="h-4 w-4" />}>
+          <Section title="Conteúdo clínico" icon={<FileText className="h-4 w-4" />}>
             <div className="space-y-4">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
@@ -259,7 +259,7 @@ function EncaminhamentoPage() {
             </div>
           </Section>
 
-          <Section title="4. EXAMES EM ANEXO" icon={<ListChecks className="h-4 w-4" />}>
+          <Section title="Exames em anexo" icon={<ListChecks className="h-4 w-4" />}>
             <div className="flex flex-wrap gap-2">
               {EXAMES_COMUNS.map((e) => (
                 <Chip
@@ -279,7 +279,7 @@ function EncaminhamentoPage() {
           </Section>
 
           <Section
-            title="5. TEXTO FINAL"
+            title="Texto final"
             icon={<Sparkles className="h-4 w-4" />}
             right={
               textoManual !== null && (

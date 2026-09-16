@@ -29,7 +29,7 @@ test.describe("documentos ambulatoriais", () => {
     page,
   }) => {
     await page.goto("/prescricao-alta");
-    await expect(page.getByTestId("doc-modo")).toContainText("MODO AVULSO");
+    await expect(page.getByTestId("doc-modo")).toContainText(/atendimento avulso/i);
     await page.getByTestId("doc-paciente-nome").fill("JOSE AVULSO");
     await page.getByTestId("doc-paciente-nome").blur();
     await page.getByTestId("doc-med-search").fill("espiro");
@@ -60,7 +60,7 @@ test.describe("documentos ambulatoriais", () => {
 
   test("receita vinculada pré-preenche paciente e aceita sugestão da IA", async ({ page }) => {
     await page.goto("/prescricao-alta?paciente=temp_e2e");
-    await expect(page.getByTestId("doc-modo")).toContainText("VINCULADO A: MARIA E2E");
+    await expect(page.getByTestId("doc-modo")).toContainText(/vinculado a MARIA E2E/i);
     await expect(page.getByTestId("doc-paciente-nome")).toHaveValue("MARIA E2E");
     await expect(page.getByTestId("doc-paciente-idade")).toHaveValue("70");
     await page.getByTestId("doc-ai-suggest").click();
@@ -71,7 +71,7 @@ test.describe("documentos ambulatoriais", () => {
 
   test("encaminhamento e orientações geram preview e texto limpo", async ({ page }) => {
     await page.goto("/encaminhamento?paciente=temp_e2e");
-    await expect(page.getByTestId("doc-modo")).toContainText("VINCULADO");
+    await expect(page.getByTestId("doc-modo")).toContainText(/vinculado a/i);
     await page.getByTestId("doc-destino-nefrologia").click();
     await page.getByTestId("doc-justificativa").fill("Piora de função renal.");
     await page.getByTestId("doc-justificativa").blur();

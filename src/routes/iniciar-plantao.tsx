@@ -6,25 +6,24 @@ import { format, parseISO, isValid } from "date-fns";
 import { z } from "zod";
 import { createShift } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { ambienteLabel, getAmbiente, getSubAmbiente } from "@/lib/ambientes";
+import { getLocal } from "@/lib/ambientes";
 import { storage } from "@/lib/storage";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
-  validateSearch: z.object({ ambiente: z.string().optional(), sub: z.string().optional() }),
+  validateSearch: z.object({ local: z.string().optional() }),
   head: () => ({ meta: [{ title: "Iniciar Plantão — MEDFLUXO" }] }),
 });
 
 function IniciarPlantaoPage() {
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
-  const { ambiente: ambienteId, sub: subId } = Route.useSearch();
-  const ambiente = getAmbiente(ambienteId);
-  const subAmbiente = getSubAmbiente(ambienteId, subId);
-  const setorPre = ambiente ? ambienteLabel(ambienteId, subId) : null;
-  const tipoPre = subAmbiente?.tipoEvolucao ?? null;
+  const { local: localId } = Route.useSearch();
+  const local = getLocal(localId);
+  const setorPre = local?.label ?? null;
+  const tipoPre = local?.tipoEvolucao ?? null;
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [hospital, setHospital] = useState("");
   const [saving, setSaving] = useState(false);
@@ -134,7 +133,7 @@ function IniciarPlantaoPage() {
               className="bg-primary/10 text-primary t-label mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2"
               data-testid="shift-ambiente"
             >
-              <span aria-hidden="true">{ambiente?.emoji}</span> {setorPre}
+              {local && <local.icon className="h-4 w-4" aria-hidden="true" />} {setorPre}
             </div>
           )}
         </div>

@@ -7,28 +7,35 @@ test.describe("hub de ambientes", () => {
     await ensureSession(page);
   });
 
-  test("leva de um subambiente pronto ao início de plantão, com o ambiente já escolhido", async ({
+  test("leva de um local pronto ao início de plantão, com o local já escolhido", async ({
     page,
   }) => {
     await page.goto("/");
 
-    await expect(page.getByTestId("hub-ambiente-enfermaria")).toBeVisible();
-    await page.getByTestId("hub-sub-clinica-medica").click();
+    await expect(page.getByTestId("hub-local-enfermaria-clinica")).toBeVisible();
+    await page.getByTestId("hub-local-enfermaria-clinica").click();
 
-    // O chip vai direto ao destino: /ambiente/:id/:sub redireciona para o
-    // início de plantão em vez de parar numa tela intermediária.
+    // Um toque vai direto ao destino: /local/:id redireciona para o início de
+    // plantão em vez de parar numa tela intermediária.
     await expect(page).toHaveURL(/\/iniciar-plantao/);
-    await expect(page.getByTestId("shift-ambiente")).toContainText(/Clínica Médica/i);
+    await expect(page.getByTestId("shift-ambiente")).toContainText(/Enfermaria Clínica/i);
+  });
+
+  test("mostra as quatro ações rápidas", async ({ page }) => {
+    await page.goto("/");
+    for (const id of ["hub-documentos", "hub-copiloto", "hub-resumo-exames", "hub-plantao-acao"]) {
+      await expect(page.getByTestId(id)).toBeVisible();
+    }
   });
 
   test("avisa 'Em breve' antes do toque e a tela de construção oferece saída", async ({ page }) => {
     await page.goto("/");
 
-    const chip = page.getByTestId("hub-sub-uti-neonatal");
-    await expect(chip).toContainText(/Em breve/i);
+    const item = page.getByTestId("hub-local-uti-neonatal");
+    await expect(item).toContainText(/Em breve/i);
 
-    await chip.click();
-    await expect(page).toHaveURL(/\/ambiente\/uti\/uti-neonatal/);
+    await item.click();
+    await expect(page).toHaveURL(/\/local\/uti-neonatal/);
     await expect(page.getByTestId("em-construcao")).toBeVisible();
 
     // Nunca um beco sem saída: daqui dá para chegar ao que já funciona.
@@ -36,12 +43,17 @@ test.describe("hub de ambientes", () => {
     await expect(page).toHaveURL(/\/passagem-plantao/);
   });
 
-  test("a passagem de plantão é alcançável a partir da Enfermaria", async ({ page }) => {
-    await page.goto("/ambiente/enfermaria");
+  test("os documentos abrem pela ação rápida, sem plantão", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("hub-documentos").click();
+    await expect(page).toHaveURL(/\/documentos/);
 
-    await expect(page.getByRole("heading", { name: /Enfermaria de Internamento/i })).toBeVisible();
-    await page.getByTestId("ambiente-atalho-passagem-plantao").click();
-    await expect(page).toHaveURL(/\/passagem-plantao/);
+    await expect(page.getByTestId("doc-atestado")).toBeVisible();
+    // Os tipos ainda não construídos avisam antes do toque.
+    await expect(page.getByTestId("doc-apac")).toContainText(/Em breve/i);
+
+    await page.getByTestId("doc-atestado").click();
+    await expect(page).toHaveURL(/\/atestado/);
   });
 
   test("as ações rápidas funcionam sem plantão aberto", async ({ page }) => {

@@ -500,7 +500,7 @@ export async function upsertSettings(data: Partial<UserSettings>, userId: string
 // OUTPATIENT DOCUMENTS (receita de alta, encaminhamento, orientações)
 // ═══════════════════════════════════
 
-export type OutpatientDocumentType = "receita" | "encaminhamento" | "orientacoes";
+export type OutpatientDocumentType = "receita" | "encaminhamento" | "orientacoes" | "atestado";
 
 export interface OutpatientDocumentRow {
   id: string;

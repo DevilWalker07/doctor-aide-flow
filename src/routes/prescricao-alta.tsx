@@ -224,7 +224,7 @@ function PrescricaoAltaPage() {
             ))}
           </Section>
 
-          <Section title="4. OBSERVAÇÕES E VIAS" icon={<StickyNote className="h-4 w-4" />}>
+          <Section title="Observações e vias" icon={<StickyNote className="h-4 w-4" />}>
             <ControlledTextarea
               value={observacoes}
               onValueChange={setObservacoes}

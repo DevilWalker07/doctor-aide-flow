@@ -29,7 +29,7 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
 
   return (
     <Section
-      title="2. MEDICAMENTOS"
+      title="Medicamentos"
       icon={<Search className="h-4 w-4" />}
       right={
         <button

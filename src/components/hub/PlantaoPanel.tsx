@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
-import { ambienteLabel, getAmbiente } from "@/lib/ambientes";
+import { acentoDo, getLocal } from "@/lib/ambientes";
 import type { Shift } from "@/lib/db";
 
 export interface PlantaoAtivoCtx {
@@ -26,27 +26,11 @@ interface Props {
   plantaoAtivo: PlantaoAtivoCtx | null;
   stats: { pacientes: number; pendencias: number };
   closedShifts: Shift[];
-  /** Último ambiente visitado, para retomar quando não há plantão aberto. */
-  ultimoAmbiente: { ambienteId: string; subId?: string } | null;
-  carregando: boolean;
+  /** Id do último local visitado, para retomar quando não há plantão aberto. */
+  ultimoAmbiente: string | null;
   onViewHandoff: (shiftId: string) => void;
   onReopen: (shift: Shift) => void;
   formatDate: (iso: string) => string;
-}
-
-function Esqueleto() {
-  return (
-    <div
-      className="border-border bg-card rounded-3xl border p-6"
-      aria-hidden="true"
-      data-testid="hub-plantao-esqueleto"
-    >
-      <div className="bg-muted h-4 w-40 animate-pulse rounded-full" />
-      <div className="bg-muted mt-4 h-7 w-56 animate-pulse rounded-full" />
-      <div className="bg-muted mt-3 h-4 w-44 animate-pulse rounded-full" />
-      <div className="bg-muted mt-6 h-12 w-full animate-pulse rounded-2xl" />
-    </div>
-  );
 }
 
 /**
@@ -59,19 +43,16 @@ export function PlantaoPanel({
   stats,
   closedShifts,
   ultimoAmbiente,
-  carregando,
   onViewHandoff,
   onReopen,
   formatDate,
 }: Props) {
   const nav = useNavigate();
 
-  if (carregando) return <Esqueleto />;
-
-  const ambienteAnterior = ultimoAmbiente ? getAmbiente(ultimoAmbiente.ambienteId) : undefined;
+  const localAnterior = ultimoAmbiente ? getLocal(ultimoAmbiente) : undefined;
 
   // Primeiro acesso: nada aqui, para a tela não abrir com espaço morto.
-  if (!plantaoAtivo && closedShifts.length === 0 && !ambienteAnterior) return null;
+  if (!plantaoAtivo && closedShifts.length === 0 && !localAnterior) return null;
 
   return (
     <section aria-labelledby="hub-plantao" className="space-y-3">
@@ -125,23 +106,21 @@ export function PlantaoPanel({
         )}
 
         {/* Sem plantão aberto: pelo menos leva de volta ao último ambiente. */}
-        {!plantaoAtivo && ambienteAnterior && (
+        {!plantaoAtivo && localAnterior && (
           <Link
-            to="/ambiente/$ambienteId"
-            params={{ ambienteId: ambienteAnterior.id }}
+            to="/local/$localId"
+            params={{ localId: localAnterior.id }}
             data-testid="hub-continuar-ambiente"
             className={`border-border bg-card hover:bg-secondary focus-visible:ring-ring flex items-center gap-4 rounded-3xl border p-5 transition-colors focus-visible:ring-2 focus-visible:outline-none`}
           >
             <div
-              className={`h-12 w-12 shrink-0 rounded-2xl ${ambienteAnterior.accent.bg} ${ambienteAnterior.accent.text} flex items-center justify-center`}
+              className={`h-12 w-12 shrink-0 rounded-2xl ${acentoDo(localAnterior).bg} ${acentoDo(localAnterior).text} flex items-center justify-center`}
             >
               <MapPin className="h-6 w-6" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="t-eyebrow text-muted-foreground">Continuar em</p>
-              <p className="t-title text-foreground mt-1 truncate">
-                {ambienteLabel(ultimoAmbiente!.ambienteId, ultimoAmbiente!.subId)}
-              </p>
+              <p className="t-title text-foreground mt-1 truncate">{localAnterior.label}</p>
             </div>
             <ArrowRight className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
           </Link>

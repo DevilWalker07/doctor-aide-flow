@@ -1,53 +1,47 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, HardHat } from "lucide-react";
-import { ATALHOS_GLOBAIS, type Ambiente, type SubAmbiente } from "@/lib/ambientes";
-
-interface Props {
-  ambiente: Ambiente;
-  sub: SubAmbiente;
-}
+import { acentoDo, ATALHOS_GLOBAIS, type Local } from "@/lib/ambientes";
 
 /**
- * Tela para um subambiente ainda sem template de evolução.
+ * Tela para um local ainda sem template de evolução.
  * Nunca é um beco sem saída: além de voltar, oferece o que já funciona hoje.
  */
-export function EmConstrucao({ ambiente, sub }: Props) {
-  const Icon = sub.icon ?? ambiente.icon;
-  const atalhos = ambiente.atalhos.length ? ambiente.atalhos : ATALHOS_GLOBAIS;
+export function EmConstrucao({ local }: { local: Local }) {
+  const acento = acentoDo(local);
+  const atalhos = local.atalhos.length ? local.atalhos : ATALHOS_GLOBAIS;
 
   return (
     <div className="bg-background min-h-screen">
       <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
         <Link
-          to="/ambiente/$ambienteId"
-          params={{ ambienteId: ambiente.id }}
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-2 inline-flex items-center gap-2 rounded-xl px-2 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          to="/"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-2 inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          <span className="t-label">Voltar para {ambiente.curto}</span>
+          <span className="t-label">Voltar para a central</span>
         </Link>
 
         <div
-          className={`mt-6 rounded-3xl border ${ambiente.accent.border} bg-card p-6 sm:p-8`}
+          className={`mt-6 rounded-3xl border ${acento.border} bg-card p-6 sm:p-8`}
           data-testid="em-construcao"
         >
           <div className="flex items-start gap-4">
             <div
-              className={`h-14 w-14 shrink-0 rounded-2xl ${ambiente.accent.bg} ${ambiente.accent.text} flex items-center justify-center`}
+              className={`h-14 w-14 shrink-0 rounded-2xl ${acento.bg} ${acento.text} flex items-center justify-center`}
             >
-              <Icon className="h-7 w-7" aria-hidden="true" />
+              <local.icon className="h-7 w-7" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="t-eyebrow text-muted-foreground">{ambiente.curto}</p>
-              <h1 className="t-display text-foreground mt-1">{sub.label}</h1>
-              <p className="t-body text-muted-foreground mt-2">{sub.descricao}</p>
+              <p className="t-eyebrow text-muted-foreground">Local de atendimento</p>
+              <h1 className="t-display text-foreground mt-1">{local.label}</h1>
+              <p className="t-body text-muted-foreground mt-2">{local.descricao}</p>
             </div>
           </div>
 
           <div className="bg-secondary mt-6 flex items-start gap-3 rounded-2xl p-4">
             <HardHat className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <p className="t-body text-foreground">
-              Este ambiente ainda não tem template de evolução próprio. Estou construindo — enquanto
+              Este local ainda não tem modelo de evolução próprio. Estou construindo — enquanto
               isso, o que já está pronto continua à mão.
             </p>
           </div>

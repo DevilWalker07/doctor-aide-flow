@@ -33,7 +33,7 @@ export function DocumentoActions({
   };
 
   const btn =
-    "px-4 sm:px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
+    "t-label inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl px-3.5 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
     <>
@@ -47,9 +47,9 @@ export function DocumentoActions({
           data-testid="doc-ai-suggest"
         >
           {suggesting ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <Sparkles className="h-3 w-3" />
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
           )}{" "}
           Sugerir com IA
         </button>
@@ -58,27 +58,31 @@ export function DocumentoActions({
         type="button"
         onClick={onSave}
         disabled={saving}
-        className={`${btn} border border-border hover:bg-secondary`}
+        className={`${btn} border border-border text-foreground hover:bg-secondary`}
         data-testid="doc-save"
       >
-        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}{" "}
+        {saving ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Save className="h-4 w-4" aria-hidden="true" />
+        )}{" "}
         Salvar
       </button>
       <button
         type="button"
         onClick={copiar}
-        className={`${btn} border border-border hover:bg-secondary`}
+        className={`${btn} border border-border text-foreground hover:bg-secondary`}
         data-testid="doc-copy"
       >
-        <Copy className="h-3 w-3" /> Copiar texto limpo
+        <Copy className="h-4 w-4" aria-hidden="true" /> Copiar texto
       </button>
       <button
         type="button"
         onClick={() => window.print()}
-        className={`${btn} bg-navy text-white shadow-xl shadow-navy/20 hover:-translate-y-0.5`}
+        className={`${btn} bg-navy text-navy-foreground hover:opacity-90`}
         data-testid="doc-print"
       >
-        <Printer className="h-3 w-3" /> Imprimir A4
+        <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir A4
       </button>
     </>
   );

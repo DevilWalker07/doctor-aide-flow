@@ -1,19 +1,23 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FlaskConical, MessageSquareText, Pill } from "lucide-react";
+import { ArrowUpRight, FlaskConical, Lock, MessageSquareText, Stethoscope } from "lucide-react";
+import { FileStack } from "lucide-react";
 
 /**
- * O que o médico consegue fazer sem abrir plantão.
+ * As quatro ações da tela inicial.
+ *
+ * As três primeiras não exigem conta — o médico abre o app e resolve. A quarta
+ * é o plantão, que mexe com dados de paciente e por isso pede login.
  * A descrição diz QUANDO usar, não o que a tela é.
  */
 const ACOES = [
   {
-    to: "/prescricao-alta" as const,
-    label: "Receituário de alta",
-    descricao: "Receita ilustrada, com posologia em linguagem simples",
-    icon: Pill,
+    to: "/documentos" as const,
+    label: "Documentos",
+    descricao: "Receita, atestado, encaminhamento e orientações",
+    icon: FileStack,
     tom: "text-emerald-700 dark:text-emerald-300",
     fundo: "bg-emerald-500/10",
-    testid: "hub-receituario",
+    testid: "hub-documentos",
   },
   {
     to: "/copiloto" as const,
@@ -27,7 +31,7 @@ const ACOES = [
   {
     to: "/resumo-exames" as const,
     label: "Resumo de exames",
-    descricao: "Cole o laudo e receba os valores organizados",
+    descricao: "Cole o laudo de laboratório ou de imagem",
     icon: FlaskConical,
     tom: "text-sky-700 dark:text-sky-300",
     fundo: "bg-sky-500/10",
@@ -35,24 +39,24 @@ const ACOES = [
   },
 ];
 
-export function QuickActions() {
+export function QuickActions({ precisaDeConta = false }: { precisaDeConta?: boolean }) {
   return (
     <section aria-labelledby="hub-acoes" className="space-y-3">
       <h2 id="hub-acoes" className="t-eyebrow text-muted-foreground">
-        Sem precisar de plantão
+        Ações rápidas
       </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {ACOES.map((a) => (
           <Link
             key={a.to}
             to={a.to}
             search={{}}
             data-testid={a.testid}
-            className="group border-border bg-card hover:border-ring/50 focus-visible:ring-ring flex min-h-[7rem] flex-col rounded-3xl border p-5 transition-colors hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="group border-border bg-card hover:border-ring/50 focus-visible:ring-ring flex min-h-[6.5rem] flex-col rounded-3xl border p-4 transition-colors hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
           >
             <div className="flex items-start justify-between gap-3">
               <div
-                className={`h-11 w-11 rounded-2xl ${a.fundo} ${a.tom} flex items-center justify-center`}
+                className={`h-10 w-10 rounded-xl ${a.fundo} ${a.tom} flex items-center justify-center`}
               >
                 <a.icon className="h-5 w-5" aria-hidden="true" />
               </div>
@@ -61,12 +65,42 @@ export function QuickActions() {
                 aria-hidden="true"
               />
             </div>
-            <div className="mt-4">
+            <div className="mt-3">
               <p className="t-title text-foreground">{a.label}</p>
               <p className="t-body text-muted-foreground mt-1">{a.descricao}</p>
             </div>
           </Link>
         ))}
+
+        {/* A quarta ação leva à lista de locais, logo abaixo na mesma tela —
+            não faz sentido navegar para escolher onde se está. */}
+        <a
+          href="#locais"
+          data-testid="hub-plantao-acao"
+          className="group border-border bg-card hover:border-ring/50 focus-visible:ring-ring flex min-h-[6.5rem] flex-col rounded-3xl border p-4 transition-colors hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl">
+              <Stethoscope className="h-5 w-5" aria-hidden="true" />
+            </div>
+            {precisaDeConta ? (
+              <span className="t-eyebrow text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="h-3 w-3" aria-hidden="true" /> Conta
+              </span>
+            ) : (
+              <ArrowUpRight
+                className="text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          <div className="mt-3">
+            <p className="t-title text-foreground">Plantão</p>
+            <p className="t-body text-muted-foreground mt-1">
+              Abrir um plantão no seu local de atendimento
+            </p>
+          </div>
+        </a>
       </div>
     </section>
   );

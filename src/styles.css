@@ -233,6 +233,44 @@
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
   line-height: 1.35;
 }
+/* Numa tela de 390 px a folha de 210 mm só aparecia pela metade, com rolagem
+   horizontal. A prévia é reduzida para caber inteira — a impressão continua
+   em tamanho real, porque @media print reescreve .a4-doc. */
+.a4-preview {
+  overflow: hidden;
+}
+.a4-preview > .a4-doc {
+  transform: scale(var(--a4-escala, 1));
+  transform-origin: top left;
+}
+@media (max-width: 1279px) {
+  .a4-preview {
+    --a4-escala: 0.42;
+    height: calc(297mm * 0.42);
+  }
+}
+@media (min-width: 420px) and (max-width: 1279px) {
+  .a4-preview {
+    --a4-escala: 0.5;
+    height: calc(297mm * 0.5);
+  }
+}
+@media (min-width: 640px) and (max-width: 1279px) {
+  .a4-preview {
+    --a4-escala: 0.72;
+    height: calc(297mm * 0.72);
+  }
+}
+@media print {
+  .a4-preview {
+    overflow: visible;
+    height: auto;
+  }
+  .a4-preview > .a4-doc {
+    transform: none;
+  }
+}
+
 .print-only {
   display: none;
 }

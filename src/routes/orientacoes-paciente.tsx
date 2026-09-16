@@ -85,7 +85,7 @@ function OrientacoesPage() {
             vinculado={Boolean(base.vinculado)}
           />
 
-          <Section title="2. TEMAS" icon={<ClipboardList className="h-4 w-4" />}>
+          <Section title="Temas" icon={<ClipboardList className="h-4 w-4" />}>
             <div className="space-y-5">
               {CATEGORIAS_ORIENTACAO.map((cat) => {
                 const lista = ORIENTACOES.filter((o) => o.categoria === cat);
@@ -112,7 +112,7 @@ function OrientacoesPage() {
             </div>
           </Section>
 
-          <Section title="3. ORIENTAÇÕES ADICIONAIS" icon={<PlusCircle className="h-4 w-4" />}>
+          <Section title="Orientações adicionais" icon={<PlusCircle className="h-4 w-4" />}>
             <div className="space-y-2 mb-3">
               {extras.map((e, i) => (
                 <div key={i} className="flex gap-2 items-center">
@@ -149,7 +149,7 @@ function OrientacoesPage() {
             </div>
           </Section>
 
-          <Section title="4. RETORNO" icon={<CalendarClock className="h-4 w-4" />}>
+          <Section title="Retorno" icon={<CalendarClock className="h-4 w-4" />}>
             <ControlledInput
               value={retorno}
               onValueChange={setRetorno}

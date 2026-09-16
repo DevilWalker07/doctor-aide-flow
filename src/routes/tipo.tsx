@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useShift } from "@/hooks/useShift";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { AMBIENTES, ambienteLabel, type Ambiente, type SubAmbiente } from "@/lib/ambientes";
+import { acentoDo, tiposDeEvolucaoDisponiveis, type Local } from "@/lib/ambientes";
 import { updateShift as dbUpdateShift } from "@/lib/db";
 
 export const Route = createFileRoute("/tipo")({
@@ -11,47 +11,26 @@ export const Route = createFileRoute("/tipo")({
   head: () => ({ meta: [{ title: "Onde você está hoje? — MEDFLUXO" }] }),
 });
 
-interface Opcao {
-  id: string;
-  label: string;
-  descricao: string;
-  ambiente: Ambiente;
-  sub: SubAmbiente;
-}
-
 /**
- * As opções saem de `ambientes.ts`, a fonte única. Esta tela mantinha a própria
- * lista de setores, que já divergia dela em rótulo e cobertura.
- *
- * Um mesmo tipo de evolução aparece em mais de um subambiente (PS Adulto e PS
- * Misto usam "upa"), então a lista é deduplicada pelo tipo — é ele que define
- * o template e os agentes.
+ * As opções saem de `ambientes.ts`, a fonte única, deduplicadas por tipo de
+ * evolução — é ele que define o template e os agentes. Esta tela mantinha a
+ * própria lista de setores, que já divergia da fonte.
  */
-const OPCOES: Opcao[] = AMBIENTES.flatMap((ambiente) =>
-  ambiente.subs
-    .filter((sub) => sub.implementado)
-    .map((sub) => ({
-      id: sub.tipoEvolucao,
-      label: ambienteLabel(ambiente.id, sub.id),
-      descricao: sub.descricao,
-      ambiente,
-      sub,
-    })),
-).filter((opcao, i, todas) => todas.findIndex((o) => o.id === opcao.id) === i);
+const OPCOES: Local[] = tiposDeEvolucaoDisponiveis();
 
 function TipoPage() {
   const nav = useNavigate();
   const { updateShift } = useShift();
   const { userId } = useSupabaseUser();
 
-  const handleSelect = async (opcao: Opcao) => {
-    localStorage.setItem("da_tipo_evolucao", opcao.id);
-    updateShift({ tipo: opcao.id, setor: opcao.label });
+  const handleSelect = async (opcao: Local) => {
+    localStorage.setItem("da_tipo_evolucao", opcao.tipoEvolucao);
+    updateShift({ tipo: opcao.tipoEvolucao, setor: opcao.label });
 
     const shiftId = localStorage.getItem("da_shift_id");
     if (shiftId && !shiftId.startsWith("temp_") && userId) {
       try {
-        await dbUpdateShift(shiftId, { type: opcao.id, sector: opcao.label }, userId);
+        await dbUpdateShift(shiftId, { type: opcao.tipoEvolucao, sector: opcao.label }, userId);
       } catch (err) {
         console.warn("Falha ao atualizar tipo no Supabase", err);
       }
@@ -85,13 +64,13 @@ function TipoPage() {
             <li key={o.id}>
               <button
                 onClick={() => handleSelect(o)}
-                data-testid={`tipo-${o.id}`}
+                data-testid={`tipo-${o.tipoEvolucao}`}
                 className="border-border bg-card hover:bg-secondary focus-visible:ring-ring flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <div
-                  className={`h-12 w-12 shrink-0 rounded-2xl ${o.ambiente.accent.bg} ${o.ambiente.accent.text} flex items-center justify-center`}
+                  className={`h-12 w-12 shrink-0 rounded-2xl ${acentoDo(o).bg} ${acentoDo(o).text} flex items-center justify-center`}
                 >
-                  <o.ambiente.icon className="h-6 w-6" aria-hidden="true" />
+                  <o.icon className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="t-title text-foreground">{o.label}</p>

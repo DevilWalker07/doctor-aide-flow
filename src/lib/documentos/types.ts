@@ -56,6 +56,36 @@ export interface OrientacoesDocumento {
   data: string;
 }
 
+/** Finalidades previstas de atestado. */
+export type FinalidadeAtestado =
+  | "afastamento"
+  | "comparecimento"
+  | "acompanhante"
+  | "atividade-fisica";
+
+export interface AtestadoDocumento {
+  paciente: PacienteDocumento;
+  finalidade: FinalidadeAtestado;
+  /** Dias de afastamento (só para finalidade "afastamento"). */
+  dias: string;
+  /** Início do afastamento ou dia do comparecimento, em dd/MM/yyyy. */
+  dataInicio: string;
+  /** Horário de comparecimento, quando aplicável. */
+  horaInicio: string;
+  horaFim: string;
+  /** Nome do paciente acompanhado, para finalidade "acompanhante". */
+  acompanhado: string;
+  cid: string;
+  /**
+   * O CID só entra no documento com autorização expressa do paciente
+   * (Código de Ética Médica, art. 73 e Resolução CFM 1.851/2008).
+   * Sem isto marcado, `cid` é ignorado na impressão.
+   */
+  cidAutorizado: boolean;
+  observacoes: string;
+  data: string;
+}
+
 export type OutpatientDocument =
   | { type: "receita"; title: string; patientId: string | null; content: ReceitaDocumento }
   | {
@@ -64,7 +94,8 @@ export type OutpatientDocument =
       patientId: string | null;
       content: EncaminhamentoDocumento;
     }
-  | { type: "orientacoes"; title: string; patientId: string | null; content: OrientacoesDocumento };
+  | { type: "orientacoes"; title: string; patientId: string | null; content: OrientacoesDocumento }
+  | { type: "atestado"; title: string; patientId: string | null; content: AtestadoDocumento };
 
 export interface StoredOutpatientDocument {
   id: string;

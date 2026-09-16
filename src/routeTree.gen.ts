@@ -25,21 +25,22 @@ import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IniciarPlantaoRouteImport } from './routes/iniciar-plantao'
 import { Route as EncaminhamentoRouteImport } from './routes/encaminhamento'
+import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CopilotoRouteImport } from './routes/copiloto'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CadastroManualRouteImport } from './routes/cadastro-manual'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AtestadoRouteImport } from './routes/atestado'
 import { Route as AdmissaoNovaRouteImport } from './routes/admissao-nova'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessandoJobIdRouteImport } from './routes/processando.$jobId'
 import { Route as PrescricaoIdRouteImport } from './routes/prescricao.$id'
 import { Route as PacienteTempRouteImport } from './routes/paciente.temp'
 import { Route as PacienteIdRouteImport } from './routes/paciente.$id'
+import { Route as LocalLocalIdRouteImport } from './routes/local.$localId'
 import { Route as EvolucaoIdRouteImport } from './routes/evolucao.$id'
-import { Route as AmbienteAmbienteIdIndexRouteImport } from './routes/ambiente.$ambienteId.index'
 import { Route as EvolucaoIdHistoricoRouteImport } from './routes/evolucao.$id.historico'
-import { Route as AmbienteAmbienteIdSubIdRouteImport } from './routes/ambiente.$ambienteId.$subId'
 
 const UploadIaRoute = UploadIaRouteImport.update({
   id: '/upload-ia',
@@ -121,6 +122,11 @@ const EncaminhamentoRoute = EncaminhamentoRouteImport.update({
   path: '/encaminhamento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentosRoute = DocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -144,6 +150,11 @@ const CadastroManualRoute = CadastroManualRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AtestadoRoute = AtestadoRouteImport.update({
+  id: '/atestado',
+  path: '/atestado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdmissaoNovaRoute = AdmissaoNovaRouteImport.update({
@@ -176,14 +187,14 @@ const PacienteIdRoute = PacienteIdRouteImport.update({
   path: '/paciente/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocalLocalIdRoute = LocalLocalIdRouteImport.update({
+  id: '/local/$localId',
+  path: '/local/$localId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvolucaoIdRoute = EvolucaoIdRouteImport.update({
   id: '/evolucao/$id',
   path: '/evolucao/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AmbienteAmbienteIdIndexRoute = AmbienteAmbienteIdIndexRouteImport.update({
-  id: '/ambiente/$ambienteId/',
-  path: '/ambiente/$ambienteId/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EvolucaoIdHistoricoRoute = EvolucaoIdHistoricoRouteImport.update({
@@ -191,20 +202,17 @@ const EvolucaoIdHistoricoRoute = EvolucaoIdHistoricoRouteImport.update({
   path: '/historico',
   getParentRoute: () => EvolucaoIdRoute,
 } as any)
-const AmbienteAmbienteIdSubIdRoute = AmbienteAmbienteIdSubIdRouteImport.update({
-  id: '/ambiente/$ambienteId/$subId',
-  path: '/ambiente/$ambienteId/$subId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/atestado': typeof AtestadoRoute
   '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
+  '/documentos': typeof DocumentosRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -222,22 +230,23 @@ export interface FileRoutesByFullPath {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
+  '/local/$localId': typeof LocalLocalIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
-  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
-  '/ambiente/$ambienteId/': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/atestado': typeof AtestadoRoute
   '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
+  '/documentos': typeof DocumentosRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -255,23 +264,24 @@ export interface FileRoutesByTo {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
+  '/local/$localId': typeof LocalLocalIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
-  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
-  '/ambiente/$ambienteId': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admissao-nova': typeof AdmissaoNovaRoute
+  '/atestado': typeof AtestadoRoute
   '/cadastro': typeof CadastroRoute
   '/cadastro-manual': typeof CadastroManualRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
+  '/documentos': typeof DocumentosRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -289,24 +299,25 @@ export interface FileRoutesById {
   '/tipo': typeof TipoRoute
   '/upload-ia': typeof UploadIaRoute
   '/evolucao/$id': typeof EvolucaoIdRouteWithChildren
+  '/local/$localId': typeof LocalLocalIdRoute
   '/paciente/$id': typeof PacienteIdRoute
   '/paciente/temp': typeof PacienteTempRoute
   '/prescricao/$id': typeof PrescricaoIdRoute
   '/processando/$jobId': typeof ProcessandoJobIdRoute
-  '/ambiente/$ambienteId/$subId': typeof AmbienteAmbienteIdSubIdRoute
   '/evolucao/$id/historico': typeof EvolucaoIdHistoricoRoute
-  '/ambiente/$ambienteId/': typeof AmbienteAmbienteIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admissao-nova'
+    | '/atestado'
     | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/copiloto'
     | '/dashboard'
+    | '/documentos'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -324,22 +335,23 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/local/$localId'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
-    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
-    | '/ambiente/$ambienteId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admissao-nova'
+    | '/atestado'
     | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/copiloto'
     | '/dashboard'
+    | '/documentos'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -357,22 +369,23 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/local/$localId'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
-    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
-    | '/ambiente/$ambienteId'
   id:
     | '__root__'
     | '/'
     | '/admissao-nova'
+    | '/atestado'
     | '/cadastro'
     | '/cadastro-manual'
     | '/configuracoes'
     | '/copiloto'
     | '/dashboard'
+    | '/documentos'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -390,23 +403,24 @@ export interface FileRouteTypes {
     | '/tipo'
     | '/upload-ia'
     | '/evolucao/$id'
+    | '/local/$localId'
     | '/paciente/$id'
     | '/paciente/temp'
     | '/prescricao/$id'
     | '/processando/$jobId'
-    | '/ambiente/$ambienteId/$subId'
     | '/evolucao/$id/historico'
-    | '/ambiente/$ambienteId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdmissaoNovaRoute: typeof AdmissaoNovaRoute
+  AtestadoRoute: typeof AtestadoRoute
   CadastroRoute: typeof CadastroRoute
   CadastroManualRoute: typeof CadastroManualRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   CopilotoRoute: typeof CopilotoRoute
   DashboardRoute: typeof DashboardRoute
+  DocumentosRoute: typeof DocumentosRoute
   EncaminhamentoRoute: typeof EncaminhamentoRoute
   IniciarPlantaoRoute: typeof IniciarPlantaoRoute
   LoginRoute: typeof LoginRoute
@@ -424,12 +438,11 @@ export interface RootRouteChildren {
   TipoRoute: typeof TipoRoute
   UploadIaRoute: typeof UploadIaRoute
   EvolucaoIdRoute: typeof EvolucaoIdRouteWithChildren
+  LocalLocalIdRoute: typeof LocalLocalIdRoute
   PacienteIdRoute: typeof PacienteIdRoute
   PacienteTempRoute: typeof PacienteTempRoute
   PrescricaoIdRoute: typeof PrescricaoIdRoute
   ProcessandoJobIdRoute: typeof ProcessandoJobIdRoute
-  AmbienteAmbienteIdSubIdRoute: typeof AmbienteAmbienteIdSubIdRoute
-  AmbienteAmbienteIdIndexRoute: typeof AmbienteAmbienteIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -546,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncaminhamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documentos': {
+      id: '/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof DocumentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -579,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/atestado': {
+      id: '/atestado'
+      path: '/atestado'
+      fullPath: '/atestado'
+      preLoaderRoute: typeof AtestadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admissao-nova': {
@@ -623,18 +650,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacienteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/local/$localId': {
+      id: '/local/$localId'
+      path: '/local/$localId'
+      fullPath: '/local/$localId'
+      preLoaderRoute: typeof LocalLocalIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evolucao/$id': {
       id: '/evolucao/$id'
       path: '/evolucao/$id'
       fullPath: '/evolucao/$id'
       preLoaderRoute: typeof EvolucaoIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ambiente/$ambienteId/': {
-      id: '/ambiente/$ambienteId/'
-      path: '/ambiente/$ambienteId'
-      fullPath: '/ambiente/$ambienteId/'
-      preLoaderRoute: typeof AmbienteAmbienteIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/evolucao/$id/historico': {
@@ -643,13 +670,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/evolucao/$id/historico'
       preLoaderRoute: typeof EvolucaoIdHistoricoRouteImport
       parentRoute: typeof EvolucaoIdRoute
-    }
-    '/ambiente/$ambienteId/$subId': {
-      id: '/ambiente/$ambienteId/$subId'
-      path: '/ambiente/$ambienteId/$subId'
-      fullPath: '/ambiente/$ambienteId/$subId'
-      preLoaderRoute: typeof AmbienteAmbienteIdSubIdRouteImport
-      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -669,11 +689,13 @@ const EvolucaoIdRouteWithChildren = EvolucaoIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdmissaoNovaRoute: AdmissaoNovaRoute,
+  AtestadoRoute: AtestadoRoute,
   CadastroRoute: CadastroRoute,
   CadastroManualRoute: CadastroManualRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   CopilotoRoute: CopilotoRoute,
   DashboardRoute: DashboardRoute,
+  DocumentosRoute: DocumentosRoute,
   EncaminhamentoRoute: EncaminhamentoRoute,
   IniciarPlantaoRoute: IniciarPlantaoRoute,
   LoginRoute: LoginRoute,
@@ -691,12 +713,11 @@ const rootRouteChildren: RootRouteChildren = {
   TipoRoute: TipoRoute,
   UploadIaRoute: UploadIaRoute,
   EvolucaoIdRoute: EvolucaoIdRouteWithChildren,
+  LocalLocalIdRoute: LocalLocalIdRoute,
   PacienteIdRoute: PacienteIdRoute,
   PacienteTempRoute: PacienteTempRoute,
   PrescricaoIdRoute: PrescricaoIdRoute,
   ProcessandoJobIdRoute: ProcessandoJobIdRoute,
-  AmbienteAmbienteIdSubIdRoute: AmbienteAmbienteIdSubIdRoute,
-  AmbienteAmbienteIdIndexRoute: AmbienteAmbienteIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

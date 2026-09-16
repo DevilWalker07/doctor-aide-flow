@@ -3,7 +3,7 @@ import { ChevronLeft, Loader2, MessageSquareText, SendHorizontal, Trash2 } from 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { apiJson } from "@/lib/apiClient";
-import { AMBIENTES } from "@/lib/ambientes";
+import { LOCAIS } from "@/lib/ambientes";
 import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/copiloto")({
@@ -90,11 +90,9 @@ function CopilotoPage() {
             onChange={(e) => setAmbiente(e.target.value)}
             className="t-label bg-card border-border text-foreground focus-visible:ring-ring min-h-[2.75rem] max-w-[13rem] rounded-xl border px-3 focus-visible:ring-2 focus-visible:outline-none"
           >
-            {AMBIENTES.flatMap((a) =>
-              a.subs.map((sub) => ({ v: sub.tipoEvolucao, l: `${a.curto} · ${sub.label}` })),
-            ).map((o) => (
-              <option key={o.v + o.l} value={o.v}>
-                {o.l}
+            {LOCAIS.map((local) => (
+              <option key={local.id} value={local.tipoEvolucao}>
+                {local.label}
               </option>
             ))}
           </select>

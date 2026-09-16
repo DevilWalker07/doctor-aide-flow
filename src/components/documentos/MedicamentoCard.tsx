@@ -57,7 +57,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
             <ControlledInput
               value={item.nome}
               onValueChange={(v) => set({ nome: v })}
-              placeholder="NOME DO MEDICAMENTO"
+              placeholder="Nome do medicamento"
               className="px-3 py-2 text-base font-black"
             />
           </div>

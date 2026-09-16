@@ -155,19 +155,22 @@ export const storage = {
   },
   setTema: (t: "light" | "dark" | "system") => localStorage.setItem("da_tema", t),
 
-  // Último ambiente visitado (para a retomada de contexto no hub)
-  getUltimoAmbiente: (): { ambienteId: string; subId?: string } | null => {
+  // Último local visitado (para a retomada de contexto no hub)
+  getUltimoAmbiente: (): string | null => {
     try {
       const raw = localStorage.getItem("da_ultimo_ambiente");
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return typeof parsed?.ambienteId === "string" ? parsed : null;
+      // Formato antigo guardava { ambienteId, subId }; aceita os dois.
+      if (raw.startsWith("{")) {
+        const parsed = JSON.parse(raw) as { ambienteId?: unknown };
+        return typeof parsed.ambienteId === "string" ? parsed.ambienteId : null;
+      }
+      return raw || null;
     } catch {
       return null;
     }
   },
-  setUltimoAmbiente: (ambienteId: string, subId?: string) =>
-    localStorage.setItem("da_ultimo_ambiente", JSON.stringify({ ambienteId, subId })),
+  setUltimoAmbiente: (localId: string) => localStorage.setItem("da_ultimo_ambiente", localId),
 
   // Documentos ambulatoriais (receita de alta, encaminhamento, orientações)
   getDocumentos: (): unknown[] => {
