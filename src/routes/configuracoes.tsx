@@ -14,7 +14,7 @@ const useLocalSignOut = () => ({
   },
 });
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { VITE_CLINICAL_AGENTS_URL } from "@/lib/clinicalAgentsConfig";
+import { apiFetch } from "@/lib/apiClient";
 import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "@tanstack/react-router";
@@ -91,7 +91,7 @@ function SettingsPage() {
   const checkHealth = async () => {
     setAiStatus("loading");
     try {
-      const response = await fetch(`${VITE_CLINICAL_AGENTS_URL}/health`);
+      const response = await apiFetch("/health");
       if (response.ok) setAiStatus("connected");
       else setAiStatus("disconnected");
     } catch {

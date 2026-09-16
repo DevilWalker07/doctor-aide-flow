@@ -16,32 +16,9 @@ import {
   convertInchesToTwip,
 } from "docx";
 
-export interface PatientRow {
-  leito: string;
-  paciente: string;
-  dih: string;
-  di?: number | null;
-  diagnostico: string;
-  quadroAtual?: string;
-  atb: string;
-  ultimoLab: string;
-  condutasHoje: string;
-  alertasPendencias: string;
-  dispositivos?: string | null;
-  anotacoesVisita: string;
-}
+import type { AlertaCritico, MapaPlantaoData, PatientRow } from "../schemas/ai.schemas.js";
 
-export interface AlertaCritico {
-  prioridade: string;
-  leito?: string;
-  paciente: string;
-  acao: string;
-}
-
-export interface MapaPlantaoData {
-  pacientes: PatientRow[];
-  alertasCriticos: AlertaCritico[];
-}
+export type { AlertaCritico, MapaPlantaoData, PatientRow };
 
 const BLUE_HNAS = "1F4E79";
 const BLUE_HEADER_ROW = "2E74B5";
@@ -51,7 +28,7 @@ const LIGHT_GRAY = "F2F2F2";
 const LIGHT_RED = "FFE7E7";
 
 function cell(
-  text: string,
+  rawText: string | null | undefined,
   opts: {
     bold?: boolean;
     fontSize?: number;
@@ -59,7 +36,7 @@ function cell(
     bgColor?: string;
     width?: number;
     align?: (typeof AlignmentType)[keyof typeof AlignmentType];
-    vAlign?: (typeof VerticalAlign)[keyof typeof VerticalAlign];
+    vAlign?: Exclude<(typeof VerticalAlign)[keyof typeof VerticalAlign], "both">;
     wrap?: boolean;
   } = {}
 ): TableCell {
@@ -73,7 +50,7 @@ function cell(
     vAlign = VerticalAlign.TOP,
   } = opts;
 
-  const lines = text.split("\n");
+  const lines = String(rawText ?? "").split("\n");
 
   return new TableCell({
     width: width ? { size: width, type: WidthType.DXA } : undefined,
@@ -218,7 +195,7 @@ export async function gerarMapaPlantaoDocx(
       children: [
         cell(leitoText, { bold: true, fontSize: 13, bgColor, width: COL.leito }),
         cell(diagText, { fontSize: 13, bgColor, width: COL.diagnostico }),
-        cell(p.atb, { fontSize: 13, bgColor, width: COL.atb, color: p.atb === "SEM ATB" ? "888888" : "000000" }),
+        cell(p.atb, { fontSize: 13, bgColor, width: COL.atb, color: /^sem atb$/i.test(p.atb.trim()) ? "888888" : "000000" }),
         cell(p.ultimoLab, { fontSize: 13, bgColor, width: COL.ultimoLab }),
         cell(p.condutasHoje, { fontSize: 13, bgColor, width: COL.condutas }),
         cell(p.alertasPendencias, {

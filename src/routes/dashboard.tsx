@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { 
   Stethoscope, Plus, LayoutGrid, ListFilter, Pill, 
   AlertTriangle, CheckCircle2, UserPlus, FileText, 
-  ArrowRight, Activity, Calendar, Building2, User,
+  ArrowRight, Activity, Calendar, Building2, User, Users,
   ClipboardList, Search, LogOut
 } from "lucide-react";
 import { useShift } from "@/hooks/useShift";
@@ -165,8 +165,8 @@ function DashboardPage() {
     setIsEnding(true);
     try {
       // 1. Gerar texto da passagem
-      let text = `PASSAGEM DE PLANTÃO - ${shift.setor}\n`;
-      text += `DATA: ${shift.data_formatada}\n`;
+      let text = `PASSAGEM DE PLANTÃO - ${shift?.setor ?? ""}\n`;
+      text += `DATA: ${shift?.data_formatada ?? ""}\n`;
       text += `PROFISSIONAL: ${storage.getNomeMedico()}\n\n`;
       
       pacientes.forEach(p => {
@@ -277,11 +277,17 @@ function DashboardPage() {
            </div>
            
            <div className="flex gap-3 w-full sm:w-auto">
-              <button onClick={() => nav({ to: "/novo-paciente" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
+              <button onClick={() => nav({ to: "/novo-paciente" })} data-testid="dashboard-add-patient" className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
                  <UserPlus className="h-4 w-4" /> ADICIONAR
               </button>
               <button onClick={() => nav({ to: "/passagem" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-border text-foreground font-bold uppercase tracking-widest text-[10px] hover:bg-secondary">
                  <FileText className="h-4 w-4" /> GERAR PASSAGEM
+              </button>
+              <button onClick={() => nav({ to: "/passagem-plantao" })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-ai/30 text-ai font-bold uppercase tracking-widest text-[10px] hover:bg-ai/5">
+                 <FileText className="h-4 w-4" /> MAPA IA (DOCX)
+              </button>
+              <button onClick={() => nav({ to: "/prescricao-alta", search: {} })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-success/40 text-success font-bold uppercase tracking-widest text-[10px] hover:bg-success/5" data-testid="dashboard-documentos">
+                 <ClipboardList className="h-4 w-4" /> DOCUMENTOS
               </button>
            </div>
         </div>

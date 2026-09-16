@@ -3,19 +3,28 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ArrowRight, Calendar, Building2, Stethoscope, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
+import { z } from "zod";
 import { createShift } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { ambienteLabel, getAmbiente, getSubAmbiente } from "@/lib/ambientes";
+import { storage } from "@/lib/storage";
 
 import { ControlledInput } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
+  validateSearch: z.object({ ambiente: z.string().optional(), sub: z.string().optional() }),
   head: () => ({ meta: [{ title: "Iniciar Plantão — MEDFLUXO" }] }),
 });
 
 function IniciarPlantaoPage() {
   const nav = useNavigate();
   const { userId } = useSupabaseUser();
+  const { ambiente: ambienteId, sub: subId } = Route.useSearch();
+  const ambiente = getAmbiente(ambienteId);
+  const subAmbiente = getSubAmbiente(ambienteId, subId);
+  const setorPre = ambiente ? ambienteLabel(ambienteId, subId) : null;
+  const tipoPre = subAmbiente?.tipoEvolucao ?? null;
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [hospital, setHospital] = useState("");
   const [saving, setSaving] = useState(false);
@@ -50,11 +59,21 @@ function IniciarPlantaoPage() {
       console.error("Erro na formatação da data", e);
     }
 
+    const destino = () => {
+      if (tipoPre) {
+        storage.setTipo(tipoPre);
+        nav({ to: "/dashboard" });
+      } else {
+        nav({ to: "/tipo" });
+      }
+    };
+
     try {
       // Try Supabase first
       const shift = await createShift({
         date: data || new Date().toISOString().slice(0, 10),
         hospital: hospitalValue,
+        ...(setorPre ? { sector: setorPre, type: tipoPre ?? undefined } : {}),
       }, userId);
 
       // Sync to localStorage
@@ -63,15 +82,15 @@ function IniciarPlantaoPage() {
         data: shift.date,
         data_formatada: displayDate,
         hospital: shift.hospital,
-        setor: shift.sector || null,
-        tipo: shift.type || null,
+        setor: shift.sector || setorPre,
+        tipo: shift.type || tipoPre,
         status: "active",
         criado_em: new Date(shift.created_at).getTime(),
       };
       localStorage.setItem("da_shift_id", shift.id);
       localStorage.setItem("da_plantao_ativo", JSON.stringify(localShift));
       toast.success("Plantão iniciado com sucesso!");
-      nav({ to: "/tipo" });
+      destino();
     } catch (err) {
       console.warn("Supabase indisponível, salvando offline.", err);
       toast.warning("Erro ao salvar plantão. Continuando offline.");
@@ -83,14 +102,14 @@ function IniciarPlantaoPage() {
         data: data || new Date().toISOString().slice(0, 10),
         data_formatada: displayDate,
         hospital: hospitalValue,
-        setor: null,
-        tipo: null,
+        setor: setorPre,
+        tipo: tipoPre,
         status: "active",
         criado_em: Date.now(),
       };
       localStorage.setItem("da_shift_id", tempId);
       localStorage.setItem("da_plantao_ativo", JSON.stringify(localShift));
-      nav({ to: "/tipo" });
+      destino();
     } finally {
       setSaving(false);
     }
@@ -111,6 +130,11 @@ function IniciarPlantaoPage() {
            </div>
            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-2">INICIAR PLANTÃO</h1>
            <p className="text-muted-foreground text-xs md:text-sm">Configure os dados básicos para começar seu dia.</p>
+           {setorPre && (
+             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary" data-testid="shift-ambiente">
+               {ambiente?.emoji} {setorPre}
+             </div>
+           )}
         </div>
 
         <div className="space-y-6 md:space-y-8">
@@ -145,6 +169,7 @@ function IniciarPlantaoPage() {
               <button 
                 onClick={handleContinue}
                 disabled={saving}
+                data-testid="shift-submit"
                 className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>CONTINUAR <ArrowRight className="h-5 w-5" /></>}

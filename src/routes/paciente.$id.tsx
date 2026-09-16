@@ -4,7 +4,7 @@ import {
   ChevronLeft, User, Activity, Pill, AlertTriangle, 
   Calendar, Building2, ClipboardList, FileText, 
   Plus, CheckCircle2, FileUp, Edit3, ArrowRight,
-  TrendingUp, Clock, Info, Check
+  TrendingUp, Clock, Info, Check, X
 } from "lucide-react";
 import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from "date-fns";
 import { toast } from "sonner";
@@ -468,15 +468,44 @@ function PacienteDetailPage() {
               <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
            </button>
 
-           <button 
-             onClick={() => nav({ to: "/encaminhamento/$id", params: { id } })}
+           <button
+             onClick={() => nav({ to: "/prescricao-alta", search: { paciente: id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-success/40 text-foreground hover:border-success"
+             data-testid="paciente-receita-alta"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-success/10 text-success">
+                    <FileText className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">RECEITA DE ALTA</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button
+             onClick={() => nav({ to: "/encaminhamento", search: { paciente: id } })}
              className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+             data-testid="paciente-encaminhamento"
            >
               <div className="flex items-center gap-4">
                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
                     <ArrowRight className="h-5 w-5" />
                  </div>
                  <span className="text-[10px] font-black uppercase tracking-widest">GERAR ENCAMINHAMENTO</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+           </button>
+
+           <button
+             onClick={() => nav({ to: "/orientacoes-paciente", search: { paciente: id } })}
+             className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
+             data-testid="paciente-orientacoes"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
+                    <ClipboardList className="h-5 w-5" />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">ORIENTAÇÕES AO PACIENTE</span>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
            </button>

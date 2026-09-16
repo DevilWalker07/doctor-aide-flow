@@ -34,37 +34,43 @@ function ProcessandoRoute() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const pollingRef = useRef<boolean>(true);
+  const inFlightRef = useRef(false);
+  const finishedRef = useRef(false);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const deadline = Date.now() + 300_000; // 5 minutes timeout
     pollingRef.current = true;
+    finishedRef.current = false;
 
     const timerInterval = setInterval(() => {
       setElapsed(prev => prev + 1);
     }, 1000);
 
+    const scheduleNext = (ms: number) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (pollingRef.current && !finishedRef.current) timeoutId = setTimeout(poll, ms);
+    };
+
     const poll = async () => {
-      if (!pollingRef.current) return;
-      
+      if (!pollingRef.current || finishedRef.current || inFlightRef.current) return;
+
       if (Date.now() > deadline) {
+        finishedRef.current = true;
         setStatus("error");
         setErrorMsg("Tempo limite atingido. Verifique sua conexão.");
         return;
       }
 
+      inFlightRef.current = true;
       try {
         const job = await getClinicalExtractionJob(jobId);
-        
-        // If status changed or job finished, update state
-        if (job.status !== status) {
-          setStatus(job.status);
-        }
-        if (job.stage !== currentStage) {
-          setCurrentStage(job.stage);
-        }
+
+        setStatus(job.status);
+        setCurrentStage(job.stage);
 
         if (job.status === "done" && job.result) {
+          finishedRef.current = true;
           storage.setExtracaoResultado(JSON.stringify(job.result));
           storage.clearJobAtivo();
           
@@ -73,7 +79,7 @@ function ProcessandoRoute() {
              storage.clearUploadPatientId();
              nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
           } else {
-             nav({ to: "/revisar-extracao" });
+             nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
           }
           
           toast.success("Processamento concluído!");
@@ -81,20 +87,24 @@ function ProcessandoRoute() {
         }
 
         if (job.status === "error") {
+          finishedRef.current = true;
           setStatus("error");
           setErrorMsg(job.error || "Erro desconhecido no servidor.");
           return;
         }
 
-        // Only schedule next poll if we're still processing
-        if (pollingRef.current && job.status !== "done" && job.status !== "error") {
-          timeoutId = setTimeout(poll, 3000);
-        }
+        scheduleNext(3000);
       } catch (err: any) {
         console.error("Polling error:", err);
-        if (pollingRef.current) {
-          timeoutId = setTimeout(poll, 5000);
+        if (err?.message?.includes("não encontrado")) {
+          finishedRef.current = true;
+          setStatus("error");
+          setErrorMsg(err.message);
+          return;
         }
+        scheduleNext(5000);
+      } finally {
+        inFlightRef.current = false;
       }
     };
 
@@ -102,9 +112,8 @@ function ProcessandoRoute() {
 
     // Visibility change listener for Safari/Mobile resistance
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && status !== "done" && status !== "error") {
-        pollingRef.current = true;
-        poll();
+      if (document.visibilityState === "visible" && !finishedRef.current && !inFlightRef.current) {
+        scheduleNext(0);
       }
     };
 
@@ -116,7 +125,8 @@ function ProcessandoRoute() {
       clearInterval(timerInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [jobId, nav]); // Removed status from dependencies to avoid re-triggering poll loop on every status change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, nav]);
 
   // Map stage to step index
   const getCurrentStepIndex = () => {
@@ -174,7 +184,7 @@ function ProcessandoRoute() {
                 <RefreshCw className="h-4 w-4" /> Tentar Novamente
               </button>
               <button
-                onClick={() => nav({ to: "/cadastro-manual" })}
+                onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
                 className="py-4 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
               >
                 <ClipboardList className="h-4 w-4" /> Preencher Manual
@@ -229,7 +239,7 @@ function ProcessandoRoute() {
                       <RefreshCw className="h-3.5 w-3.5" /> Aguardar mais
                     </button>
                     <button
-                      onClick={() => nav({ to: "/cadastro-manual" })}
+                      onClick={() => nav({ to: "/cadastro-manual", search: {} as never })}
                       className="flex-1 py-4 rounded-xl bg-secondary text-foreground font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                     >
                       <ClipboardList className="h-3.5 w-3.5" /> Digitar Manual

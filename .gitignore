@@ -9,7 +9,14 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-server
 dist-ssr
+playwright-report
+test-results
+
+# Documentos clínicos nunca entram no repositório
+/*.docx
+/*.pdf
 .output
 .vinxi
 .tanstack/**

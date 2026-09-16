@@ -128,8 +128,19 @@ export const storage = {
     return merged;
   },
 
+  // Documentos ambulatoriais (receita de alta, encaminhamento, orientações)
+  getDocumentos: (): unknown[] => {
+    try {
+      return JSON.parse(localStorage.getItem('da_documentos') || '[]');
+    } catch {
+      return [];
+    }
+  },
+  setDocumentos: (docs: unknown[]) => localStorage.setItem('da_documentos', JSON.stringify(docs)),
+
   // Limpeza de sessão (ao encerrar plantão ou sair da conta)
   clearSession: () => {
+    localStorage.removeItem('da_documentos');
     localStorage.removeItem('da_shift_id');
     localStorage.removeItem('da_tipo_evolucao');
     localStorage.removeItem('da_extracao_resultado');
