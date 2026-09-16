@@ -1,5 +1,6 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { EvolucaoBody } from "../../server/schemas/ai.schemas.js";
 import { AIUnavailableError } from "../../server/lib/errors.js";
 import { makeApp } from "./helpers/app.js";
 import { aiMock, resetAiMock } from "./helpers/mocks.js";
@@ -164,6 +165,28 @@ describe("/api/ai/*", () => {
       .send({ evolutionText: "EVOLUCAO MEDICA PACIENTE ESTAVEL SEM QUEIXAS" });
     expect(res.status).toBe(200);
     expect(res.headers.deprecation).toBe("true");
+  });
+
+  it("aceita raw_notes na geração de evolução", async () => {
+    // O Zod usa `strip`: um campo fora do schema é descartado em silêncio,
+    // e o ditado do médico sumiria sem nenhum erro visível.
+    const res = await request(app)
+      .post("/api/ai/gerar-evolucao")
+      .set(auth)
+      .send({
+        patient: { name: "X" },
+        raw_notes: "PACIENTE REFERE MELHORA DA DISPNEIA, ACEITANDO DIETA.",
+      });
+    expect(res.status).toBe(200);
+    expect(EvolucaoBody.parse({ patient: {}, raw_notes: "abc" }).raw_notes).toBe("abc");
+  });
+
+  it("rejeita raw_notes acima do limite", async () => {
+    const res = await request(app)
+      .post("/api/ai/gerar-evolucao")
+      .set(auth)
+      .send({ patient: { name: "X" }, raw_notes: "a".repeat(20_001) });
+    expect(res.status).toBe(400);
   });
 
   it("404 JSON para rota de API inexistente", async () => {

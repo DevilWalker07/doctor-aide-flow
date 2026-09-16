@@ -52,6 +52,8 @@ export const EvolucaoBody = z.object({
   tipo_unidade: z.string().optional(),
   template: z.string().optional(),
   data_plantao: z.string().optional(),
+  /** Anotações ditadas ou digitadas livremente, para a IA reestruturar. */
+  raw_notes: z.string().max(20_000).optional(),
   preferences: z
     .object({
       uppercase: z.boolean().optional(),

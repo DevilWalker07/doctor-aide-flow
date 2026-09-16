@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import {
+  ChevronDown,
+  Mic,
   ChevronLeft,
   Sparkles,
   Copy,
@@ -22,6 +24,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { storage } from "@/lib/storage";
 
 import { ControlledTextarea } from "@/components/ui/controlled-input";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
@@ -191,6 +194,24 @@ function EvolucaoPage() {
   const [evolutionText, setEvolutionText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [rawNotes, setRawNotes] = useState("");
+  const [ditadoAberto, setDitadoAberto] = useState(false);
+  const [rascunhoVoz, setRascunhoVoz] = useState<string | null>(null);
+
+  const chaveRascunhoVoz = `da_voz_rascunho_${id}`;
+
+  // O rascunho era gravado e nunca lido. Lê-lo é o que salva o médico que foi
+  // interrompido no meio do ditado.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(chaveRascunhoVoz);
+      if (!raw) return;
+      const { text } = JSON.parse(raw) as { text?: string };
+      if (text?.trim()) setRascunhoVoz(text);
+    } catch {
+      /* rascunho corrompido: segue sem oferecer restauração */
+    }
+  }, [chaveRascunhoVoz]);
 
   useEffect(() => {
     if (!userId) return;
@@ -275,6 +296,7 @@ function EvolucaoPage() {
         tipo_unidade: tipoUnidade,
         template: TEMPLATES[tipoUnidade] || TEMPLATES.enfermaria_clinica,
         data_plantao: dataPlantao,
+        ...(rawNotes.trim() ? { raw_notes: rawNotes.trim() } : {}),
         preferences: {
           uppercase: true,
           lab_format: "compact_inline",
@@ -505,6 +527,91 @@ function EvolucaoPage() {
                   )}
                   {isGenerating ? "GERANDO..." : "GERAR EVOLUÇÃO"}
                 </button>
+              </div>
+
+              {/* Ditado: recolhido por padrão, para não roubar espaço de quem digita. */}
+              <div className="border-border mb-6 rounded-3xl border">
+                <button
+                  type="button"
+                  onClick={() => setDitadoAberto((v) => !v)}
+                  aria-expanded={ditadoAberto}
+                  data-testid="voice-disclosure"
+                  className="hover:bg-secondary focus-visible:ring-ring flex min-h-[3rem] w-full items-center justify-between gap-3 rounded-3xl px-5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <span className="flex items-center gap-2">
+                    <Mic className="text-muted-foreground h-5 w-5" aria-hidden="true" />
+                    <span className="t-title text-foreground">Ditar anotações</span>
+                  </span>
+                  <ChevronDown
+                    className={`text-muted-foreground h-5 w-5 transition-transform ${ditadoAberto ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {ditadoAberto && (
+                  <div className="space-y-4 px-5 pt-1 pb-5">
+                    <p className="t-body text-muted-foreground">
+                      Fale como quiser. A IA reestrutura no modelo da unidade ao gerar a evolução.
+                    </p>
+
+                    {rascunhoVoz && (
+                      <div className="border-border bg-secondary flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center">
+                        <p className="t-body text-foreground flex-1">
+                          Há anotações ditadas que não viraram evolução.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            data-testid="voice-restore"
+                            onClick={() => {
+                              setRawNotes((atual) =>
+                                atual.trim() ? `${atual.trim()}\n${rascunhoVoz}` : rascunhoVoz,
+                              );
+                              setRascunhoVoz(null);
+                            }}
+                            className="t-label bg-primary text-primary-foreground focus-visible:ring-ring min-h-[2.75rem] rounded-xl px-4 focus-visible:ring-2 focus-visible:outline-none"
+                          >
+                            Restaurar anotações
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRascunhoVoz(null);
+                              try {
+                                localStorage.removeItem(chaveRascunhoVoz);
+                              } catch {
+                                /* nada a fazer */
+                              }
+                            }}
+                            className="t-label border-border text-foreground hover:bg-background focus-visible:ring-ring min-h-[2.75rem] rounded-xl border px-4 focus-visible:ring-2 focus-visible:outline-none"
+                          >
+                            Descartar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <VoiceRecorder
+                      value={rawNotes}
+                      onChange={setRawNotes}
+                      autosaveKey={chaveRascunhoVoz}
+                    />
+
+                    <div>
+                      <label htmlFor="raw-notes" className="t-label text-muted-foreground">
+                        Anotações brutas
+                      </label>
+                      <ControlledTextarea
+                        id="raw-notes"
+                        value={rawNotes}
+                        onValueChange={setRawNotes}
+                        data-testid="voice-notes"
+                        placeholder="Dite ou digite livremente: queixas, exame físico, condutas."
+                        className="bg-secondary/20 border-border focus:ring-ring mt-1 min-h-[9rem] w-full rounded-2xl border p-4 text-[0.9375rem] leading-relaxed focus:ring-2 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 relative">
