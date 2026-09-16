@@ -8,7 +8,7 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroPage,
-  head: () => ({ meta: [{ title: "Criar conta — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Criar conta — MEDFLUXO" }] }),
 });
 
 function CadastroPage() {

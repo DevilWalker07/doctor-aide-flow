@@ -25,7 +25,7 @@ import {
 export const Route = createFileRoute("/encaminhamento")({
   component: EncaminhamentoPage,
   validateSearch: z.object({ paciente: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Encaminhamento — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Encaminhamento — MEDFLUXO" }] }),
 });
 
 const FORM_INICIAL: EncaminhamentoForm = { destino: "Cardiologia", destinoOutro: "", prioridade: "eletivo", hipoteses: [], resumoClinico: "", justificativa: "", exames: [], solicitacao: "" };

@@ -8,7 +8,7 @@ import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/copiloto")({
   component: CopilotoPage,
-  head: () => ({ meta: [{ title: "Copiloto Clínico — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Copiloto Clínico — MEDFLUXO" }] }),
 });
 
 interface Msg {

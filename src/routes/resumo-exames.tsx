@@ -7,7 +7,7 @@ import type { LabExtractionResult } from "@/lib/types/lab";
 
 export const Route = createFileRoute("/resumo-exames")({
   component: ResumoExamesPage,
-  head: () => ({ meta: [{ title: "Resumo de Exames — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Resumo de Exames — MEDFLUXO" }] }),
 });
 
 function ResumoExamesPage() {

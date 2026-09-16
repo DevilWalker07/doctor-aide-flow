@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O Motor Luan é a camada de orquestração clínica do DOUTOR AJUDA / HNAS ASSIST. Ele recebe textos clínicos, evoluções de ontem, pacientes e laboratórios, e devolve estruturas revisáveis pelo médico.
+O Motor Luan é a camada de orquestração clínica do MEDFLUXO / HNAS ASSIST. Ele recebe textos clínicos, evoluções de ontem, pacientes e laboratórios, e devolve estruturas revisáveis pelo médico.
 
 ## Agentes
 

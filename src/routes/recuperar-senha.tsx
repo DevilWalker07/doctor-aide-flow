@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/recuperar-senha")({
   component: RecuperarSenhaPage,
-  head: () => ({ meta: [{ title: "Recuperar senha — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Recuperar senha — MEDFLUXO" }] }),
 });
 
 function RecuperarSenhaPage() {

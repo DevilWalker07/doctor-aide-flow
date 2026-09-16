@@ -10,7 +10,7 @@ export function AuthShell({ titulo, subtitulo, children, rodape }: { titulo: str
             <Stethoscope className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-lg font-black tracking-tight uppercase text-foreground">Doutor Ajuda</div>
+            <div className="text-lg font-black tracking-tight uppercase text-foreground">Medfluxo</div>
             <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">HNAS Assist</div>
           </div>
         </div>

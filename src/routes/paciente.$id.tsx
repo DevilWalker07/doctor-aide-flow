@@ -13,7 +13,7 @@ import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
-  head: () => ({ meta: [{ title: "Prontuário do Paciente — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Prontuário do Paciente — MEDFLUXO" }] }),
 });
 
 function PacienteDetailPage() {

@@ -7,7 +7,7 @@ import { updateShift as dbUpdateShift } from "@/lib/db";
 
 export const Route = createFileRoute("/tipo")({
   component: TipoPage,
-  head: () => ({ meta: [{ title: "Onde você está hoje? — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Onde você está hoje? — MEDFLUXO" }] }),
 });
 
 const sectors = [

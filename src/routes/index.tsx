@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
   component: HubPage,
-  head: () => ({ meta: [{ title: "Doutor Ajuda — Central de Atendimento" }] }),
+  head: () => ({ meta: [{ title: "Medfluxo — Central de Atendimento" }] }),
 });
 
 function formatDate(dateStr: string): string {
@@ -153,7 +153,7 @@ function HubPage() {
             <Stethoscope className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <span className="block font-black tracking-tight text-lg leading-none">DOUTOR AJUDA</span>
+            <span className="block font-black tracking-tight text-lg leading-none">MEDFLUXO</span>
             <span className="block text-[9px] font-black tracking-[0.3em] uppercase text-slate-500 mt-1 truncate">Central de atendimento</span>
           </div>
         </div>
@@ -184,7 +184,7 @@ function HubPage() {
       </main>
 
       <footer className="relative z-10 py-8 text-center">
-        <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">Doutor Ajuda · HNAS Assist</p>
+        <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">Medfluxo · HNAS Assist</p>
       </footer>
 
       {selectedHandoff && (

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/upload-ia")({
       patient_id: (search.patient_id as string) || undefined,
     };
   },
-  head: () => ({ meta: [{ title: "Upload IA — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Upload IA — MEDFLUXO" }] }),
 });
 
 function UploadIAPage() {

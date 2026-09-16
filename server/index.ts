@@ -5,7 +5,7 @@ import { getJobStore } from "./services/jobStore.js";
 const app = createApp({ jobStore: getJobStore() });
 
 const server = app.listen(env.PORT, () => {
-  console.log(`DOUTOR AJUDA Motor Luan v${APP_VERSION} em http://localhost:${env.PORT} (${env.NODE_ENV})`);
+  console.log(`MEDFLUXO Motor Luan v${APP_VERSION} em http://localhost:${env.PORT} (${env.NODE_ENV})`);
 });
 
 server.requestTimeout = 300_000;

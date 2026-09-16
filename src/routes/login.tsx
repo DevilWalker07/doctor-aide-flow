@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   validateSearch: z.object({ redirect: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Entrar — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Entrar — MEDFLUXO" }] }),
 });
 
 function LoginPage() {

@@ -17,7 +17,7 @@ import { CATEGORIAS_ORIENTACAO, ORIENTACOES } from "@/lib/medical/orientacoes";
 export const Route = createFileRoute("/orientacoes-paciente")({
   component: OrientacoesPage,
   validateSearch: z.object({ paciente: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Orientações ao Paciente — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Orientações ao Paciente — MEDFLUXO" }] }),
 });
 
 function OrientacoesPage() {

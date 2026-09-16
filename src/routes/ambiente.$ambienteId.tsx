@@ -12,7 +12,7 @@ export const Route = createFileRoute("/ambiente/$ambienteId")({
     return { ambiente };
   },
   component: AmbientePage,
-  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.ambiente.curto ?? "Ambiente"} — DOUTOR AJUDA` }] }),
+  head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.ambiente.curto ?? "Ambiente"} — MEDFLUXO` }] }),
 });
 
 function AmbientePage() {

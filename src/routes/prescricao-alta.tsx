@@ -20,7 +20,7 @@ import { getMedicamento, MEDICAMENTOS, type Horario, type Medicamento } from "@/
 export const Route = createFileRoute("/prescricao-alta")({
   component: PrescricaoAltaPage,
   validateSearch: z.object({ paciente: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Receita de Alta — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Receita de Alta — MEDFLUXO" }] }),
 });
 
 const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);

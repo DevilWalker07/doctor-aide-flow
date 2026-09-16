@@ -14,7 +14,7 @@ import { ControlledInput } from "@/components/ui/controlled-input";
 export const Route = createFileRoute("/iniciar-plantao")({
   component: IniciarPlantaoPage,
   validateSearch: z.object({ ambiente: z.string().optional(), sub: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Iniciar Plantão — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Iniciar Plantão — MEDFLUXO" }] }),
 });
 
 function IniciarPlantaoPage() {

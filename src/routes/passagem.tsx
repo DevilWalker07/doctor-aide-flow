@@ -10,7 +10,7 @@ import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/passagem")({
   component: PassagemPage,
-  head: () => ({ meta: [{ title: "Passagem de Plantão — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Passagem de Plantão — MEDFLUXO" }] }),
 });
 
 function PassagemPage() {

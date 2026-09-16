@@ -1,5 +1,5 @@
 -- ============================================================
--- DOUTOR AJUDA — SCHEMA CANÔNICO
+-- MEDFLUXO — SCHEMA CANÔNICO
 -- Substitui 00000_initial, 0001_doutor_ajuda, 20260514_fase3 e
 -- 99999_local_mode (que desligava RLS). Aplicar em banco limpo:
 --   supabase db reset            (local)

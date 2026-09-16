@@ -16,7 +16,7 @@ import { ControlledTextarea } from "@/components/ui/controlled-input";
 
 export const Route = createFileRoute("/evolucao/$id")({
   component: EvolucaoPage,
-  head: () => ({ meta: [{ title: "Gerar Evolução Clínica — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Gerar Evolução Clínica — MEDFLUXO" }] }),
 });
 
 const TEMPLATES: Record<string, string> = {

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/nova-senha")({
   component: NovaSenhaPage,
-  head: () => ({ meta: [{ title: "Nova senha — DOUTOR AJUDA" }] }),
+  head: () => ({ meta: [{ title: "Nova senha — MEDFLUXO" }] }),
 });
 
 function NovaSenhaPage() {
