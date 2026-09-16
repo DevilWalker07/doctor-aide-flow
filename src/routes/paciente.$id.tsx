@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import {
   ChevronLeft,
   User,
@@ -25,11 +25,69 @@ import { differenceInDays, parseISO, isValid, format, addDays, startOfDay } from
 import { toast } from "sonner";
 import { getPatientById, updatePatient, getLastEvolution } from "@/lib/db";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { leitoCurto, nomeExibicao } from "@/lib/format";
+import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/paciente/$id")({
   component: PacienteDetailPage,
   head: () => ({ meta: [{ title: "Prontuário do Paciente — MEDFLUXO" }] }),
 });
+
+type NavFn = ReturnType<typeof useNavigate>;
+
+interface AcaoCtx {
+  nav: NavFn;
+  id: string;
+  handleStatusUpdate: (status: string) => void;
+}
+
+/** Ações secundárias da ficha. "Evoluir" não entra: é o botão fixo do rodapé. */
+const ACOES: Array<{
+  label: string;
+  icon: typeof Pill;
+  testid?: string;
+  acao: (ctx: AcaoCtx) => void;
+}> = [
+  {
+    label: "Gerar prescrição",
+    icon: Pill,
+    acao: ({ nav, id }) => nav({ to: "/prescricao/$id", params: { id } }),
+  },
+  {
+    label: "Receita de alta",
+    icon: FileText,
+    testid: "paciente-receita-alta",
+    acao: ({ nav, id }) => nav({ to: "/prescricao-alta", search: { paciente: id } }),
+  },
+  {
+    label: "Encaminhamento",
+    icon: ArrowRight,
+    testid: "paciente-encaminhamento",
+    acao: ({ nav, id }) => nav({ to: "/encaminhamento", search: { paciente: id } }),
+  },
+  {
+    label: "Orientações ao paciente",
+    icon: ClipboardList,
+    testid: "paciente-orientacoes",
+    acao: ({ nav, id }) => nav({ to: "/orientacoes-paciente", search: { paciente: id } }),
+  },
+  {
+    label: "Editar dados",
+    icon: Edit3,
+    acao: ({ nav, id }) =>
+      nav({ to: "/cadastro-manual", search: { id, tipo: "internado" } as never }),
+  },
+  {
+    label: "Marcar alta provável",
+    icon: Check,
+    acao: ({ handleStatusUpdate }) => handleStatusUpdate("alta_provavel"),
+  },
+  {
+    label: "Histórico de evoluções",
+    icon: Clock,
+    acao: ({ nav, id }) => nav({ to: "/evolucao/$id/historico", params: { id } }),
+  },
+];
 
 function PacienteDetailPage() {
   const { id } = useParams({ from: "/paciente/$id" });
@@ -182,603 +240,428 @@ function PacienteDetailPage() {
     }
   };
 
+  // O ajuste de "dias para alerta de ATB" existia em Configurações, mas esta
+  // tela ignorava e fixava 7 dias para qualquer esquema.
+  const diasAlertaAtb = useMemo(() => {
+    const dias = storage.getAtbAlertDays();
+    return Number.isFinite(dias) && dias > 0 ? dias : 7;
+  }, []);
+
+  const problemasAtivos: string[] = useMemo(() => {
+    const lista: string[] = [...(paciente?.diagnoses ?? [])];
+    const dx = paciente?.data?.conducta?.dx;
+    if (dx && !lista.includes(dx)) lista.push(dx);
+    return lista;
+  }, [paciente]);
+
+  const dataAdmissao = useMemo(() => {
+    const bruta = paciente?.admissionDate || paciente?.admission;
+    if (!bruta) return "data não informada";
+    const d = parseISO(bruta);
+    return isValid(d) ? format(d, "dd/MM/yyyy") : String(bruta);
+  }, [paciente]);
+
   if (loading) return null;
   if (!paciente) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <h1 className="text-2xl font-bold mb-4 uppercase tracking-tighter">
-          Paciente não encontrado
-        </h1>
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center p-6 text-center">
+        <h1 className="t-display text-foreground">Paciente não encontrado</h1>
+        <p className="t-body text-muted-foreground mt-2">
+          Ele pode ter sido removido ou pertencer a outro plantão.
+        </p>
         <Link
           to="/dashboard"
-          className="text-primary font-black uppercase text-xs tracking-widest border-b-2 border-primary/20 hover:border-primary"
+          className="bg-primary text-primary-foreground focus-visible:ring-ring mt-6 inline-flex min-h-[3rem] items-center rounded-2xl px-6 text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
         >
-          Voltar ao Dashboard
+          Voltar ao plantão
         </Link>
       </div>
     );
   }
 
   const lastEvolution = evolutions[0];
+  const nome = nomeExibicao(paciente.name);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Premium Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-30 shadow-sm overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 bg-primary h-full" />
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-6">
+    <div className="bg-background min-h-screen pb-28">
+      <header className="bg-card border-border sticky top-0 z-30 border-b">
+        <div className="mx-auto max-w-4xl px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => nav({ to: "/dashboard" })}
-              className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest"
+              className="t-label text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-2 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" /> Plantão
             </button>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${paciente.status === "alta_provavel" ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"}`}
-              >
-                {paciente.status === "alta_provavel" ? "ALTA PROVÁVEL" : "INTERNADO"}
-              </span>
-            </div>
+            <span
+              className={`t-label rounded-full px-3 py-1.5 ${
+                paciente.status === "alta_provavel"
+                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              {paciente.status === "alta_provavel" ? "Alta provável" : "Internado"}
+            </span>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight mb-2 uppercase">
-                {paciente.name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                <span className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-primary" /> LEITO {paciente.bed}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-secondary" /> {paciente.age} ANOS ·{" "}
-                  {paciente.sex === "M" ? "MASCULINO" : "FEMININO"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-secondary" /> {paciente.sector}
-                </span>
-              </div>
-              <div className="mt-3 text-[10px] font-black text-primary/60 uppercase tracking-widest flex items-center gap-2">
-                <Calendar className="h-3 w-3" /> {dihInfo?.d} · {dihInfo?.label}
-              </div>
-            </div>
-            <div className="bg-secondary/30 rounded-2xl px-6 py-4 border border-border">
-              <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">
-                DATA DE ADMISSÃO
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-primary">{dihInfo?.d}</span>
-                <span className="text-xs font-bold text-muted-foreground tracking-tight">
-                  {(() => {
-                    try {
-                      const dateStr = paciente.admissionDate || paciente.admission;
-                      if (!dateStr) return "N/A";
-                      const d = parseISO(dateStr);
-                      return isValid(d) ? format(d, "dd/MM/yyyy") : dateStr;
-                    } catch {
-                      return "N/A";
-                    }
-                  })()}
-                </span>
-              </div>
-            </div>
-          </div>
+          <h1 className="t-display text-foreground mt-2">{nome}</h1>
+          <p className="t-body text-muted-foreground">
+            Leito {leitoCurto(paciente.bed)} ·{" "}
+            {paciente.age ? `${paciente.age} anos` : "idade não informada"} ·{" "}
+            {paciente.sex === "M" ? "Masculino" : "Feminino"}
+            {paciente.sector ? ` · ${paciente.sector}` : ""}
+          </p>
+          <p className="t-label text-primary mt-1 flex items-center gap-1.5">
+            <Calendar className="h-4 w-4" aria-hidden="true" />
+            {dihInfo?.d} de internação · admitido em {dataAdmissao}
+          </p>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 space-y-12">
-        {/* LISTA DE PROBLEMAS */}
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
         <Section
-          title="LISTA DE PROBLEMAS"
-          icon={<ClipboardList className="h-5 w-5" />}
+          title="Lista de problemas"
+          icon={<ClipboardList className="h-5 w-5" aria-hidden="true" />}
           action={
             <button
               onClick={() =>
                 nav({ to: "/cadastro-manual", search: { id, tipo: "internado" } as any })
               }
-              className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
+              className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Edit3 className="h-3 w-3" /> EDITAR
+              <Edit3 className="h-4 w-4" aria-hidden="true" /> Editar
             </button>
           }
         >
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-4">
-                <div className="h-2 w-2 rounded-full bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]" />{" "}
-                PROBLEMAS ATIVOS
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h4 className="t-eyebrow text-muted-foreground flex items-center gap-2">
+                <span className="bg-destructive h-2 w-2 rounded-full" aria-hidden="true" /> Ativos
               </h4>
-              {paciente.diagnoses?.length > 0 || paciente.data?.conducta?.dx ? (
-                <div className="space-y-2">
-                  {paciente.diagnoses?.map((prob: string, i: number) => (
-                    <div
+              {problemasAtivos.length > 0 ? (
+                <ul className="mt-3 space-y-2">
+                  {problemasAtivos.map((prob: string, i: number) => (
+                    <li
                       key={i}
-                      className="p-4 bg-white border border-border rounded-xl text-xs font-bold text-foreground shadow-sm uppercase flex items-center gap-2"
+                      className="bg-background border-border t-body text-foreground flex items-center gap-2 rounded-xl border p-3"
                     >
-                      <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" /> {prob}
-                    </div>
+                      <span
+                        className="bg-destructive h-1.5 w-1.5 shrink-0 rounded-full"
+                        aria-hidden="true"
+                      />
+                      {prob}
+                    </li>
                   ))}
-                  {paciente.data?.conducta?.dx && (
-                    <div className="p-4 bg-white border border-border rounded-xl text-xs font-bold text-foreground shadow-sm uppercase flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />{" "}
-                      {paciente.data.conducta.dx}
-                    </div>
-                  )}
-                </div>
+                </ul>
               ) : (
-                <p className="text-xs italic text-muted-foreground">
-                  Nenhum problema ativo listado.
-                </p>
+                <p className="t-body text-muted-foreground mt-3">Nenhum problema ativo listado.</p>
               )}
             </div>
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 mb-4">
-                <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />{" "}
-                COMORBIDADES CONTROLADAS
+            <div>
+              <h4 className="t-eyebrow text-muted-foreground flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />{" "}
+                Comorbidades
               </h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {paciente.comorbidities?.length > 0 ? (
                   paciente.comorbidities.map((c: string) => (
                     <span
                       key={c}
-                      className="px-3 py-2 bg-secondary/50 border border-border rounded-lg text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1.5"
+                      className="bg-secondary border-border t-label text-foreground flex items-center gap-1.5 rounded-lg border px-3 py-2"
                     >
-                      <div className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {c}
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />{" "}
+                      {c}
                     </span>
                   ))
                 ) : (
-                  <p className="text-xs italic text-muted-foreground">
-                    Nenhuma comorbidade listada.
-                  </p>
+                  <p className="t-body text-muted-foreground">Nenhuma comorbidade listada.</p>
                 )}
               </div>
             </div>
           </div>
         </Section>
 
-        {/* ANTIBIÓTICOS */}
-        <Section title="ANTIBIÓTICOS" icon={<Pill className="h-5 w-5" />}>
-          <div className="space-y-8">
-            {paciente.data?.abx?.length > 0 ? (
-              paciente.data.abx.map((atb: any, i: number) => {
-                const dValue = differenceInDays(
-                  startOfDay(new Date()),
-                  startOfDay(parseISO(atb.d0)),
-                );
-                const dSafe = dValue >= 0 ? dValue : 0;
-                const maxDays = 7;
-                const progressBlocks = 8;
-                const activeBlocks = Math.min(
-                  Math.round((dSafe / maxDays) * progressBlocks),
-                  progressBlocks,
-                );
-
-                const blocks = "█".repeat(activeBlocks) + "░".repeat(progressBlocks - activeBlocks);
-                const colorClass =
-                  dSafe <= 3
-                    ? "text-emerald-500"
-                    : dSafe <= 5
-                      ? "text-amber-500"
-                      : "text-destructive";
+        <Section title="Antibióticos" icon={<Pill className="h-5 w-5" aria-hidden="true" />}>
+          {paciente.data?.abx?.length > 0 ? (
+            <ul className="space-y-5">
+              {paciente.data.abx.map((atb: any, i: number) => {
+                const inicio = parseISO(atb.d0);
+                const dias = isValid(inicio)
+                  ? Math.max(differenceInDays(startOfDay(new Date()), startOfDay(inicio)), 0)
+                  : null;
+                const passouDoAlerta = dias !== null && dias > diasAlertaAtb;
+                const proporcao = dias === null ? 0 : Math.min(dias / diasAlertaAtb, 1);
 
                 return (
-                  <div key={i} className="space-y-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-black text-foreground uppercase tracking-tight text-lg">
-                          {atb.name}
-                        </h3>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                          {atb.dose} · {atb.via} · {atb.freq}
+                  <li key={i} className="space-y-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="t-title text-foreground">{atb.name}</h3>
+                        <p className="t-body text-muted-foreground">
+                          {[atb.dose, atb.via, atb.freq].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-black text-foreground">D{dSafe}</div>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                          INÍCIO: {format(parseISO(atb.d0), "dd/MM/yyyy")}
+                        <span className="t-display text-foreground leading-none">
+                          {dias === null ? "D?" : `D${dias}`}
+                        </span>
+                        <p className="t-label text-muted-foreground font-normal">
+                          {isValid(inicio)
+                            ? `Início ${format(inicio, "dd/MM/yyyy")}`
+                            : "Início não informado"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className={`font-mono text-xl tracking-tighter ${colorClass}`}>
-                        {blocks}{" "}
-                        <span className="text-xs font-black text-muted-foreground ml-2">
-                          {dSafe}/7 DIAS
-                        </span>
+                    {/* Era uma barra feita de caracteres █ e ░, que o leitor de
+                        tela lê como ruído. Agora é uma barra de verdade, e o
+                        limite vem de Configurações em vez de 7 dias fixos. */}
+                    <div>
+                      <div
+                        className="bg-secondary h-2 w-full overflow-hidden rounded-full"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={diasAlertaAtb}
+                        aria-valuenow={dias ?? 0}
+                        aria-label={`${atb.name}: dia ${dias ?? "desconhecido"} de uso`}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            passouDoAlerta
+                              ? "bg-destructive"
+                              : proporcao > 0.7
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${Math.max(proporcao * 100, 4)}%` }}
+                        />
                       </div>
-                      <div className="flex justify-between text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                        <span>Início: {format(parseISO(atb.d0), "dd/MM/yyyy")}</span>
-                        <span>
-                          Término previsto: {format(addDays(parseISO(atb.d0), 7), "dd/MM/yyyy")}
-                        </span>
-                      </div>
+                      {/* Não afirmamos data de término: o esquema é do prescritor. */}
+                      <p className="t-label text-muted-foreground mt-1.5 font-normal">
+                        Reavaliar em {diasAlertaAtb} dias (ajustável em Configurações)
+                      </p>
                     </div>
 
-                    {dSafe > 7 && (
-                      <div className="flex items-center gap-2 p-3 bg-destructive/5 border border-destructive/10 rounded-xl text-destructive text-[10px] font-bold uppercase tracking-widest">
-                        <AlertTriangle className="h-4 w-4" /> ⚠ ATB HÁ MAIS DE 7 DIAS
-                      </div>
+                    {passouDoAlerta && (
+                      <p className="bg-destructive/10 text-destructive t-body flex items-center gap-2 rounded-xl p-3">
+                        <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
+                        Em uso há mais de {diasAlertaAtb} dias — revisar indicação e culturas.
+                      </p>
                     )}
-                  </div>
+                  </li>
                 );
-              })
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center bg-secondary/20 rounded-[2rem] border-2 border-dashed border-border">
-                <Pill className="h-8 w-8 text-muted-foreground/30 mb-3" />
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                  Nenhum antibiótico em uso
-                </p>
-              </div>
-            )}
-          </div>
+              })}
+            </ul>
+          ) : (
+            <div className="border-border flex flex-col items-center rounded-2xl border-2 border-dashed py-8 text-center">
+              <Pill className="text-muted-foreground mb-2 h-8 w-8" aria-hidden="true" />
+              <p className="t-body text-muted-foreground">Nenhum antibiótico em uso</p>
+            </div>
+          )}
         </Section>
 
-        {/* LABORATÓRIOS RECENTES */}
-        <Section
-          title="LABORATÓRIOS RECENTES"
-          icon={<Activity className="h-5 w-5" />}
-          action={
-            <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">
-              Ver todos
-            </button>
-          }
-        >
+        <Section title="Laboratório" icon={<Activity className="h-5 w-5" aria-hidden="true" />}>
           {paciente.data?.lab ? (
-            <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-2xl border border-border">
-              <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-primary border border-border shadow-sm shrink-0">
-                <Clock className="h-5 w-5" />
+            <div className="bg-secondary border-border flex items-center gap-4 rounded-2xl border p-4">
+              <div className="bg-card text-primary border-border flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border">
+                <Clock className="h-5 w-5" aria-hidden="true" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                  ÚLTIMO RESULTADO EM {paciente.data.lab.date}
+              <div className="min-w-0 flex-1">
+                <p className="t-label text-muted-foreground font-normal">
+                  Último resultado em {paciente.data.lab.date}
                 </p>
-                <p className="font-bold text-foreground text-sm truncate uppercase tracking-tight">
+                <p className="t-body text-foreground">
                   {paciente.data.lab.formatted || "Resultado estruturado disponível."}
                 </p>
               </div>
             </div>
           ) : (
-            <p className="text-xs italic text-muted-foreground">
-              Nenhum exame laboratorial registrado.
-            </p>
+            <p className="t-body text-muted-foreground">Nenhum exame laboratorial registrado.</p>
           )}
         </Section>
 
-        {/* PENDÊNCIAS */}
         <Section
-          title="PENDÊNCIAS"
-          icon={<AlertTriangle className="h-5 w-5" />}
+          title="Pendências"
+          icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
           action={
             <button
               onClick={() =>
                 nav({ to: "/cadastro-manual", search: { id, tipo: "internado" } as any })
               }
-              className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center gap-1"
+              className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Plus className="h-3 w-3" /> Adicionar
+              <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar
             </button>
           }
         >
-          <div className="space-y-3">
-            {paciente.pendingIssues?.length > 0 ? (
-              paciente.pendingIssues.map((pend: string, i: number) => (
-                <div
+          {paciente.pendingIssues?.length > 0 ? (
+            <ul className="space-y-2">
+              {paciente.pendingIssues.map((pend: string, i: number) => (
+                <li
                   key={i}
-                  className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-2xl group transition-all hover:border-amber-400"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                    <span className="text-xs font-bold text-amber-900 uppercase tracking-tight truncate">
-                      {pend}
-                    </span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <AlertTriangle
+                      className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                      aria-hidden="true"
+                    />
+                    <span className="t-body text-foreground">{pend}</span>
                   </div>
                   <button
                     onClick={() => resolvePendencia(pend)}
-                    className="px-3 py-2 rounded-lg bg-white border border-amber-200 text-[10px] font-black text-amber-600 uppercase tracking-widest hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-1"
+                    aria-label={`Resolver pendência: ${pend}`}
+                    className="t-label bg-card border-border text-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl border px-3 transition-colors hover:border-emerald-500 hover:bg-emerald-500 hover:text-white focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVER
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Resolver
                   </button>
-                </div>
-              ))
-            ) : (
-              <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-widest">
-                  Tudo resolvido! Nenhuma pendência ativa.
-                </span>
-              </div>
-            )}
-          </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="t-body flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" /> Nenhuma pendência
+              ativa.
+            </p>
+          )}
         </Section>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* ÚLTIMA EVOLUÇÃO */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
-                <FileText className="h-5 w-5" />
-              </div>
-              <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">
-                ÚLTIMA EVOLUÇÃO
-              </h2>
-            </div>
-            <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm">
-              {lastEvolution ? (
-                <>
-                  <div className="flex justify-between items-center mb-3">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                      DATA: {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy HH:mm")}
-                    </p>
-                    <button
-                      onClick={() => nav({ to: `/evolucao/${id}/historico` })}
-                      className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
-                    >
-                      VER HISTÓRICO <ArrowRight className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed italic mb-6 line-clamp-3">
-                    {lastEvolution.content}
-                  </p>
-                  <button
-                    onClick={() => setModalEvolucao(lastEvolution)}
-                    className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
-                  >
-                    VER COMPLETA
-                  </button>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground italic">Nenhuma evolução registrada.</p>
-              )}
-            </div>
-          </div>
-
-          {/* DOCUMENTOS IMPORTADOS */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
-                <FileUp className="h-5 w-5" />
-              </div>
-              <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">
-                DOCUMENTOS IMPORTADOS
-              </h2>
-            </div>
-            <div className="bg-white border border-border rounded-[2.5rem] p-8 shadow-sm space-y-4">
-              {paciente.documents?.length > 0 ? (
-                <div className="space-y-2">
-                  {paciente.documents.map((doc: any, i: number) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 bg-secondary/20 rounded-xl border border-border"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-foreground truncate">
-                            {doc.name}
-                          </p>
-                          <p className="text-[8px] text-muted-foreground font-black uppercase">
-                            {doc.date}
-                          </p>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground/30" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic mb-4">
-                  Nenhum documento anexado.
-                </p>
-              )}
-              <button
-                onClick={() => nav({ to: "/upload-ia", search: { patient_id: id } as any })}
-                className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-[10px] font-black text-muted-foreground hover:border-primary/40 hover:text-primary transition-all flex flex-col items-center gap-2"
-              >
-                <Plus className="h-5 w-5" /> ADICIONAR DOCUMENTO
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* AÇÕES EM DESTAQUE */}
-        {/* AÇÕES EM DESTAQUE */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-12">
-          <button
-            onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-primary text-white border-primary shadow-lg shadow-primary/20"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-white/20">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                GERAR EVOLUÇÃO
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-white/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/prescricao/$id", params: { id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <Pill className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                GERAR PRESCRIÇÃO
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/prescricao-alta", search: { paciente: id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-success/40 text-foreground hover:border-success"
-            data-testid="paciente-receita-alta"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-success/10 text-success">
-                <FileText className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                RECEITA DE ALTA
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/encaminhamento", search: { paciente: id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-            data-testid="paciente-encaminhamento"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <ArrowRight className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                GERAR ENCAMINHAMENTO
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/orientacoes-paciente", search: { paciente: id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-            data-testid="paciente-orientacoes"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <ClipboardList className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                ORIENTAÇÕES AO PACIENTE
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/upload-ia", search: { patient_id: id } as any })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <FileUp className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                ADICIONAR DOCUMENTO
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() =>
-              nav({ to: "/cadastro-manual", search: { id, tipo: "internado" } as any })
+        <div className="grid gap-6 md:grid-cols-2">
+          <Section
+            title="Última evolução"
+            icon={<FileText className="h-5 w-5" aria-hidden="true" />}
+            action={
+              lastEvolution ? (
+                <button
+                  onClick={() => nav({ to: "/evolucao/$id/historico", params: { id } })}
+                  className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  Histórico <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              ) : undefined
             }
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
           >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <Edit3 className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                EDITAR PACIENTE
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
+            {lastEvolution ? (
+              <>
+                <p className="t-label text-muted-foreground font-normal">
+                  {format(parseISO(lastEvolution.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                </p>
+                <p className="t-body text-muted-foreground mt-2 line-clamp-3">
+                  {lastEvolution.content}
+                </p>
+                <button
+                  onClick={() => setModalEvolucao(lastEvolution)}
+                  className="t-label text-primary focus-visible:ring-ring mt-3 inline-flex min-h-[2.75rem] items-center rounded-xl hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  Ver completa
+                </button>
+              </>
+            ) : (
+              <p className="t-body text-muted-foreground">Nenhuma evolução registrada.</p>
+            )}
+          </Section>
 
-          <button
-            onClick={() => handleStatusUpdate("alta_provavel")}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <Check className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                MARCAR ALTA PROVÁVEL
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
-
-          <button
-            onClick={() => nav({ to: "/evolucao/$id/historico", params: { id } })}
-            className="flex items-center justify-between p-6 rounded-[2rem] border transition-all hover:-translate-y-1 hover:shadow-xl bg-white border-border text-foreground hover:border-primary/40"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-secondary">
-                <Clock className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                VER HISTÓRICO
-              </span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
-          </button>
+          <Section title="Documentos" icon={<FileUp className="h-5 w-5" aria-hidden="true" />}>
+            {paciente.documents?.length > 0 && (
+              <ul className="mb-3 space-y-2">
+                {paciente.documents.map((doc: any, i: number) => (
+                  <li
+                    key={i}
+                    className="bg-secondary border-border flex items-center gap-3 rounded-xl border p-3"
+                  >
+                    <FileText
+                      className="text-muted-foreground h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0">
+                      <p className="t-body text-foreground truncate">{doc.name}</p>
+                      <p className="t-label text-muted-foreground font-normal">{doc.date}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => nav({ to: "/upload-ia", search: { patient_id: id } as any })}
+              className="border-border text-muted-foreground hover:border-primary hover:text-primary focus-visible:ring-ring t-body flex min-h-[3rem] w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed py-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Plus className="h-5 w-5" aria-hidden="true" /> Adicionar documento
+            </button>
+          </Section>
         </div>
+
+        {/* Eram nove cartões de mesmo peso visual, um deles repetindo o botão
+            flutuante. Agora: uma ação principal e o resto agrupado. */}
+        <section aria-labelledby="paciente-acoes" className="space-y-3">
+          <h2 id="paciente-acoes" className="t-eyebrow text-muted-foreground">
+            Ações
+          </h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {ACOES.map((a) => (
+              <li key={a.label}>
+                <button
+                  onClick={() => a.acao({ nav, id, handleStatusUpdate })}
+                  data-testid={a.testid}
+                  className="border-border bg-card hover:bg-secondary focus-visible:ring-ring flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <div className="bg-secondary text-foreground flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                    <a.icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <span className="t-body text-foreground flex-1">{a.label}</span>
+                  <ArrowRight
+                    className="text-muted-foreground h-5 w-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
 
-      {/* Footer Nav */}
-      <div className="max-w-5xl mx-auto px-6 pb-20 text-center">
-        <button
-          onClick={() => nav({ to: "/dashboard" })}
-          className="text-[10px] font-black text-muted-foreground hover:text-foreground uppercase tracking-[0.2em] transition-all flex items-center gap-2 mx-auto border-b border-transparent hover:border-muted-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" /> VOLTAR AO DASHBOARD
-        </button>
+      {/* Ação principal fixa: é o que o médico veio fazer. */}
+      <div className="bg-background/90 border-border fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-xl">
+        <div className="mx-auto max-w-4xl px-4 py-3 sm:px-6">
+          <button
+            onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
+            className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <TrendingUp className="h-5 w-5" aria-hidden="true" /> Evoluir paciente
+          </button>
+        </div>
       </div>
 
-      {/* Floating Action for Mobile */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <button
-          onClick={() => nav({ to: "/evolucao/$id", params: { id } })}
-          className="px-10 py-5 rounded-[2rem] bg-navy text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl flex items-center gap-4 hover:scale-105 transition-all"
-        >
-          <TrendingUp className="h-5 w-5" /> EVOLUIR AGORA
-        </button>
-      </div>
-
-      {/* Modal Ver Completa */}
       {modalEvolucao && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <header className="px-8 py-6 border-b border-border bg-secondary/30 flex items-center justify-between">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-card border-border flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl">
+            <header className="border-border flex items-center justify-between border-b p-5">
               <div>
-                <h2 className="text-sm font-black text-foreground uppercase tracking-widest mb-1">
-                  EVOLUÇÃO MÉDICA
-                </h2>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                  {format(parseISO(modalEvolucao.created_at), "dd/MM/yyyy HH:mm")}
+                <h2 className="t-title text-foreground">Evolução médica</h2>
+                <p className="t-label text-muted-foreground font-normal">
+                  {format(parseISO(modalEvolucao.created_at), "dd/MM/yyyy 'às' HH:mm")}
                 </p>
               </div>
               <button
                 onClick={() => setModalEvolucao(null)}
-                className="h-10 w-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-secondary transition-all"
+                aria-label="Fechar"
+                className="touch-target border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </header>
-            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
-              <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground uppercase">
+            {/* O texto clínico permanece em caixa alta: é convenção do
+                prontuário, não decisão de interface. */}
+            <div className="custom-scrollbar flex-1 overflow-y-auto p-5">
+              <pre className="text-foreground font-mono text-[0.8125rem] leading-relaxed whitespace-pre-wrap">
                 {modalEvolucao.content}
               </pre>
             </div>
-            <footer className="px-8 py-6 border-t border-border bg-secondary/30 flex justify-end">
+            <footer className="border-border flex justify-end border-t p-5">
               <button
                 onClick={() => setModalEvolucao(null)}
-                className="px-8 py-4 rounded-xl bg-navy text-white font-black uppercase tracking-widest text-[10px] shadow-xl shadow-navy/20 hover:-translate-y-0.5 transition-all"
+                className="bg-navy text-navy-foreground focus-visible:ring-ring min-h-[3rem] rounded-2xl px-8 text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
               >
-                FECHAR
+                Fechar
               </button>
             </footer>
           </div>
@@ -795,26 +678,22 @@ function Section({
   action,
 }: {
   title: string;
-  icon: any;
-  children: any;
-  action?: any;
+  icon: ReactNode;
+  children: ReactNode;
+  action?: ReactNode;
 }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-6 ml-1">
+    <section className="bg-card border-border rounded-3xl border p-5 sm:p-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground border border-border/50">
+          <div className="bg-secondary text-muted-foreground flex h-10 w-10 items-center justify-center rounded-2xl">
             {icon}
           </div>
-          <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-foreground">
-            {title}
-          </h2>
+          <h2 className="t-title text-foreground">{title}</h2>
         </div>
         {action}
       </div>
-      <div className="bg-white border border-border rounded-[3rem] p-8 md:p-12 shadow-sm">
-        {children}
-      </div>
-    </div>
+      {children}
+    </section>
   );
 }
