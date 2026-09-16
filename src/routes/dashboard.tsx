@@ -292,10 +292,10 @@ function DashboardPage() {
               <h1 className="t-title text-foreground truncate">{shift.setor || "Plantão"}</h1>
               <p className="t-label text-muted-foreground flex items-center gap-1.5 truncate font-normal">
                 <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {shift.hospital || "Unidade não informada"}
-                <span aria-hidden="true">·</span>
-                <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {shift.data_formatada}
+                {/* Sem data, o separador ficava pendurado no fim da linha. */}
+                {[shift.hospital || "Unidade não informada", shift.data_formatada]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
           </div>
@@ -319,17 +319,17 @@ function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
-        {/* Os cartões SÃO o filtro. Antes havia uma fileira de chips repetindo
-            os mesmos quatro filtros logo abaixo — dois controles para a mesma
-            coisa, e "EXAMES" nem filtrava (dividia a chave com "TOTAL"). */}
-        <section aria-labelledby="dash-filtros" className="space-y-3">
+        {/* No celular, cinco cartões grandes empurravam o primeiro paciente
+            para baixo da dobra — e o médico abre o plantão para ver pacientes.
+            Viraram uma faixa compacta que rola na horizontal. */}
+        <section aria-labelledby="dash-filtros">
           <h2 id="dash-filtros" className="sr-only">
             Filtrar pacientes
           </h2>
           <div
             role="radiogroup"
             aria-labelledby="dash-filtros"
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
           >
             {FILTROS.map((f) => {
               const ativo = filter === f.key;
@@ -340,17 +340,19 @@ function DashboardPage() {
                   aria-checked={ativo}
                   onClick={() => setFilter(f.key)}
                   data-testid={`dash-filtro-${f.key}`}
-                  className={`focus-visible:ring-ring flex min-h-[5.5rem] flex-col items-start justify-center gap-1 rounded-2xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                  className={`focus-visible:ring-ring inline-flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-2xl border px-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                     ativo
-                      ? "border-primary bg-primary/5 ring-primary ring-1"
-                      : "border-border bg-card hover:bg-secondary"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary"
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <f.icon className={`h-4 w-4 ${f.tom}`} aria-hidden="true" />
-                    <span className="t-label text-muted-foreground">{f.label}</span>
+                  <f.icon className={`h-4 w-4 ${ativo ? "" : f.tom}`} aria-hidden="true" />
+                  <span className="t-label">{f.label}</span>
+                  <span
+                    className={`t-label rounded-full px-1.5 ${ativo ? "bg-primary/20" : "bg-secondary"}`}
+                  >
+                    {stats[f.stat]}
                   </span>
-                  <span className="t-display text-foreground leading-none">{stats[f.stat]}</span>
                 </button>
               );
             })}
@@ -361,28 +363,29 @@ function DashboardPage() {
           <button
             onClick={() => nav({ to: "/novo-paciente" })}
             data-testid="dashboard-add-patient"
-            className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:flex-none"
+            className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
           >
             <UserPlus className="h-5 w-5" aria-hidden="true" /> Adicionar paciente
           </button>
           <button
             onClick={() => nav({ to: "/passagem-plantao" })}
-            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:flex-none"
+            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl border px-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <FileText className="h-5 w-5" aria-hidden="true" /> Passagem (DOCX)
-          </button>
-          <button
-            onClick={() => nav({ to: "/passagem" })}
-            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:flex-none"
-          >
-            <ClipboardList className="h-5 w-5" aria-hidden="true" /> Passagem rápida
+            <FileText className="h-5 w-5" aria-hidden="true" /> Passagem
           </button>
           <button
             onClick={() => nav({ to: "/prescricao-alta", search: {} })}
             data-testid="dashboard-documentos"
-            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl border px-5 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:flex-none"
+            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl border px-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <Pill className="h-5 w-5" aria-hidden="true" /> Documentos
+          </button>
+          <button
+            onClick={() => nav({ to: "/passagem" })}
+            aria-label="Passagem rápida em texto"
+            className="touch-target border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ClipboardList className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -411,12 +414,12 @@ function DashboardPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       {/* O nome é o que o olho procura primeiro. Guardamos em
                           caixa alta, mas exibimos com a forma da palavra. */}
-                      <h3 className="t-title text-foreground truncate">{nomeExibicao(p.nome)}</h3>
+                      <h3 className="t-title text-foreground">{nomeExibicao(p.nome)}</h3>
                       <span className="t-label text-muted-foreground bg-secondary rounded-md px-2 py-0.5 font-normal">
                         {p.idade ? `${p.idade} anos` : "Idade não informada"} · {p.sexo}
                       </span>
                     </div>
-                    <p className="t-body text-muted-foreground truncate">
+                    <p className="t-body text-muted-foreground line-clamp-2">
                       {p.motivo_admissao ||
                         p.lista_de_problemas
                           .slice(0, 2)

@@ -263,17 +263,17 @@ function SettingsPage() {
         <Section title="Regras de antibiótico" icon={<Activity className="h-5 w-5" />}>
           <div className="space-y-6">
             <div className="space-y-4">
-              <label className="t-label text-muted-foreground">REGRA DE CONTAGEM (D-DAY)</label>
-              <div className="grid grid-cols-2 gap-4">
+              <label className="t-label text-muted-foreground">Regra de contagem (D-day)</label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
                   {
                     id: "D0",
-                    label: "D0 = DIA DE INÍCIO",
+                    label: "D0 — dia de início",
                     desc: "Contagem inicia no dia da primeira dose",
                   },
                   {
                     id: "D1",
-                    label: "D1 = DIA COMPLETO",
+                    label: "D1 — primeiro dia completo",
                     desc: "Contagem inicia após 24h da primeira dose",
                   },
                 ].map((opt) => (
@@ -290,18 +290,19 @@ function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <label className="t-label text-muted-foreground">ALERTA DE CICLO PROLONGADO</label>
+              <label className="t-label text-muted-foreground">Alerta de ciclo prolongado</label>
               <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-foreground">
-                  NOTIFICAR SE ATB HÁ MAIS DE
-                </span>
+                <label htmlFor="atb-alerta" className="t-body text-foreground">
+                  Notificar se o antibiótico passar de
+                </label>
                 <input
+                  id="atb-alerta"
                   type="number"
                   value={atbAlertDays}
                   onChange={(e) => setAtbAlertDays(e.target.value)}
-                  className="w-20 bg-secondary/30 border border-border rounded-xl px-4 py-2 text-center font-black"
+                  className="bg-secondary border-border text-foreground focus:ring-ring min-h-[2.75rem] w-20 rounded-xl border px-3 text-center text-base font-bold focus:ring-2 focus:outline-none"
                 />
-                <span className="text-xs font-bold text-foreground">DIAS</span>
+                <span className="t-body text-foreground">dias</span>
               </div>
             </div>
           </div>
@@ -309,13 +310,13 @@ function SettingsPage() {
             onClick={saveRules}
             className="bg-secondary text-foreground border-border hover:bg-border focus-visible:ring-ring mt-5 inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <Save className="h-4 w-4" /> SALVAR REGRAS
+            <Save className="h-5 w-5" aria-hidden="true" /> Salvar regras
           </button>
         </Section>
 
         {/* 3. BACKEND DE IA */}
         <Section title="Servidor de IA" icon={<Globe className="h-5 w-5" />}>
-          <div className="flex items-center justify-between p-6 bg-secondary/30 rounded-[2rem] border border-border">
+          <div className="bg-secondary border-border flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
             <div className="flex items-center gap-4">
               <div className="bg-secondary border-border flex h-10 w-10 items-center justify-center rounded-2xl border">
                 <RefreshCw
@@ -323,22 +324,22 @@ function SettingsPage() {
                 />
               </div>
               <div>
-                <p className="t-label text-muted-foreground">STATUS DA CONEXÃO</p>
+                <p className="t-label text-muted-foreground">Status da conexão</p>
                 <div className="flex items-center gap-1.5">
                   {aiStatus === "connected" ? (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="t-body text-emerald-700 dark:text-emerald-300">
-                        CONECTADO AO RAILWAY
+                        Conectado
                       </span>
                     </>
                   ) : aiStatus === "disconnected" ? (
                     <>
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
-                      <span className="t-body text-destructive">DESCONECTADO</span>
+                      <span className="t-body text-destructive">Sem conexão com o servidor</span>
                     </>
                   ) : (
-                    <span className="t-body text-muted-foreground">VERIFICANDO...</span>
+                    <span className="t-body text-muted-foreground">Verificando…</span>
                   )}
                 </div>
               </div>
@@ -347,7 +348,7 @@ function SettingsPage() {
               onClick={checkHealth}
               className="t-label border-border bg-card hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              TESTAR CONEXÃO
+              Testar conexão
             </button>
           </div>
         </Section>
@@ -355,9 +356,9 @@ function SettingsPage() {
         {/* 4. DADOS E PRIVACIDADE */}
         <Section title="Dados e privacidade" icon={<Shield className="h-5 w-5" />}>
           <div className="space-y-4">
-            <div className="p-6 bg-secondary/30 rounded-[2rem] border border-border">
-              <h3 className="t-title text-foreground mb-2">EXPORTAÇÃO DE DADOS</h3>
-              <p className="text-xs text-muted-foreground font-bold mb-4">
+            <div className="bg-secondary border-border rounded-2xl border p-5">
+              <h3 className="t-title text-foreground mb-2">Exportar seus dados</h3>
+              <p className="t-body text-muted-foreground mb-4">
                 Baixe uma cópia completa de todos os seus plantões, pacientes, evoluções e
                 prescrições em formato JSON.
               </p>
@@ -365,19 +366,20 @@ function SettingsPage() {
                 onClick={handleExportData}
                 className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-5 text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
               >
-                EXPORTAR MEUS DADOS
+                Baixar cópia em JSON
               </button>
             </div>
-            <div className="p-6 bg-destructive/5 rounded-[2rem] border border-destructive/20">
-              <h3 className="t-title text-destructive mb-2">ENCERRAR SESSÃO</h3>
-              <p className="text-xs text-destructive/70 font-bold mb-4">
-                Isto irá deslogar do sistema e limpar os dados temporários locais deste dispositivo.
+            <div className="bg-destructive/5 border-destructive/20 rounded-2xl border p-5">
+              <h3 className="t-title text-destructive mb-2">Sair da conta</h3>
+              <p className="t-body text-muted-foreground mb-4">
+                Você sai do sistema e os dados temporários deste aparelho são apagados. Os plantões
+                já salvos continuam na sua conta.
               </p>
               <button
                 onClick={handleLogout}
                 className="bg-destructive focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-5 text-base font-bold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
               >
-                SAIR DA CONTA
+                Sair da conta
               </button>
             </div>
           </div>
@@ -386,31 +388,23 @@ function SettingsPage() {
         {/* 4. SOBRE O APP */}
         <Section title="Sobre o app" icon={<Info className="h-5 w-5" />}>
           <div className="text-center space-y-4">
-            <img
-              src="/logo.png"
-              alt="Medfluxo"
-              className="h-20 w-20 rounded-[2rem] mx-auto shadow-2xl shadow-navy/20"
-            />
+            <img src="/logo.png" alt="Medfluxo" className="mx-auto h-16 w-16 rounded-2xl" />
             <div>
-              <h3 className="text-lg font-black text-foreground tracking-tight">
-                MEDFLUXO — FASE 2
-              </h3>
-              <p className="t-body text-muted-foreground">
-                ASSISTENTE CLÍNICO INTELIGENTE · VERSÃO 2.0
-              </p>
+              <h3 className="t-title text-foreground">Medfluxo</h3>
+              <p className="t-body text-muted-foreground">Assistente clínico · versão 2.0</p>
             </div>
             <div className="flex justify-center gap-6 pt-4">
               <a
                 href="#"
                 className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                TERMOS DE USO
+                Termos de uso
               </a>
               <a
                 href="#"
                 className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                PRIVACIDADE
+                Privacidade
               </a>
             </div>
           </div>

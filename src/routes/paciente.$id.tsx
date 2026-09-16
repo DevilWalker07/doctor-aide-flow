@@ -311,9 +311,13 @@ function PacienteDetailPage() {
             {paciente.sex === "M" ? "Masculino" : "Feminino"}
             {paciente.sector ? ` · ${paciente.sector}` : ""}
           </p>
+          {/* Sem data de admissão o dihInfo é null e a linha virava
+              " de internação · admitido em data não informada". */}
           <p className="t-label text-primary mt-1 flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" aria-hidden="true" />
-            {dihInfo?.d} de internação · admitido em {dataAdmissao}
+            <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {dihInfo
+              ? `${dihInfo.d} de internação · admitido em ${dataAdmissao}`
+              : "Data de admissão não informada"}
           </p>
         </div>
       </header>

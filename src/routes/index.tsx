@@ -18,6 +18,7 @@ import {
   updateShift,
   type Shift,
 } from "@/lib/db";
+import { nomeExibicao } from "@/lib/format";
 import { storage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -45,13 +46,28 @@ function HubPage() {
   useEnsureProfile();
 
   const [nomeMedico, setNomeMedico] = useState(() => storage.getNomeMedico());
-  const [plantaoAtivo, setPlantaoAtivo] = useState<PlantaoAtivoCtx | null>(null);
+  // Lê o cache local de forma síncrona: assim a tela já nasce preenchida e o
+  // esqueleto não fica eterno quando a rede pendura (não rejeita, só não volta).
+  const [plantaoAtivo, setPlantaoAtivo] = useState<PlantaoAtivoCtx | null>(() => {
+    try {
+      const raw = localStorage.getItem("da_plantao_ativo");
+      return raw ? (JSON.parse(raw) as PlantaoAtivoCtx) : null;
+    } catch {
+      return null;
+    }
+  });
   const [closedShifts, setClosedShifts] = useState<Shift[]>([]);
   const [stats, setStats] = useState({ pacientes: 0, pendencias: 0 });
   const [selectedHandoff, setSelectedHandoff] = useState<string | null>(null);
   const [showReopenModal, setShowReopenModal] = useState<Shift | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [carregando, setCarregando] = useState(true);
+  const [carregando, setCarregando] = useState(() => {
+    try {
+      return !localStorage.getItem("da_plantao_ativo");
+    } catch {
+      return true;
+    }
+  });
   const [offline, setOffline] = useState(false);
   const [ultimoAmbiente] = useState(() => {
     try {
@@ -136,8 +152,15 @@ function HubPage() {
     }
 
     load();
+    // Rede pendurada não deixa o médico olhando esqueleto: depois de 6s a tela
+    // mostra o que tem em cache.
+    const destravar = setTimeout(() => {
+      if (!cancelled) setCarregando(false);
+    }, 6000);
+
     return () => {
       cancelled = true;
+      clearTimeout(destravar);
     };
   }, [userId]);
 
@@ -188,7 +211,8 @@ function HubPage() {
     nav({ to: "/login", search: {} });
   };
 
-  const primeiroNome = nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0] || "Doutor(a)";
+  const primeiroNome =
+    nomeExibicao(nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0]) || "Doutor(a)";
   const primeiroAcesso =
     !carregando && !plantaoAtivo && closedShifts.length === 0 && !ultimoAmbiente;
 
