@@ -72,16 +72,18 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.message || payload?.error || `Erro ao enviar arquivo (${response.status}).`);
+    throw new Error(
+      payload?.message || payload?.error || `Erro ao enviar arquivo (${response.status}).`,
+    );
   }
 
   const data = await response.json();
   if (!data.job_id) throw new Error("Backend não retornou job_id.");
-  
+
   // Persist for page refresh / Safari
   storage.setJobAtivo(data.job_id);
   storage.setJobArquivo(file.name);
-  
+
   return data.job_id as string;
 }
 
@@ -91,7 +93,8 @@ export async function startClinicalExtractionJob(file: File): Promise<string> {
 export async function getClinicalExtractionJob(jobId: string): Promise<JobStatusResponse> {
   const response = await apiFetch(`/api/extract/job/${encodeURIComponent(jobId)}`);
   if (!response.ok) {
-    if (response.status === 404) throw new Error("Job não encontrado. O servidor pode ter reiniciado.");
+    if (response.status === 404)
+      throw new Error("Job não encontrado. O servidor pode ter reiniciado.");
     throw new Error(`Erro ao consultar job (${response.status}).`);
   }
   return response.json();
@@ -105,7 +108,7 @@ export async function extractClinicalDocument(
   file: File,
   onProgress?: (stage: string, status: string) => void,
   timeoutMs = 180_000,
-  pollIntervalMs = 3_000
+  pollIntervalMs = 3_000,
 ): Promise<ClinicalExtractionResult> {
   const jobId = await startClinicalExtractionJob(file);
 

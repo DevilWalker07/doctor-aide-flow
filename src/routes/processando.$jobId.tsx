@@ -1,6 +1,14 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { Loader2, CheckCircle2, AlertCircle, FileText, X, RefreshCw, ClipboardList } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  X,
+  RefreshCw,
+  ClipboardList,
+} from "lucide-react";
 import { getClinicalExtractionJob } from "@/lib/documentExtractor";
 import { storage } from "@/lib/storage";
 import { toast } from "sonner";
@@ -12,8 +20,22 @@ export const Route = createFileRoute("/processando/$jobId")({
 
 const STEPS = [
   { id: "queued", label: "Arquivo recebido", stages: ["Arquivo recebido"] },
-  { id: "prep", label: "Preparando imagem / documento", stages: ["Preparando imagem", "Lendo documento", "Lendo PDF", "Lendo texto", "Processando páginas"] },
-  { id: "ai", label: "Lendo com IA", stages: ["Lendo com IA", "Lendo com OpenAI Vision", "Lendo com IA (OpenAI)"] },
+  {
+    id: "prep",
+    label: "Preparando imagem / documento",
+    stages: [
+      "Preparando imagem",
+      "Lendo documento",
+      "Lendo PDF",
+      "Lendo texto",
+      "Processando páginas",
+    ],
+  },
+  {
+    id: "ai",
+    label: "Lendo com IA",
+    stages: ["Lendo com IA", "Lendo com OpenAI Vision", "Lendo com IA (OpenAI)"],
+  },
   { id: "org", label: "Organizando dados clínicos", stages: ["Organizando dados clínicos"] },
   { id: "done", label: "Pronto para revisão", stages: ["Pronto para revisão"] },
 ];
@@ -21,7 +43,7 @@ const STEPS = [
 function ProcessandoRoute() {
   const params = Route.useParams();
   const nav = useNavigate();
-  
+
   // Safari resistance: use storage job_id if it exists and differs from URL
   const [jobId] = useState(() => {
     const activeJob = storage.getJobAtivo();
@@ -44,7 +66,7 @@ function ProcessandoRoute() {
     finishedRef.current = false;
 
     const timerInterval = setInterval(() => {
-      setElapsed(prev => prev + 1);
+      setElapsed((prev) => prev + 1);
     }, 1000);
 
     const scheduleNext = (ms: number) => {
@@ -73,15 +95,15 @@ function ProcessandoRoute() {
           finishedRef.current = true;
           storage.setExtracaoResultado(JSON.stringify(job.result));
           storage.clearJobAtivo();
-          
+
           const storedPatientId = storage.getUploadPatientId();
           if (storedPatientId) {
-             storage.clearUploadPatientId();
-             nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
+            storage.clearUploadPatientId();
+            nav({ to: "/revisar-extracao", search: { patient_id: storedPatientId } as any });
           } else {
-             nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
+            nav({ to: "/revisar-extracao", search: { patient_id: undefined } });
           }
-          
+
           toast.success("Processamento concluído!");
           return;
         }
@@ -132,9 +154,9 @@ function ProcessandoRoute() {
   const getCurrentStepIndex = () => {
     if (status === "done") return 4;
     if (status === "error") return -1;
-    
-    const index = STEPS.findIndex(step => 
-      step.stages.some(s => currentStage.toLowerCase().includes(s.toLowerCase()))
+
+    const index = STEPS.findIndex((step) =>
+      step.stages.some((s) => currentStage.toLowerCase().includes(s.toLowerCase())),
     );
     return index === -1 ? 0 : index;
   };
@@ -155,7 +177,9 @@ function ProcessandoRoute() {
 
       <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative z-10">
         <div className="text-center mb-10">
-          <h1 className="text-xs font-extrabold tracking-[0.3em] uppercase text-ai mb-4">PROCESSANDO DOCUMENTO</h1>
+          <h1 className="text-xs font-extrabold tracking-[0.3em] uppercase text-ai mb-4">
+            PROCESSANDO DOCUMENTO
+          </h1>
           <div className="flex items-center justify-center gap-3 bg-secondary/50 py-3 px-6 rounded-2xl border border-border w-fit mx-auto mb-4">
             <FileText className="h-5 w-5 text-ai" />
             <span className="font-bold text-sm truncate max-w-[200px]">{fileName}</span>
@@ -170,7 +194,9 @@ function ProcessandoRoute() {
             <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6 text-destructive">
               <AlertCircle className="h-10 w-10" />
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground mb-4 text-center">Falha no Processamento</h2>
+            <h2 className="text-2xl font-extrabold text-foreground mb-4 text-center">
+              Falha no Processamento
+            </h2>
             <div className="bg-destructive/5 border border-destructive/10 rounded-2xl p-6 mb-8">
               <p className="text-sm text-destructive font-medium text-center leading-relaxed">
                 {errorMsg}
@@ -197,14 +223,21 @@ function ProcessandoRoute() {
               {STEPS.map((step, index) => {
                 const isCompleted = index < currentStepIndex || status === "done";
                 const isCurrent = index === currentStepIndex && status !== "done";
-                
+
                 return (
                   <div key={step.id} className="flex items-center gap-4 group">
-                    <div className={`
+                    <div
+                      className={`
                       h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-500
-                      ${isCompleted ? "bg-green-500 border-green-500 text-white" : 
-                        isCurrent ? "border-ai bg-ai/10 text-ai" : "border-border text-muted-foreground"}
-                    `}>
+                      ${
+                        isCompleted
+                          ? "bg-green-500 border-green-500 text-white"
+                          : isCurrent
+                            ? "border-ai bg-ai/10 text-ai"
+                            : "border-border text-muted-foreground"
+                      }
+                    `}
+                    >
                       {isCompleted ? (
                         <CheckCircle2 className="h-6 w-6 animate-in zoom-in duration-300" />
                       ) : isCurrent ? (
@@ -214,7 +247,9 @@ function ProcessandoRoute() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-bold tracking-tight ${isCompleted ? "text-foreground" : isCurrent ? "text-ai" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-sm font-bold tracking-tight ${isCompleted ? "text-foreground" : isCurrent ? "text-ai" : "text-muted-foreground"}`}
+                      >
                         {step.label}
                       </p>
                       {isCurrent && (
@@ -256,7 +291,7 @@ function ProcessandoRoute() {
                       Você pode minimizar o app. O resultado será salvo.
                     </p>
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       pollingRef.current = false;

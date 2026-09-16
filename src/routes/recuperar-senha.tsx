@@ -41,12 +41,27 @@ function RecuperarSenhaPage() {
     >
       {enviado ? (
         <p className="text-sm font-semibold text-foreground">
-          Se existir uma conta para <strong>{email}</strong>, você receberá um e-mail com o link para criar uma nova senha.
+          Se existir uma conta para <strong>{email}</strong>, você receberá um e-mail com o link
+          para criar uma nova senha.
         </p>
       ) : (
         <form onSubmit={submit} className="space-y-3">
-          <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail da conta" className={authInputCls} data-testid="auth-email" />
-          <button type="submit" disabled={loading} className={authButtonCls} data-testid="auth-submit">
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="E-mail da conta"
+            className={authInputCls}
+            data-testid="auth-email"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className={authButtonCls}
+            data-testid="auth-submit"
+          >
             {loading && <Loader2 className="h-3 w-3 animate-spin" />} Enviar link
           </button>
         </form>

@@ -1,4 +1,9 @@
-import { classifyLab, LAB_THRESHOLDS, normalizeLabKey, type LabKey } from "../../../shared/medical/labThresholds";
+import {
+  classifyLab,
+  LAB_THRESHOLDS,
+  normalizeLabKey,
+  type LabKey,
+} from "../../../shared/medical/labThresholds";
 
 export function detectarReascensaoPCR(values: number[]) {
   if (values.length < 3) return false;
@@ -7,7 +12,10 @@ export function detectarReascensaoPCR(values: number[]) {
   return last > previousMin * 1.5;
 }
 
-export function formatarLaboratorio(vals: Record<string, string | number | null | undefined>, date = new Date().toLocaleDateString("pt-BR")) {
+export function formatarLaboratorio(
+  vals: Record<string, string | number | null | undefined>,
+  date = new Date().toLocaleDateString("pt-BR"),
+) {
   const get = (...keys: string[]) => {
     for (const key of keys) {
       const value = vals[key] ?? vals[key.toUpperCase()];
@@ -30,13 +38,19 @@ const ALIAS_EXTRA: Record<string, LabKey> = {
   hemoglobina: "HB",
 };
 
-export function parseLabValues(vals: Record<string, string | number | null | undefined>): Partial<Record<LabKey, number>> {
+export function parseLabValues(
+  vals: Record<string, string | number | null | undefined>,
+): Partial<Record<LabKey, number>> {
   const out: Partial<Record<LabKey, number>> = {};
   for (const [rawKey, rawValue] of Object.entries(vals)) {
     if (rawValue == null || rawValue === "") continue;
     const key = ALIAS_EXTRA[rawKey.toLowerCase()] ?? normalizeLabKey(rawKey);
     if (!key || key in out) continue;
-    const n = Number(String(rawValue).replace(/\.(?=\d{3}\b)/g, "").replace(",", "."));
+    const n = Number(
+      String(rawValue)
+        .replace(/\.(?=\d{3}\b)/g, "")
+        .replace(",", "."),
+    );
     if (Number.isFinite(n)) out[key] = n;
   }
   return out;
@@ -48,7 +62,9 @@ export interface AlertaLab {
   message: string;
 }
 
-export function avaliarLaboratorio(vals: Record<string, string | number | null | undefined>): AlertaLab[] {
+export function avaliarLaboratorio(
+  vals: Record<string, string | number | null | undefined>,
+): AlertaLab[] {
   const parsed = parseLabValues(vals);
   const alerts: AlertaLab[] = [];
   for (const key of Object.keys(parsed) as LabKey[]) {
@@ -56,7 +72,11 @@ export function avaliarLaboratorio(vals: Record<string, string | number | null |
     const { severity, direction } = classifyLab(key, value);
     if (!severity) continue;
     const t = LAB_THRESHOLDS[key];
-    alerts.push({ key, severity, message: `${t.label.toUpperCase()} ${String(value).replace(".", ",")} ${direction === "low" ? "BAIXO" : "ALTO"}` });
+    alerts.push({
+      key,
+      severity,
+      message: `${t.label.toUpperCase()} ${String(value).replace(".", ",")} ${direction === "low" ? "BAIXO" : "ALTO"}`,
+    });
   }
   return alerts;
 }
@@ -68,5 +88,7 @@ export function gerarAnaliseLaboratorialLocal(vals: Record<string, string>) {
     if (a.key === "PCR") return "PROVA INFLAMATÓRIA ELEVADA";
     return a.message;
   });
-  return alerts.length ? [...new Set(alerts)].join(". ") + "." : "SEM ALERTAS LABORATORIAIS AUTOMÁTICOS.";
+  return alerts.length
+    ? [...new Set(alerts)].join(". ") + "."
+    : "SEM ALERTAS LABORATORIAIS AUTOMÁTICOS.";
 }

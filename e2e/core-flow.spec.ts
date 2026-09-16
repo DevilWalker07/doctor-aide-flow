@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { ensureSession, seedDoctor, withSupabase } from "./helpers/auth";
 
-const fixture = (name: string) => fileURLToPath(new URL(`../tests/fixtures/${name}`, import.meta.url));
+const fixture = (name: string) =>
+  fileURLToPath(new URL(`../tests/fixtures/${name}`, import.meta.url));
 
 test.describe("fluxo principal: plantão → paciente → upload IA → evolução → passagem", () => {
   test("percorre o fluxo com backend em AI_MOCK", async ({ page }) => {
@@ -14,7 +15,10 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     await page.locator("#hospital-name").fill("HOSPITAL E2E");
     await page.getByTestId("shift-submit").click();
     await expect(page).toHaveURL(/\/tipo/);
-    await page.getByRole("button", { name: /Enfermaria Clínica Médica/i }).first().click();
+    await page
+      .getByRole("button", { name: /Enfermaria Clínica Médica/i })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Novo paciente → admissão nova → upload IA
@@ -40,13 +44,17 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     // 5. Evolução com IA
     await page.goto(pacienteUrl.replace("/paciente/", "/evolucao/"));
     await page.getByTestId("evolution-generate").click();
-    await expect(page.getByTestId("evolution-text")).toHaveValue(/EVOLUÇÃO MÉDICA/i, { timeout: 30_000 });
+    await expect(page.getByTestId("evolution-text")).toHaveValue(/EVOLUÇÃO MÉDICA/i, {
+      timeout: 30_000,
+    });
     await page.getByTestId("evolution-save").click();
     await expect(page).toHaveURL(/\/paciente\//);
 
     // 6. Passagem de plantão IA (DOCX)
     await page.goto("/passagem-plantao");
-    await page.getByTestId("handoff-files").setInputFiles([fixture("evolucao.txt"), fixture("test.docx")]);
+    await page
+      .getByTestId("handoff-files")
+      .setInputFiles([fixture("evolucao.txt"), fixture("test.docx")]);
     await page.getByTestId("handoff-generate").click();
     const download = page.waitForEvent("download", { timeout: 60_000 });
     await page.getByTestId("handoff-download").click();

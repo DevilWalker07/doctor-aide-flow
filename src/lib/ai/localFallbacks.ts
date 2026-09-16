@@ -16,10 +16,22 @@ export function fallbackLabExtraction(text: string): LabExtractionResult {
   read("creatinina", /(?:CR|CREATININA)[:\s]*(\d+[.,]?\d*)/i);
   read("pcr", /(?:PCR|PROTE[IÍ]NA C REATIVA)[:\s]*(\d+[.,]?\d*)/i);
   const texto = `LAB ATUAL (${hoje}): HB ${valores.hb || "NÃO REFERIDO"} / HT ${valores.ht || "NÃO REFERIDO"} / LEUCO ${valores.leucocitos || "NÃO REFERIDO"} / CR ${valores.creatinina || "NÃO REFERIDO"} / PCR ${valores.pcr || "NÃO REFERIDO"}`;
-  return { data_exame: hoje, tipo_exame: "LABORATÓRIO", valores, texto_formatado: texto, alertas: [], valores_duvidosos: [], campos_nao_encontrados: [] };
+  return {
+    data_exame: hoje,
+    tipo_exame: "LABORATÓRIO",
+    valores,
+    texto_formatado: texto,
+    alertas: [],
+    valores_duvidosos: [],
+    campos_nao_encontrados: [],
+  };
 }
 
-export function gerarMapaPassagemPlantao(pacientes: ImportedRoundPatient[], setor: string, data: string): string {
+export function gerarMapaPassagemPlantao(
+  pacientes: ImportedRoundPatient[],
+  setor: string,
+  data: string,
+): string {
   return [
     `PASSAGEM DE PLANTÃO ${setor.toUpperCase()} - ${data}`,
     "",
@@ -35,10 +47,16 @@ export function gerarMapaPassagemPlantao(pacientes: ImportedRoundPatient[], seto
       `Alertas: ${p.alertas?.length ? p.alertas.join("; ") : "SEM ALERTAS"}`,
       "",
     ]),
-  ].join("\n").toUpperCase();
+  ]
+    .join("\n")
+    .toUpperCase();
 }
 
-export function gerarBriefingLocal(pacientes: ImportedRoundPatient[], setor: string, data: string): string {
+export function gerarBriefingLocal(
+  pacientes: ImportedRoundPatient[],
+  setor: string,
+  data: string,
+): string {
   const alertas = pacientes.filter((p) => p.alertas.length);
   return [
     `BRIEFING DE PLANTÃO - ${setor.toUpperCase()} - ${data}`,
@@ -47,19 +65,29 @@ export function gerarBriefingLocal(pacientes: ImportedRoundPatient[], setor: str
     `- TOTAL DE PACIENTES: ${pacientes.length}`,
     "",
     "PACIENTES CRÍTICOS",
-    ...(alertas.length ? alertas.map((p) => `- ${p.leito} ${p.nome}: ${p.alertas.join(", ")}`) : ["- SEM ALERTAS CRÍTICOS IDENTIFICADOS"]),
+    ...(alertas.length
+      ? alertas.map((p) => `- ${p.leito} ${p.nome}: ${p.alertas.join(", ")}`)
+      : ["- SEM ALERTAS CRÍTICOS IDENTIFICADOS"]),
     "",
     "RISCO DE ASPIRAÇÃO",
-    ...pacientes.filter((p) => /ASPIRA|ENGASGO|VÔMIT/i.test(`${p.alertas.join(" ")} ${p.quadro}`)).map((p) => `- ${p.leito} ${p.nome}`),
+    ...pacientes
+      .filter((p) => /ASPIRA|ENGASGO|VÔMIT/i.test(`${p.alertas.join(" ")} ${p.quadro}`))
+      .map((p) => `- ${p.leito} ${p.nome}`),
     "",
     "ALERTAS INFECCIOSOS",
-    ...pacientes.filter((p) => /PCR|ATB|ANTIB|INFEC/i.test(`${p.laboratorio} ${p.antibioticos}`)).map((p) => `- ${p.leito} ${p.nome}: ${p.antibioticos}`),
+    ...pacientes
+      .filter((p) => /PCR|ATB|ANTIB|INFEC/i.test(`${p.laboratorio} ${p.antibioticos}`))
+      .map((p) => `- ${p.leito} ${p.nome}: ${p.antibioticos}`),
     "",
     "ALERTAS RENAIS",
-    ...pacientes.filter((p) => /RENAL|DRC|CR |CREAT/i.test(`${p.alertas.join(" ")} ${p.laboratorio}`)).map((p) => `- ${p.leito} ${p.nome}: ${p.laboratorio}`),
+    ...pacientes
+      .filter((p) => /RENAL|DRC|CR |CREAT/i.test(`${p.alertas.join(" ")} ${p.laboratorio}`))
+      .map((p) => `- ${p.leito} ${p.nome}: ${p.laboratorio}`),
     "",
     "PENDÊNCIAS DE ESPECIALIDADES",
-    ...pacientes.filter((p) => /FONO|PSIQ|NEFRO|ENDO|PARECER|RNM/i.test(p.pendencias)).map((p) => `- ${p.leito} ${p.nome}: ${p.pendencias}`),
+    ...pacientes
+      .filter((p) => /FONO|PSIQ|NEFRO|ENDO|PARECER|RNM/i.test(p.pendencias))
+      .map((p) => `- ${p.leito} ${p.nome}: ${p.pendencias}`),
     "",
     "ALTAS PROVÁVEIS",
     "- REVISAR NO ROUND.",
@@ -68,7 +96,9 @@ export function gerarBriefingLocal(pacientes: ImportedRoundPatient[], setor: str
     "1. VER ALERTAS CRÍTICOS.",
     "2. REVISAR ANTIBIÓTICOS E FUNÇÃO RENAL.",
     "3. CHECAR PENDÊNCIAS DE ALTA/PROCEDIMENTO.",
-  ].join("\n").toUpperCase();
+  ]
+    .join("\n")
+    .toUpperCase();
 }
 
 export function fallbackEvolution(payload: any): string {

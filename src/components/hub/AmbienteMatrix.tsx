@@ -6,10 +6,15 @@ export function AmbienteMatrix() {
   return (
     <section aria-labelledby="hub-ambientes" className="space-y-4">
       <div>
-        <h2 id="hub-ambientes" className="text-xl sm:text-2xl font-black tracking-tight text-slate-100">
+        <h2
+          id="hub-ambientes"
+          className="text-xl sm:text-2xl font-black tracking-tight text-slate-100"
+        >
           Onde você está atendendo agora?
         </h2>
-        <p className="text-xs text-slate-400 mt-1">Escolha o ambiente para abrir um plantão com o fluxo e os agentes certos.</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Escolha o ambiente para abrir um plantão com o fluxo e os agentes certos.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -19,14 +24,23 @@ export function AmbienteMatrix() {
             data-testid={`hub-ambiente-${amb.id}`}
             className={`relative rounded-[1.75rem] border ${amb.accent.border} bg-slate-900/60 p-5 flex flex-col gap-4 transition-colors hover:bg-slate-900`}
           >
-            <Link to="/ambiente/$ambienteId" params={{ ambienteId: amb.id }} search={{}} className="flex items-start gap-4 group focus-visible:outline-none">
-              <div className={`h-12 w-12 shrink-0 rounded-2xl ${amb.accent.bg} ${amb.accent.text} flex items-center justify-center`}>
+            <Link
+              to="/ambiente/$ambienteId"
+              params={{ ambienteId: amb.id }}
+              search={{}}
+              className="flex items-start gap-4 group focus-visible:outline-none"
+            >
+              <div
+                className={`h-12 w-12 shrink-0 rounded-2xl ${amb.accent.bg} ${amb.accent.text} flex items-center justify-center`}
+              >
                 <amb.icon className="h-6 w-6" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true">{amb.emoji}</span>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-100 leading-tight">{amb.label}</h3>
+                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-100 leading-tight">
+                    {amb.label}
+                  </h3>
                 </div>
                 <p className="mt-1 text-xs text-slate-400 leading-relaxed">{amb.descricao}</p>
               </div>

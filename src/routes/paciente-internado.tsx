@@ -29,15 +29,15 @@ function PacienteInternadoTriage() {
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4 uppercase">
             PACIENTE JÁ INTERNADO
           </h1>
-          <p className="text-lg text-muted-foreground font-medium">
-            O que você tem disponível?
-          </p>
+          <p className="text-lg text-muted-foreground font-medium">O que você tem disponível?</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mb-12">
           {/* Foto de Prontuário */}
           <button
-            onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "vision" } as any })}
+            onClick={() =>
+              nav({ to: "/upload-ia", search: { tipo: "internado", engine: "vision" } as any })
+            }
             className="group relative bg-white border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -51,13 +51,16 @@ function PacienteInternadoTriage() {
               Foto da evolução anterior, prescrição ou anotação (HEIC, JPG, PNG...).
             </p>
             <div className="relative flex items-center gap-2 text-primary text-[10px] font-bold uppercase tracking-widest mt-auto">
-              Usar câmera <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+              Usar câmera{" "}
+              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
           {/* PDF / DOCX */}
           <button
-            onClick={() => nav({ to: "/upload-ia", search: { tipo: "internado", engine: "docling" } as any })}
+            onClick={() =>
+              nav({ to: "/upload-ia", search: { tipo: "internado", engine: "docling" } as any })
+            }
             className="group relative bg-white border border-border rounded-[2.5rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden flex flex-col"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -71,7 +74,8 @@ function PacienteInternadoTriage() {
               Documento digital da evolução ou prescrição.
             </p>
             <div className="relative flex items-center gap-2 text-ai text-[10px] font-bold uppercase tracking-widest mt-auto">
-              Selecionar arquivo <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+              Selecionar arquivo{" "}
+              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
@@ -91,7 +95,8 @@ function PacienteInternadoTriage() {
               Digitar o que sei sobre este paciente.
             </p>
             <div className="relative flex items-center gap-2 text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-auto">
-              Abrir formulário <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+              Abrir formulário{" "}
+              <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </div>
@@ -101,10 +106,15 @@ function PacienteInternadoTriage() {
             <Info className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-bold text-ai/80 uppercase tracking-widest mb-1">Dica de IA</p>
+            <p className="text-sm font-bold text-ai/80 uppercase tracking-widest mb-1">
+              Dica de IA
+            </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              A IA vai ler o documento e extrair automaticamente: 
-              <span className="font-bold text-foreground"> nome, leito, diagnósticos, ATB, laboratórios e pendências.</span>
+              A IA vai ler o documento e extrair automaticamente:
+              <span className="font-bold text-foreground">
+                {" "}
+                nome, leito, diagnósticos, ATB, laboratórios e pendências.
+              </span>
             </p>
           </div>
         </div>

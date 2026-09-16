@@ -160,7 +160,9 @@ export const ORIENTACOES: Orientacao[] = [
       "Instale barras de apoio no banheiro e use tapete antiderrapante no box.",
       "Use óculos e bengala/andador se indicados.",
     ],
-    sinaisAlerta: ["Após qualquer queda com batida na cabeça, dor forte ou dificuldade para andar: procure atendimento."],
+    sinaisAlerta: [
+      "Após qualquer queda com batida na cabeça, dor forte ou dificuldade para andar: procure atendimento.",
+    ],
   },
   {
     id: "retorno-e-exames",

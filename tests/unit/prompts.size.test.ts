@@ -37,7 +37,14 @@ describe("orçamento de tokens dos prompts", () => {
   });
 
   it("prompts JSON pedem _raciocinio e trazem exemplo quando previsto", () => {
-    for (const p of [PASSAGEM_PLANTAO_BATCH_PROMPT, DOCUMENT_EXTRACTION_PROMPT, CLINICA_MEDICA_PROMPT, PEDIATRIA_PROMPT, UTI_PROMPT, ORQUESTRADOR_PROMPT]) {
+    for (const p of [
+      PASSAGEM_PLANTAO_BATCH_PROMPT,
+      DOCUMENT_EXTRACTION_PROMPT,
+      CLINICA_MEDICA_PROMPT,
+      PEDIATRIA_PROMPT,
+      UTI_PROMPT,
+      ORQUESTRADOR_PROMPT,
+    ]) {
       expect(p).toContain("_raciocinio");
     }
     expect(PASSAGEM_PLANTAO_BATCH_PROMPT).toContain("### EXEMPLO SAÍDA");

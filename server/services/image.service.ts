@@ -25,5 +25,10 @@ export async function normalizeImageToJpeg(input: Buffer, ext: string): Promise<
     .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
     .toBuffer({ resolveWithObject: true });
 
-  return { base64: data.toString("base64"), mime: "image/jpeg", width: info.width, height: info.height };
+  return {
+    base64: data.toString("base64"),
+    mime: "image/jpeg",
+    width: info.width,
+    height: info.height,
+  };
 }

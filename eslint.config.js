@@ -6,7 +6,17 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "dist-server", ".output", ".vinxi", "playwright-report", "test-results", "src/routeTree.gen.ts"] },
+  {
+    ignores: [
+      "dist",
+      "dist-server",
+      ".output",
+      ".vinxi",
+      "playwright-report",
+      "test-results",
+      "src/routeTree.gen.ts",
+    ],
+  },
   {
     files: ["server/**/*.ts", "shared/**/*.ts", "tests/**/*.ts", "e2e/**/*.ts", "*.config.ts"],
     languageOptions: { globals: globals.node },

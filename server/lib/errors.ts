@@ -18,7 +18,10 @@ export class AIUnavailableError extends HttpError {
 }
 
 export class AIResponseError extends HttpError {
-  constructor(message: string, public readonly raw?: string) {
+  constructor(
+    message: string,
+    public readonly raw?: string,
+  ) {
     super(502, "ai_invalid_response", message);
     this.name = "AIResponseError";
   }

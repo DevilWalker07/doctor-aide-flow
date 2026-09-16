@@ -5,13 +5,55 @@ export type Sex = "M" | "F";
 export type PatientStatus = "PENDENTE" | "EVOLUÇÃO GERADA" | "ALERTA RENAL" | "ATB D4/7";
 
 export type PatientData = {
-  vitals?: { pas?: number; pad?: number; fc?: number; fr?: number; spo2?: number; temp?: number; pasMin?: number; pasMax?: number };
+  vitals?: {
+    pas?: number;
+    pad?: number;
+    fc?: number;
+    fr?: number;
+    spo2?: number;
+    temp?: number;
+    pasMin?: number;
+    pasMax?: number;
+  };
   hgt?: { h06?: number; h12?: number; h18?: number; h00?: number };
   status?: { geral?: string; clinica?: string; hemo?: string; consc?: string; glasgow?: number };
-  resp?: { padrao?: string; suporte?: string; o2?: number; modo?: string; fio2?: number; peep?: number; vmFr?: number };
-  digest?: { tolerancia?: string; tipo?: string; nauseas?: boolean; vomitos?: boolean; vomitoAspecto?: string; dejecoes?: string; flatos?: string; abdome?: string; dor?: string };
-  diurese?: { padrao?: string; via?: string; aspecto?: string; debito?: number; bh?: string; bhValor?: number };
-  outros?: { sono?: string; dor?: string; eva?: number; agitacao?: boolean; distermia?: boolean; pico?: number; disglicemia?: boolean };
+  resp?: {
+    padrao?: string;
+    suporte?: string;
+    o2?: number;
+    modo?: string;
+    fio2?: number;
+    peep?: number;
+    vmFr?: number;
+  };
+  digest?: {
+    tolerancia?: string;
+    tipo?: string;
+    nauseas?: boolean;
+    vomitos?: boolean;
+    vomitoAspecto?: string;
+    dejecoes?: string;
+    flatos?: string;
+    abdome?: string;
+    dor?: string;
+  };
+  diurese?: {
+    padrao?: string;
+    via?: string;
+    aspecto?: string;
+    debito?: number;
+    bh?: string;
+    bhValor?: number;
+  };
+  outros?: {
+    sono?: string;
+    dor?: string;
+    eva?: number;
+    agitacao?: boolean;
+    distermia?: boolean;
+    pico?: number;
+    disglicemia?: boolean;
+  };
   abx?: { name: string; dose: string; via: string; freq: string; d0: string; durDays: number }[];
   lab?: { date: string; raw: Record<string, string>; formatted: string };
   pcrHist?: number[];
@@ -150,13 +192,91 @@ const seed: Patient[] = [
     hda: "PACIENTE INTERNADA POR PE DIABETICO INFECTADO, COM ANTECEDENTES DE HAS, DM2 E DAOP.",
     status: "PENDENTE",
     data: {
-      abx: [{ name: "CIPROFLOXACINO", dose: "400MG", via: "EV", freq: "12/12H", d0: "2026-03-24", durDays: 7 }],
+      abx: [
+        {
+          name: "CIPROFLOXACINO",
+          dose: "400MG",
+          via: "EV",
+          freq: "12/12H",
+          d0: "2026-03-24",
+          durDays: 7,
+        },
+      ],
       pcrHist: [127.8, 1.2, 53],
     },
   },
-  { id: "p2", bed: "L02", name: "JOSE CARLOS", age: 67, sex: "M", sector: "CLINICA MEDICA MASCULINA", ward: "CMM", admission: "2026-04-22", admissionDate: "2026-04-22", hda: "", status: "EVOLUÇÃO GERADA", diagnoses: [], comorbidities: [], devices: [], pendingIssues: [], alerts: [], tags: [], memory: [] },
-  { id: "p3", bed: "L03", name: "ANA RITA", age: 74, sex: "F", sector: "CLINICA MEDICA FEMININA", ward: "CMF", admission: "2026-04-21", admissionDate: "2026-04-21", hda: "", status: "ALERTA RENAL", diagnoses: [], comorbidities: [], devices: [], pendingIssues: [], alerts: ["ALERTA RENAL"], tags: [], memory: [] },
-  { id: "p4", bed: "L04", name: "TERESINHA CAMPOS NUNES", age: 80, sex: "F", sector: "CLINICA MEDICA FEMININA", ward: "CMF", admission: "2026-04-19", admissionDate: "2026-04-19", hda: "", status: "ATB D4/7", diagnoses: [], comorbidities: [], devices: [], pendingIssues: [], alerts: [], tags: [], memory: [], data: { abx: [{ name: "CEFTRIAXONA", dose: "1G", via: "EV", freq: "12/12H", d0: "2026-04-25", durDays: 7 }] } },
+  {
+    id: "p2",
+    bed: "L02",
+    name: "JOSE CARLOS",
+    age: 67,
+    sex: "M",
+    sector: "CLINICA MEDICA MASCULINA",
+    ward: "CMM",
+    admission: "2026-04-22",
+    admissionDate: "2026-04-22",
+    hda: "",
+    status: "EVOLUÇÃO GERADA",
+    diagnoses: [],
+    comorbidities: [],
+    devices: [],
+    pendingIssues: [],
+    alerts: [],
+    tags: [],
+    memory: [],
+  },
+  {
+    id: "p3",
+    bed: "L03",
+    name: "ANA RITA",
+    age: 74,
+    sex: "F",
+    sector: "CLINICA MEDICA FEMININA",
+    ward: "CMF",
+    admission: "2026-04-21",
+    admissionDate: "2026-04-21",
+    hda: "",
+    status: "ALERTA RENAL",
+    diagnoses: [],
+    comorbidities: [],
+    devices: [],
+    pendingIssues: [],
+    alerts: ["ALERTA RENAL"],
+    tags: [],
+    memory: [],
+  },
+  {
+    id: "p4",
+    bed: "L04",
+    name: "TERESINHA CAMPOS NUNES",
+    age: 80,
+    sex: "F",
+    sector: "CLINICA MEDICA FEMININA",
+    ward: "CMF",
+    admission: "2026-04-19",
+    admissionDate: "2026-04-19",
+    hda: "",
+    status: "ATB D4/7",
+    diagnoses: [],
+    comorbidities: [],
+    devices: [],
+    pendingIssues: [],
+    alerts: [],
+    tags: [],
+    memory: [],
+    data: {
+      abx: [
+        {
+          name: "CEFTRIAXONA",
+          dose: "1G",
+          via: "EV",
+          freq: "12/12H",
+          d0: "2026-04-25",
+          durDays: 7,
+        },
+      ],
+    },
+  },
 ];
 
 function id(prefix: string) {
@@ -171,7 +291,7 @@ function readJson<T>(key: string, fallback: T): T {
   if (!storageAvailable()) return fallback;
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as T : fallback;
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
@@ -190,7 +310,8 @@ function normalizePatient(p: any): Patient {
     sex: (p.sex || p.sexo || "F") === "M" ? "M" : "F",
     sector: p.sector || p.setor || p.ward || "CLINICA MEDICA",
     ward: p.ward || p.setor,
-    admission: p.admission || p.admissionDate || p.admission_date || new Date().toISOString().slice(0, 10),
+    admission:
+      p.admission || p.admissionDate || p.admission_date || new Date().toISOString().slice(0, 10),
     admissionDate: p.admissionDate || p.admission || p.admission_date,
     dih: p.dih,
     diagnoses: p.diagnoses || p.diagnosticos || [],
@@ -283,7 +404,10 @@ async function trySupabase<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 export async function getPatients(): Promise<Patient[]> {
   const local = readPatientsLocal();
   return trySupabase<Patient[]>(async () => {
-    const { data, error } = await supabase.from("patients").select("*").order("bed", { ascending: true });
+    const { data, error } = await supabase
+      .from("patients")
+      .select("*")
+      .order("bed", { ascending: true });
     if (error) throw error;
     const mapped = (data || []).map(fromSupabasePatient);
     if (mapped.length) writePatientsLocal(mapped);
@@ -312,7 +436,10 @@ export async function savePatient(patient: Patient): Promise<Patient> {
   return normalized;
 }
 
-export async function updatePatient(id: string, patch: Partial<Patient>): Promise<Patient | undefined> {
+export async function updatePatient(
+  id: string,
+  patch: Partial<Patient>,
+): Promise<Patient | undefined> {
   const patient = getPatient(id);
   if (!patient) return undefined;
   return savePatient({ ...patient, ...patch });
@@ -334,10 +461,23 @@ export async function addPatient(p: Omit<Patient, "id" | "status">): Promise<Pat
 export async function getActiveShift(): Promise<Shift | null> {
   const local = readJson<Shift | null>(KEYS.activeShift, null);
   return trySupabase<Shift | null>(async () => {
-    const { data, error } = await supabase.from("shifts").select("*").eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await supabase
+      .from("shifts")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (error) throw error;
     if (!data) return local;
-    const shift = { id: data.id, date: data.date, sector: data.sector, workplace: data.workplace, active: data.active, createdAt: data.created_at };
+    const shift = {
+      id: data.id,
+      date: data.date,
+      sector: data.sector,
+      workplace: data.workplace,
+      active: data.active,
+      createdAt: data.created_at,
+    };
     writeJson(KEYS.activeShift, shift);
     return shift;
   }, local);
@@ -365,7 +505,11 @@ export async function saveShift(shift: Shift): Promise<Shift> {
 export async function getEvolutionsByPatient(patientId: string): Promise<Evolution[]> {
   const local = readJson<Record<string, Evolution[]>>(KEYS.evolutions, {})[patientId] || [];
   return trySupabase<Evolution[]>(async () => {
-    const { data, error } = await supabase.from("evolutions").select("*").eq("patient_id", patientId).order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("evolutions")
+      .select("*")
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []).map((e: any) => ({
       id: e.id,
@@ -379,17 +523,38 @@ export async function getEvolutionsByPatient(patientId: string): Promise<Evoluti
   }, local);
 }
 
-export async function saveEvolution(evolutionOrPatientId: Evolution | string, evolutionText?: string): Promise<Evolution> {
-  const evolution: Evolution = typeof evolutionOrPatientId === "string"
-    ? { id: id("evolution"), patientId: evolutionOrPatientId, text: evolutionText || "", generatedBy: "MEDFLUXO", createdAt: new Date().toISOString(), date: new Date().toISOString().slice(0, 10) }
-    : { ...evolutionOrPatientId, id: evolutionOrPatientId.id || id("evolution"), createdAt: evolutionOrPatientId.createdAt || new Date().toISOString() };
+export async function saveEvolution(
+  evolutionOrPatientId: Evolution | string,
+  evolutionText?: string,
+): Promise<Evolution> {
+  const evolution: Evolution =
+    typeof evolutionOrPatientId === "string"
+      ? {
+          id: id("evolution"),
+          patientId: evolutionOrPatientId,
+          text: evolutionText || "",
+          generatedBy: "MEDFLUXO",
+          createdAt: new Date().toISOString(),
+          date: new Date().toISOString().slice(0, 10),
+        }
+      : {
+          ...evolutionOrPatientId,
+          id: evolutionOrPatientId.id || id("evolution"),
+          createdAt: evolutionOrPatientId.createdAt || new Date().toISOString(),
+        };
 
   const all = readJson<Record<string, Evolution[]>>(KEYS.evolutions, {});
-  all[evolution.patientId] = [evolution, ...(all[evolution.patientId] || []).filter((e) => e.id !== evolution.id)];
+  all[evolution.patientId] = [
+    evolution,
+    ...(all[evolution.patientId] || []).filter((e) => e.id !== evolution.id),
+  ];
   writeJson(KEYS.evolutions, all);
 
   const legacy = readJson<Record<string, any[]>>(KEYS.legacyEvolutions, {});
-  legacy[evolution.patientId] = [{ id: evolution.id, text: evolution.text, created_at: evolution.createdAt }, ...(legacy[evolution.patientId] || [])];
+  legacy[evolution.patientId] = [
+    { id: evolution.id, text: evolution.text, created_at: evolution.createdAt },
+    ...(legacy[evolution.patientId] || []),
+  ];
   writeJson(KEYS.legacyEvolutions, legacy);
 
   await trySupabase(async () => {
@@ -412,7 +577,11 @@ export async function saveEvolution(evolutionOrPatientId: Evolution | string, ev
 export async function getLabExamsByPatient(patientId: string): Promise<LabExam[]> {
   const local = readJson<Record<string, LabExam[]>>(KEYS.labExams, {})[patientId] || [];
   return trySupabase<LabExam[]>(async () => {
-    const { data, error } = await supabase.from("lab_exams").select("*").eq("patient_id", patientId).order("exam_date", { ascending: false });
+    const { data, error } = await supabase
+      .from("lab_exams")
+      .select("*")
+      .eq("patient_id", patientId)
+      .order("exam_date", { ascending: false });
     if (error) throw error;
     return (data || []).map((l: any) => ({
       id: l.id,
@@ -441,7 +610,10 @@ export async function getLabExamsByPatient(patientId: string): Promise<LabExam[]
 export async function saveLabExam(labExam: LabExam): Promise<LabExam> {
   const record = { ...labExam, id: labExam.id || id("lab") };
   const all = readJson<Record<string, LabExam[]>>(KEYS.labExams, {});
-  all[record.patientId] = [record, ...(all[record.patientId] || []).filter((l) => l.id !== record.id)];
+  all[record.patientId] = [
+    record,
+    ...(all[record.patientId] || []).filter((l) => l.id !== record.id),
+  ];
   writeJson(KEYS.labExams, all);
   await trySupabase(async () => {
     const { error } = await supabase.from("lab_exams").upsert({
@@ -472,8 +644,15 @@ export async function saveLabExam(labExam: LabExam): Promise<LabExam> {
 }
 
 export async function saveRoundMap(roundMap: RoundMap): Promise<RoundMap> {
-  const record = { ...roundMap, id: roundMap.id || id("round"), createdAt: roundMap.createdAt || new Date().toISOString() };
-  writeJson(KEYS.roundMaps, [record, ...readJson<RoundMap[]>(KEYS.roundMaps, []).filter((r) => r.id !== record.id)]);
+  const record = {
+    ...roundMap,
+    id: roundMap.id || id("round"),
+    createdAt: roundMap.createdAt || new Date().toISOString(),
+  };
+  writeJson(KEYS.roundMaps, [
+    record,
+    ...readJson<RoundMap[]>(KEYS.roundMaps, []).filter((r) => r.id !== record.id),
+  ]);
   await trySupabase(async () => {
     const { error } = await supabase.from("round_maps").upsert({
       id: record.id.startsWith("round_") ? undefined : record.id,
@@ -493,7 +672,10 @@ export async function saveRoundMap(roundMap: RoundMap): Promise<RoundMap> {
 export async function getRoundMaps(): Promise<RoundMap[]> {
   const local = readJson<RoundMap[]>(KEYS.roundMaps, []);
   return trySupabase<RoundMap[]>(async () => {
-    const { data, error } = await supabase.from("round_maps").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("round_maps")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []).map((r: any) => ({
       id: r.id,
@@ -507,9 +689,18 @@ export async function getRoundMaps(): Promise<RoundMap[]> {
   }, local);
 }
 
-export async function saveImportedYesterdayEvolutions(importResult: ImportedYesterdayEvolutions): Promise<ImportedYesterdayEvolutions> {
-  const record = { ...importResult, id: importResult.id || id("import"), createdAt: importResult.createdAt || new Date().toISOString() };
-  writeJson(KEYS.imports, [record, ...readJson<ImportedYesterdayEvolutions[]>(KEYS.imports, []).filter((r) => r.id !== record.id)]);
+export async function saveImportedYesterdayEvolutions(
+  importResult: ImportedYesterdayEvolutions,
+): Promise<ImportedYesterdayEvolutions> {
+  const record = {
+    ...importResult,
+    id: importResult.id || id("import"),
+    createdAt: importResult.createdAt || new Date().toISOString(),
+  };
+  writeJson(KEYS.imports, [
+    record,
+    ...readJson<ImportedYesterdayEvolutions[]>(KEYS.imports, []).filter((r) => r.id !== record.id),
+  ]);
   await trySupabase(async () => {
     const { error } = await supabase.from("imported_yesterday_evolutions").upsert({
       id: record.id.startsWith("import_") ? undefined : record.id,
@@ -540,10 +731,14 @@ export function usePatients() {
     if (hasSupabaseConfig) {
       const channel = supabase
         .channel("patients_changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "patients" }, () => refresh())
+        .on("postgres_changes", { event: "*", schema: "public", table: "patients" }, () =>
+          refresh(),
+        )
         .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, []);
 

@@ -21,17 +21,28 @@ export interface ChunkOpts {
   maxCharsPerItem: number;
 }
 
-const DEFAULT_CHUNK: ChunkOpts = { maxCharsPerBatch: 12_000, maxItemsPerBatch: 6, maxCharsPerItem: 20_000 };
+const DEFAULT_CHUNK: ChunkOpts = {
+  maxCharsPerBatch: 12_000,
+  maxItemsPerBatch: 6,
+  maxCharsPerItem: 20_000,
+};
 
-export function chunkEvolucoes(items: EvolucaoInput[], opts: Partial<ChunkOpts> = {}): EvolucaoInput[][] {
+export function chunkEvolucoes(
+  items: EvolucaoInput[],
+  opts: Partial<ChunkOpts> = {},
+): EvolucaoInput[][] {
   const { maxCharsPerBatch, maxItemsPerBatch, maxCharsPerItem } = { ...DEFAULT_CHUNK, ...opts };
   const batches: EvolucaoInput[][] = [];
   let current: EvolucaoInput[] = [];
   let currentChars = 0;
 
   for (const raw of items) {
-    const item = raw.text.length > maxCharsPerItem ? { ...raw, text: raw.text.slice(0, maxCharsPerItem) } : raw;
-    const fits = current.length < maxItemsPerBatch && currentChars + item.text.length <= maxCharsPerBatch;
+    const item =
+      raw.text.length > maxCharsPerItem
+        ? { ...raw, text: raw.text.slice(0, maxCharsPerItem) }
+        : raw;
+    const fits =
+      current.length < maxItemsPerBatch && currentChars + item.text.length <= maxCharsPerBatch;
     if (!fits && current.length > 0) {
       batches.push(current);
       current = [];
@@ -83,7 +94,9 @@ export function mergeBatchResults(batches: PassagemPlantaoBatch[]): MapaPlantaoD
 
 export function applyLabGuardrails(data: MapaPlantaoData): MapaPlantaoData {
   const alertas = [...data.alertasCriticos];
-  const seen = new Set(alertas.map((a) => `${normalizeLeito(a.leito ?? "")}|${a.acao.toUpperCase()}`));
+  const seen = new Set(
+    alertas.map((a) => `${normalizeLeito(a.leito ?? "")}|${a.acao.toUpperCase()}`),
+  );
 
   const pacientes = data.pacientes.map((row) => {
     const criticos = flagLabOutliers(row.ultimoLab).filter((f) => f.severity === "critical");
@@ -92,7 +105,9 @@ export function applyLabGuardrails(data: MapaPlantaoData): MapaPlantaoData {
     const resumo = criticos.map((f) => f.message).join("; ");
     const linha = `!! LAB CRÍTICO: ${resumo} — REAVALIAR`;
     const jaTem = row.alertasPendencias.toUpperCase().includes("LAB CRÍTICO");
-    const alertasPendencias = jaTem ? row.alertasPendencias : [linha, row.alertasPendencias].filter(Boolean).join("\n");
+    const alertasPendencias = jaTem
+      ? row.alertasPendencias
+      : [linha, row.alertasPendencias].filter(Boolean).join("\n");
 
     const acao = `LAB CRÍTICO: ${resumo} — REAVALIAR`;
     const key = `${normalizeLeito(row.leito)}|${acao.toUpperCase()}`;
@@ -131,12 +146,19 @@ export async function gerarMapaPlantao(
       total_arquivos_no_lote: batch.length,
       evolucoes: batch.map((b) => `=== ARQUIVO: ${b.fileName} ===\n${b.text.trim()}`).join("\n\n"),
     };
-    const result = await safeJsonCompletion(PASSAGEM_PLANTAO_BATCH_PROMPT, payload, PassagemPlantaoBatchSchema, {
-      maxTokens: 8000,
-      mockKey: "passagemBatch",
-    });
+    const result = await safeJsonCompletion(
+      PASSAGEM_PLANTAO_BATCH_PROMPT,
+      payload,
+      PassagemPlantaoBatchSchema,
+      {
+        maxTokens: 8000,
+        mockKey: "passagemBatch",
+      },
+    );
     if (!result.ok) {
-      throw new Error(`${result.error}${result.issues ? ` (${result.issues.length} campos inválidos)` : ""}`);
+      throw new Error(
+        `${result.error}${result.issues ? ` (${result.issues.length} campos inválidos)` : ""}`,
+      );
     }
     return result.data;
   });
@@ -154,5 +176,10 @@ export async function gerarMapaPlantao(
     }
   });
 
-  return { data: mergeBatchResults(ok), warnings, batchesTotal: batches.length, batchesFailed: failed };
+  return {
+    data: mergeBatchResults(ok),
+    warnings,
+    batchesTotal: batches.length,
+    batchesFailed: failed,
+  };
 }

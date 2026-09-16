@@ -4,9 +4,13 @@ import { type Patient } from "./store";
 export async function extractBulkPatientsWithAI(
   text: string,
   sector: string,
-  filename = ""
+  filename = "",
 ): Promise<Omit<Patient, "id" | "status">[]> {
-  const result = await importYesterdayEvolutionsWithAI(text, { sector, filename, mode: "bulk-patient-import" });
+  const result = await importYesterdayEvolutionsWithAI(text, {
+    sector,
+    filename,
+    mode: "bulk-patient-import",
+  });
 
   return result.patients.map((p) => ({
     bed: p.leito || "L00",
@@ -27,7 +31,9 @@ export async function extractBulkPatientsWithAI(
     tags: p.alertas || [],
     memory: p.memory || [],
     data: {
-      lab: p.laboratorio ? { date: new Date().toLocaleDateString("pt-BR"), raw: {}, formatted: p.laboratorio } : undefined,
+      lab: p.laboratorio
+        ? { date: new Date().toLocaleDateString("pt-BR"), raw: {}, formatted: p.laboratorio }
+        : undefined,
       conducta: {
         dx: p.diagnosticos,
         pendencias: p.pendencias,

@@ -40,22 +40,56 @@ function LoginPage() {
       rodape={
         <>
           Ainda não tem conta?{" "}
-          <Link to="/cadastro" className="text-primary hover:underline" data-testid="auth-go-signup">
+          <Link
+            to="/cadastro"
+            className="text-primary hover:underline"
+            data-testid="auth-go-signup"
+          >
             Criar conta
           </Link>
         </>
       }
     >
-      {!configured && <p className="mb-4 text-xs font-bold text-warning-foreground bg-warning/15 rounded-xl px-4 py-3">Supabase não configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).</p>}
+      {!configured && (
+        <p className="mb-4 text-xs font-bold text-warning-foreground bg-warning/15 rounded-xl px-4 py-3">
+          Supabase não configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
+        </p>
+      )}
       <form onSubmit={submit} className="space-y-3">
-        <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" className={authInputCls} data-testid="auth-email" />
-        <input type="password" required autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Senha" className={authInputCls} data-testid="auth-password" />
-        <button type="submit" disabled={loading || !configured} className={authButtonCls} data-testid="auth-submit">
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-mail"
+          className={authInputCls}
+          data-testid="auth-email"
+        />
+        <input
+          type="password"
+          required
+          autoComplete="current-password"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          placeholder="Senha"
+          className={authInputCls}
+          data-testid="auth-password"
+        />
+        <button
+          type="submit"
+          disabled={loading || !configured}
+          className={authButtonCls}
+          data-testid="auth-submit"
+        >
           {loading && <Loader2 className="h-3 w-3 animate-spin" />} Entrar
         </button>
       </form>
       <div className="mt-4 text-center">
-        <Link to="/recuperar-senha" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+        <Link
+          to="/recuperar-senha"
+          className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary"
+        >
           Esqueci minha senha
         </Link>
       </div>

@@ -1,6 +1,12 @@
 import { HORARIOS, type Horario } from "@/lib/medical/medicamentos";
 import { getOrientacao } from "@/lib/medical/orientacoes";
-import type { EncaminhamentoDocumento, MedicoDocumento, OrientacoesDocumento, ReceitaDocumento, ReceitaItem } from "./types";
+import type {
+  EncaminhamentoDocumento,
+  MedicoDocumento,
+  OrientacoesDocumento,
+  ReceitaDocumento,
+  ReceitaItem,
+} from "./types";
 
 const UNIDADE_POR_ACAO: Record<ReceitaItem["acao"], [string, string]> = {
   comprimido: ["comprimido", "comprimidos"],
@@ -17,7 +23,10 @@ export function unidadeLabel(acao: ReceitaItem["acao"], n: number): string {
 }
 
 export function horariosAtivos(horarios: Partial<Record<Horario, number>>) {
-  return HORARIOS.filter((h) => (horarios[h.id] ?? 0) > 0).map((h) => ({ ...h, n: horarios[h.id] as number }));
+  return HORARIOS.filter((h) => (horarios[h.id] ?? 0) > 0).map((h) => ({
+    ...h,
+    n: horarios[h.id] as number,
+  }));
 }
 
 function cabecalhoMedico(medico: MedicoDocumento) {
@@ -30,13 +39,20 @@ function linhaPaciente(nome: string, idade?: string) {
 }
 
 export function formatReceitaWhatsApp(doc: ReceitaDocumento, medico: MedicoDocumento): string {
-  const linhas: string[] = [`💊 *RECEITA MÉDICA* — ${cabecalhoMedico(medico)}`, linhaPaciente(doc.paciente.nome, doc.paciente.idade), `📅 ${doc.data}`, ""];
+  const linhas: string[] = [
+    `💊 *RECEITA MÉDICA* — ${cabecalhoMedico(medico)}`,
+    linhaPaciente(doc.paciente.nome, doc.paciente.idade),
+    `📅 ${doc.data}`,
+    "",
+  ];
 
   doc.itens.forEach((item, i) => {
     linhas.push(`*${i + 1}. ${item.nome} ${item.dose}* — ${item.quantidade}`);
     const ativos = horariosAtivos(item.horarios);
     if (ativos.length) {
-      linhas.push(ativos.map((h) => `${h.emoji} ${h.label}: ${unidadeLabel(item.acao, h.n)}`).join("  |  "));
+      linhas.push(
+        ativos.map((h) => `${h.emoji} ${h.label}: ${unidadeLabel(item.acao, h.n)}`).join("  |  "),
+      );
     }
     if (item.instrucao) linhas.push(`📝 ${item.instrucao}`);
     if (item.duracao) linhas.push(`⏳ ${item.duracao}`);
@@ -51,12 +67,29 @@ export function formatReceitaWhatsApp(doc: ReceitaDocumento, medico: MedicoDocum
   return linhas.join("\n").trim();
 }
 
-export function formatEncaminhamentoWhatsApp(doc: EncaminhamentoDocumento, medico: MedicoDocumento): string {
-  return [`📄 *ENCAMINHAMENTO MÉDICO* — ${cabecalhoMedico(medico)}`, "", doc.texto.trim(), "", `✍️ ${cabecalhoMedico(medico)}${medico.hospital ? ` — ${medico.hospital}` : ""}`].join("\n");
+export function formatEncaminhamentoWhatsApp(
+  doc: EncaminhamentoDocumento,
+  medico: MedicoDocumento,
+): string {
+  return [
+    `📄 *ENCAMINHAMENTO MÉDICO* — ${cabecalhoMedico(medico)}`,
+    "",
+    doc.texto.trim(),
+    "",
+    `✍️ ${cabecalhoMedico(medico)}${medico.hospital ? ` — ${medico.hospital}` : ""}`,
+  ].join("\n");
 }
 
-export function formatOrientacoesWhatsApp(doc: OrientacoesDocumento, medico: MedicoDocumento): string {
-  const linhas: string[] = [`📋 *ORIENTAÇÕES AO PACIENTE* — ${cabecalhoMedico(medico)}`, linhaPaciente(doc.paciente.nome, doc.paciente.idade), `📅 ${doc.data}`, ""];
+export function formatOrientacoesWhatsApp(
+  doc: OrientacoesDocumento,
+  medico: MedicoDocumento,
+): string {
+  const linhas: string[] = [
+    `📋 *ORIENTAÇÕES AO PACIENTE* — ${cabecalhoMedico(medico)}`,
+    linhaPaciente(doc.paciente.nome, doc.paciente.idade),
+    `📅 ${doc.data}`,
+    "",
+  ];
 
   for (const id of doc.orientacaoIds) {
     const o = getOrientacao(id);

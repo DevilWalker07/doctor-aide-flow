@@ -87,7 +87,12 @@ export const aiFixtures = {
       },
     ],
     alertasCriticos: [
-      { prioridade: "!! URGENTE", leito: "L02", paciente: "PACIENTE TESTE DOIS", acao: "REPETIR POTÁSSIO EM 6H E AJUSTAR CIPROFLOXACINO PARA CLCR" },
+      {
+        prioridade: "!! URGENTE",
+        leito: "L02",
+        paciente: "PACIENTE TESTE DOIS",
+        acao: "REPETIR POTÁSSIO EM 6H E AJUSTAR CIPROFLOXACINO PARA CLCR",
+      },
     ],
   },
   evolucao: `EVOLUÇÃO MÉDICA (MOCK)
@@ -106,7 +111,8 @@ CONDUTAS
 PENDÊNCIAS
 - RX TÓRAX`,
   mapa: "PASSAGEM DE PLANTÃO (MOCK)\n\nL01 - PACIENTE TESTE UM (72 ANOS)\nDIAGNÓSTICO: PAC\nANTIBIÓTICO: CEFTRIAXONA D3/7\n",
-  briefing: "BRIEFING DE PLANTÃO (MOCK)\n\nCENSO: 2 PACIENTES\nPACIENTES CRÍTICOS: L02 — HIPERCALEMIA\n",
+  briefing:
+    "BRIEFING DE PLANTÃO (MOCK)\n\nCENSO: 2 PACIENTES\nPACIENTES CRÍTICOS: L02 — HIPERCALEMIA\n",
   encaminhamento:
     "ENCAMINHAMENTO MÉDICO (MOCK)\n\nEncaminho o(a) paciente para avaliação especializada em NEFROLOGIA devido a piora de função renal em vigência de ITU complicada.\n\nHipóteses diagnósticas: DRC estágio 3 agudizada.\nSolicito avaliação e conduta.",
   evolutionReview: {

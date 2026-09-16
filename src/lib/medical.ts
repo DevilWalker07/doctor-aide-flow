@@ -4,7 +4,13 @@ export { calcularDiaAtb, cicloAtbExcedido } from "./medical/antibiotico";
 export { gerarAlertasPaciente } from "./medical/alertas";
 export { gerarEvolucaoLocal } from "./medical/evolucaoLocal";
 export { calcularHgtStats } from "./medical/glicemia";
-export { avaliarLaboratorio, detectarReascensaoPCR, formatarLaboratorio, gerarAnaliseLaboratorialLocal, parseLabValues } from "./medical/laboratorio";
+export {
+  avaliarLaboratorio,
+  detectarReascensaoPCR,
+  formatarLaboratorio,
+  gerarAnaliseLaboratorialLocal,
+  parseLabValues,
+} from "./medical/laboratorio";
 export { calcularCKDEPI2021, classificarDRC } from "./medical/renal";
 export { LAB_THRESHOLDS } from "../../shared/medical/labThresholds";
 

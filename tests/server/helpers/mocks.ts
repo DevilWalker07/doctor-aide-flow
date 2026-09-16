@@ -4,8 +4,17 @@ import type { z } from "zod";
 import { aiFixtures, type AiFixtureKey } from "../../../server/mocks/aiFixtures.js";
 import type { CompletionOpts, SafeResult } from "../../../server/services/openaiClient.js";
 
-type JsonFn = (system: string, payload: unknown, schema: z.ZodType<unknown, z.ZodTypeDef, unknown>, opts?: CompletionOpts) => Promise<SafeResult<unknown>>;
-type TextFn = (system: string, payload: unknown, opts?: { mockKey?: AiFixtureKey }) => Promise<string>;
+type JsonFn = (
+  system: string,
+  payload: unknown,
+  schema: z.ZodType<unknown, z.ZodTypeDef, unknown>,
+  opts?: CompletionOpts,
+) => Promise<SafeResult<unknown>>;
+type TextFn = (
+  system: string,
+  payload: unknown,
+  opts?: { mockKey?: AiFixtureKey },
+) => Promise<string>;
 
 export const aiMock = {
   json: vi.fn<JsonFn>(),
@@ -28,10 +37,15 @@ export function resetAiMock() {
   });
 }
 
-export const authUsers = new Map<string, string>([["valid-token", "user-1"], ["other-token", "user-2"]]);
+export const authUsers = new Map<string, string>([
+  ["valid-token", "user-1"],
+  ["other-token", "user-2"],
+]);
 export const getUserMock = vi.fn(async (token: string) => {
   const id = authUsers.get(token);
-  return id ? { data: { user: { id } }, error: null } : { data: { user: null }, error: { message: "invalid" } };
+  return id
+    ? { data: { user: { id } }, error: null }
+    : { data: { user: null }, error: { message: "invalid" } };
 });
 
 const passthrough: RequestHandler = (_req, _res, next) => next();
@@ -54,5 +68,10 @@ vi.mock("../../../server/lib/supabaseAdmin.js", () => ({
 
 vi.mock("../../../server/middleware/security.js", () => ({
   buildCors: () => passthrough,
-  buildRateLimiters: () => ({ ai: passthrough, upload: passthrough, poll: passthrough, passagem: passthrough }),
+  buildRateLimiters: () => ({
+    ai: passthrough,
+    upload: passthrough,
+    poll: passthrough,
+    passagem: passthrough,
+  }),
 }));

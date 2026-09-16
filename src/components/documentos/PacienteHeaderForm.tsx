@@ -16,9 +16,21 @@ export function PacienteHeaderForm({ value, onChange, vinculado }: Props) {
     <Section title="1. PACIENTE" icon={<User className="h-4 w-4" />}>
       <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
         <div className="sm:col-span-4">
-          <ControlledInput value={value.nome} onValueChange={(v) => set({ nome: v })} placeholder="NOME COMPLETO DO PACIENTE" uppercase data-testid="doc-paciente-nome" />
+          <ControlledInput
+            value={value.nome}
+            onValueChange={(v) => set({ nome: v })}
+            placeholder="NOME COMPLETO DO PACIENTE"
+            uppercase
+            data-testid="doc-paciente-nome"
+          />
         </div>
-        <ControlledInput value={value.idade ?? ""} onValueChange={(v) => set({ idade: v.replace(/\D/g, "").slice(0, 3) })} placeholder="IDADE" inputMode="numeric" data-testid="doc-paciente-idade" />
+        <ControlledInput
+          value={value.idade ?? ""}
+          onValueChange={(v) => set({ idade: v.replace(/\D/g, "").slice(0, 3) })}
+          placeholder="IDADE"
+          inputMode="numeric"
+          data-testid="doc-paciente-idade"
+        />
         <select
           value={value.sexo ?? ""}
           onChange={(e) => set({ sexo: e.target.value as PacienteDocumento["sexo"] })}
@@ -30,10 +42,19 @@ export function PacienteHeaderForm({ value, onChange, vinculado }: Props) {
           <option value="M">MASCULINO</option>
         </select>
         <div className="sm:col-span-3">
-          <ControlledInput value={value.documento ?? ""} onValueChange={(v) => set({ documento: v })} placeholder="CPF / CNS (OPCIONAL)" />
+          <ControlledInput
+            value={value.documento ?? ""}
+            onValueChange={(v) => set({ documento: v })}
+            placeholder="CPF / CNS (OPCIONAL)"
+          />
         </div>
         <div className="sm:col-span-3">
-          <ControlledInput value={value.leito ?? ""} onValueChange={(v) => set({ leito: v })} placeholder={vinculado ? "LEITO" : "ORIGEM / LEITO (OPCIONAL)"} uppercase />
+          <ControlledInput
+            value={value.leito ?? ""}
+            onValueChange={(v) => set({ leito: v })}
+            placeholder={vinculado ? "LEITO" : "ORIGEM / LEITO (OPCIONAL)"}
+            uppercase
+          />
         </div>
       </div>
     </Section>

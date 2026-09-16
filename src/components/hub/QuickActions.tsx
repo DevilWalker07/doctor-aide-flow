@@ -31,7 +31,10 @@ const ACTIONS = [
 export function QuickActions() {
   return (
     <section aria-labelledby="hub-acoes" className="space-y-3">
-      <h2 id="hub-acoes" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+      <h2
+        id="hub-acoes"
+        className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400"
+      >
         Ações rápidas · sem selecionar plantão
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -50,7 +53,9 @@ export function QuickActions() {
               <ArrowUpRight className="h-4 w-4 text-slate-500 group-hover:text-slate-200 transition-colors" />
             </div>
             <div className="mt-4">
-              <div className="text-sm font-black uppercase tracking-wide text-slate-100">{a.label}</div>
+              <div className="text-sm font-black uppercase tracking-wide text-slate-100">
+                {a.label}
+              </div>
               <p className="mt-1 text-xs text-slate-400 leading-relaxed">{a.descricao}</p>
             </div>
           </Link>

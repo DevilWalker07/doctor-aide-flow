@@ -14,6 +14,14 @@
     "allowImportingTsExtensions": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["tests/**/*.ts", "e2e/**/*.ts", "server/**/*.ts", "shared/**/*.ts", "src/lib/**/*.ts", "vitest.config.ts", "playwright.config.ts"],
+  "include": [
+    "tests/**/*.ts",
+    "e2e/**/*.ts",
+    "server/**/*.ts",
+    "shared/**/*.ts",
+    "src/lib/**/*.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["dist-server", "node_modules"]
 }

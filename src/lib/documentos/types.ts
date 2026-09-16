@@ -58,7 +58,12 @@ export interface OrientacoesDocumento {
 
 export type OutpatientDocument =
   | { type: "receita"; title: string; patientId: string | null; content: ReceitaDocumento }
-  | { type: "encaminhamento"; title: string; patientId: string | null; content: EncaminhamentoDocumento }
+  | {
+      type: "encaminhamento";
+      title: string;
+      patientId: string | null;
+      content: EncaminhamentoDocumento;
+    }
   | { type: "orientacoes"; title: string; patientId: string | null; content: OrientacoesDocumento };
 
 export interface StoredOutpatientDocument {

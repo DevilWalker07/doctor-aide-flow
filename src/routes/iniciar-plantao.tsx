@@ -70,11 +70,14 @@ function IniciarPlantaoPage() {
 
     try {
       // Try Supabase first
-      const shift = await createShift({
-        date: data || new Date().toISOString().slice(0, 10),
-        hospital: hospitalValue,
-        ...(setorPre ? { sector: setorPre, type: tipoPre ?? undefined } : {}),
-      }, userId);
+      const shift = await createShift(
+        {
+          date: data || new Date().toISOString().slice(0, 10),
+          hospital: hospitalValue,
+          ...(setorPre ? { sector: setorPre, type: tipoPre ?? undefined } : {}),
+        },
+        userId,
+      );
 
       // Sync to localStorage
       const localShift = {
@@ -125,62 +128,83 @@ function IniciarPlantaoPage() {
 
       <div className="max-w-xl w-full bg-white border border-border rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative z-10">
         <div className="text-center mb-10">
-           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">
-              <Stethoscope className="h-7 w-7" />
-           </div>
-           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-2">INICIAR PLANTÃO</h1>
-           <p className="text-muted-foreground text-xs md:text-sm">Configure os dados básicos para começar seu dia.</p>
-           {setorPre && (
-             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary" data-testid="shift-ambiente">
-               {ambiente?.emoji} {setorPre}
-             </div>
-           )}
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">
+            <Stethoscope className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-2">
+            INICIAR PLANTÃO
+          </h1>
+          <p className="text-muted-foreground text-xs md:text-sm">
+            Configure os dados básicos para começar seu dia.
+          </p>
+          {setorPre && (
+            <div
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary"
+              data-testid="shift-ambiente"
+            >
+              {ambiente?.emoji} {setorPre}
+            </div>
+          )}
         </div>
 
         <div className="space-y-6 md:space-y-8">
-           <div className="space-y-2">
-              <label htmlFor="shift-date" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <Calendar className="h-3 w-3" /> DATA DO PLANTÃO
-              </label>
-              <ControlledInput 
-                id="shift-date"
-                type="date" 
-                value={data} 
-                onValueChange={setData}
-                className="appearance-none"
-              />
-           </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="shift-date"
+              className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"
+            >
+              <Calendar className="h-3 w-3" /> DATA DO PLANTÃO
+            </label>
+            <ControlledInput
+              id="shift-date"
+              type="date"
+              value={data}
+              onValueChange={setData}
+              className="appearance-none"
+            />
+          </div>
 
-           <div className="space-y-2">
-              <label htmlFor="hospital-name" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <Building2 className="h-3 w-3" /> HOSPITAL / UNIDADE
-              </label>
-              <ControlledInput 
-                id="hospital-name"
-                type="text" 
-                value={hospital} 
-                onValueChange={setHospital}
-                placeholder="Ex: Hospital Nair Alves de Souza"
-              />
-           </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="hospital-name"
+              className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"
+            >
+              <Building2 className="h-3 w-3" /> HOSPITAL / UNIDADE
+            </label>
+            <ControlledInput
+              id="hospital-name"
+              type="text"
+              value={hospital}
+              onValueChange={setHospital}
+              placeholder="Ex: Hospital Nair Alves de Souza"
+            />
+          </div>
 
-
-           <div className="pt-4">
-              <button 
-                onClick={handleContinue}
-                disabled={saving}
-                data-testid="shift-submit"
-                className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <>CONTINUAR <ArrowRight className="h-5 w-5" /></>}
-              </button>
-           </div>
+          <div className="pt-4">
+            <button
+              onClick={handleContinue}
+              disabled={saving}
+              data-testid="shift-submit"
+              className="w-full py-5 rounded-2xl bg-primary text-primary-foreground font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  CONTINUAR <ArrowRight className="h-5 w-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="mt-10 text-center">
-           <Link to="/" className="text-[10px] font-extrabold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest flex items-center justify-center gap-2">
-              <ChevronLeft className="h-3 w-3" /> CANCELAR E VOLTAR
-           </Link>
+          <Link
+            to="/"
+            className="text-[10px] font-extrabold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <ChevronLeft className="h-3 w-3" /> CANCELAR E VOLTAR
+          </Link>
         </div>
       </div>
     </div>

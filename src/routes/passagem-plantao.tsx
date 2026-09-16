@@ -78,7 +78,7 @@ function PassagemPlantaoPage() {
       setIsDragging(false);
       addFiles(e.dataTransfer.files);
     },
-    [addFiles]
+    [addFiles],
   );
 
   const handleRemove = (id: string) => {
@@ -135,7 +135,12 @@ function PassagemPlantaoPage() {
         } catch {
           /* header já legível */
         }
-        setWarnings(decoded.split(";").map((s) => s.trim()).filter(Boolean));
+        setWarnings(
+          decoded
+            .split(";")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        );
       }
 
       setStats({ pacientes: pacientesCount, alertas: alertasCount });
@@ -225,7 +230,10 @@ function PassagemPlantaoPage() {
 
         {/* Drop zone */}
         <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
@@ -235,9 +243,13 @@ function PassagemPlantaoPage() {
               : "border-border hover:border-[#1F4E79]/40 hover:bg-secondary/30"
           }`}
         >
-          <Upload className={`h-8 w-8 ${isDragging ? "text-[#1F4E79]" : "text-muted-foreground"}`} />
+          <Upload
+            className={`h-8 w-8 ${isDragging ? "text-[#1F4E79]" : "text-muted-foreground"}`}
+          />
           <p className="text-sm font-bold text-foreground">
-            {isDragging ? "Solte os arquivos aqui" : "Arraste os DOCX dos leitos ou clique para selecionar"}
+            {isDragging
+              ? "Solte os arquivos aqui"
+              : "Arraste os DOCX dos leitos ou clique para selecionar"}
           </p>
           <p className="text-xs text-muted-foreground">
             Suporte a DOCX, TXT e PDF — até 30 arquivos — 20MB cada
@@ -275,7 +287,9 @@ function PassagemPlantaoPage() {
             <ul className="divide-y divide-border max-h-72 overflow-y-auto">
               {files.map((f) => (
                 <li key={f.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className={`h-4 w-4 flex-shrink-0 ${f.status === "error" ? "text-destructive" : "text-[#1F4E79]"}`} />
+                  <FileText
+                    className={`h-4 w-4 flex-shrink-0 ${f.status === "error" ? "text-destructive" : "text-[#1F4E79]"}`}
+                  />
                   <span className="flex-1 text-xs font-medium truncate">{f.file.name}</span>
                   <span className="text-[10px] text-muted-foreground">
                     {(f.file.size / 1024).toFixed(0)} KB
@@ -308,7 +322,9 @@ function PassagemPlantaoPage() {
               </p>
               <ul className="space-y-0.5">
                 {warnings.map((w, i) => (
-                  <li key={i} className="text-xs text-amber-700">{w}</li>
+                  <li key={i} className="text-xs text-amber-700">
+                    {w}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -331,7 +347,8 @@ function PassagemPlantaoPage() {
             ) : (
               <>
                 <FileText className="h-4 w-4" />
-                Gerar Mapa de Passagem ({readyFiles.length} leito{readyFiles.length !== 1 ? "s" : ""})
+                Gerar Mapa de Passagem ({readyFiles.length} leito
+                {readyFiles.length !== 1 ? "s" : ""})
               </>
             )}
           </button>

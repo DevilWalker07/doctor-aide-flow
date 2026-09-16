@@ -14,7 +14,9 @@ export function gerarMapaPlantaoLocal(patients: any[], sector: string, date: str
       `Alertas: ${p.alertas?.length ? p.alertas.join("; ") : "SEM ALERTAS"}`,
       "",
     ]),
-  ].join("\n").toUpperCase();
+  ]
+    .join("\n")
+    .toUpperCase();
 }
 
 export function gerarBriefingLocal(patients: any[], sector: string, date: string) {
@@ -24,7 +26,12 @@ CENSO DO PLANTÃO
 - TOTAL DE PACIENTES: ${patients.length}
 
 PACIENTES CRÍTICOS
-${patients.filter((p) => p.alertas?.length).map((p) => `- ${p.leito || p.bed} ${p.nome || p.name}: ${p.alertas.join(", ")}`).join("\n") || "- SEM ALERTAS CRÍTICOS IDENTIFICADOS"}
+${
+  patients
+    .filter((p) => p.alertas?.length)
+    .map((p) => `- ${p.leito || p.bed} ${p.nome || p.name}: ${p.alertas.join(", ")}`)
+    .join("\n") || "- SEM ALERTAS CRÍTICOS IDENTIFICADOS"
+}
 
 PRIORIDADES DO ROUND
 1. VER ALERTAS CRÍTICOS.

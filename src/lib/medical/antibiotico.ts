@@ -6,6 +6,11 @@ export function calcularDiaAtb(dataInicio: string, hoje: string, modo: "D0" | "D
   return modo === "D1" ? diff + 1 : diff;
 }
 
-export function cicloAtbExcedido(dataInicio: string, hoje: string, duracaoDias: number, modo: "D0" | "D1" = "D1") {
+export function cicloAtbExcedido(
+  dataInicio: string,
+  hoje: string,
+  duracaoDias: number,
+  modo: "D0" | "D1" = "D1",
+) {
   return calcularDiaAtb(dataInicio, hoje, modo) > duracaoDias;
 }

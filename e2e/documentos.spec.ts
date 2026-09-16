@@ -8,13 +8,26 @@ test.describe("documentos ambulatoriais", () => {
     await page.addInitScript(() => {
       localStorage.setItem(
         "da_pacientes",
-        JSON.stringify([{ id: "temp_e2e", nome: "MARIA E2E", idade: 70, sexo: "F", leito: "L07", lista_de_problemas: ["HAS", "DM2"], medicacoes: ["LOSARTANA 50MG"], antibioticos: [] }]),
+        JSON.stringify([
+          {
+            id: "temp_e2e",
+            nome: "MARIA E2E",
+            idade: 70,
+            sexo: "F",
+            leito: "L07",
+            lista_de_problemas: ["HAS", "DM2"],
+            medicacoes: ["LOSARTANA 50MG"],
+            antibioticos: [],
+          },
+        ]),
       );
     });
     await ensureSession(page);
   });
 
-  test("receita avulsa: catálogo, grade de horários, Farmácia Popular, cópia e salvamento", async ({ page }) => {
+  test("receita avulsa: catálogo, grade de horários, Farmácia Popular, cópia e salvamento", async ({
+    page,
+  }) => {
     await page.goto("/prescricao-alta");
     await expect(page.getByTestId("doc-modo")).toContainText("MODO AVULSO");
     await page.getByTestId("doc-paciente-nome").fill("JOSE AVULSO");
@@ -29,13 +42,20 @@ test.describe("documentos ambulatoriais", () => {
     await expect(page.getByTestId("doc-item-0-manha")).toHaveText("1");
 
     await page.getByTestId("doc-copy").click();
-    await expect(page.locator("[data-sonner-toast]").filter({ hasText: /copiado/i }).first()).toBeVisible();
+    await expect(
+      page
+        .locator("[data-sonner-toast]")
+        .filter({ hasText: /copiado/i })
+        .first(),
+    ).toBeVisible();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
     expect(clip).toContain("🌅");
     expect(clip).toContain("Espironolactona 25 mg");
 
     await page.getByTestId("doc-save").click();
-    await expect(page.locator("[data-sonner-toast]").filter({ hasText: /salvo/i }).first()).toBeVisible();
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /salvo/i }).first(),
+    ).toBeVisible();
   });
 
   test("receita vinculada pré-preenche paciente e aceita sugestão da IA", async ({ page }) => {
@@ -44,7 +64,9 @@ test.describe("documentos ambulatoriais", () => {
     await expect(page.getByTestId("doc-paciente-nome")).toHaveValue("MARIA E2E");
     await expect(page.getByTestId("doc-paciente-idade")).toHaveValue("70");
     await page.getByTestId("doc-ai-suggest").click();
-    await expect(page.getByTestId("doc-preview-item-0")).toContainText(/losartana/i, { timeout: 30_000 });
+    await expect(page.getByTestId("doc-preview-item-0")).toContainText(/losartana/i, {
+      timeout: 30_000,
+    });
   });
 
   test("encaminhamento e orientações geram preview e texto limpo", async ({ page }) => {
@@ -60,9 +82,16 @@ test.describe("documentos ambulatoriais", () => {
     await expect(page).toHaveURL(/\/orientacoes-paciente\?paciente=temp_e2e/);
     await page.getByTestId("doc-orientacao-diabetes").click();
     await page.getByTestId("doc-orientacao-sinais-alerta-gerais").click();
-    await expect(page.getByTestId("doc-preview-orientacoes")).toContainText("Cuidados com o diabetes");
+    await expect(page.getByTestId("doc-preview-orientacoes")).toContainText(
+      "Cuidados com o diabetes",
+    );
     await page.getByTestId("doc-copy").click();
-    await expect(page.locator("[data-sonner-toast]").filter({ hasText: /copiado/i }).first()).toBeVisible();
+    await expect(
+      page
+        .locator("[data-sonner-toast]")
+        .filter({ hasText: /copiado/i })
+        .first(),
+    ).toBeVisible();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
     expect(clip).toContain("✅");
     expect(clip).toContain("🚨");

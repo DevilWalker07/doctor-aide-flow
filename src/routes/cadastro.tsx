@@ -52,7 +52,8 @@ function CadastroPage() {
     return (
       <AuthShell titulo="Confirme seu e-mail" subtitulo="Enviamos um link de confirmação">
         <p className="text-sm font-semibold text-foreground">
-          Abra o e-mail enviado para <strong>{email}</strong> e clique no link para ativar a conta. Depois volte e entre.
+          Abra o e-mail enviado para <strong>{email}</strong> e clique no link para ativar a conta.
+          Depois volte e entre.
         </p>
         <Link to="/login" className={`${authButtonCls} mt-6`}>
           Ir para o login
@@ -75,11 +76,53 @@ function CadastroPage() {
       }
     >
       <form onSubmit={submit} className="space-y-3">
-        <input required autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo" className={authInputCls} data-testid="auth-name" />
-        <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" className={authInputCls} data-testid="auth-email" />
-        <input type="password" required minLength={8} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Senha (mín. 8 caracteres)" className={authInputCls} data-testid="auth-password" />
-        <input type="password" required minLength={8} autoComplete="new-password" value={confirma} onChange={(e) => setConfirma(e.target.value)} placeholder="Confirmar senha" className={authInputCls} data-testid="auth-password-confirm" />
-        <button type="submit" disabled={loading || !configured} className={authButtonCls} data-testid="auth-submit">
+        <input
+          required
+          autoComplete="name"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome completo"
+          className={authInputCls}
+          data-testid="auth-name"
+        />
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-mail"
+          className={authInputCls}
+          data-testid="auth-email"
+        />
+        <input
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          placeholder="Senha (mín. 8 caracteres)"
+          className={authInputCls}
+          data-testid="auth-password"
+        />
+        <input
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
+          value={confirma}
+          onChange={(e) => setConfirma(e.target.value)}
+          placeholder="Confirmar senha"
+          className={authInputCls}
+          data-testid="auth-password-confirm"
+        />
+        <button
+          type="submit"
+          disabled={loading || !configured}
+          className={authButtonCls}
+          data-testid="auth-submit"
+        >
           {loading && <Loader2 className="h-3 w-3 animate-spin" />} Criar conta
         </button>
       </form>

@@ -1,7 +1,17 @@
 import { Stethoscope } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function AuthShell({ titulo, subtitulo, children, rodape }: { titulo: string; subtitulo: string; children: ReactNode; rodape?: ReactNode }) {
+export function AuthShell({
+  titulo,
+  subtitulo,
+  children,
+  rodape,
+}: {
+  titulo: string;
+  subtitulo: string;
+  children: ReactNode;
+  rodape?: ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -10,16 +20,24 @@ export function AuthShell({ titulo, subtitulo, children, rodape }: { titulo: str
             <Stethoscope className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-lg font-black tracking-tight uppercase text-foreground">Medfluxo</div>
-            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">HNAS Assist</div>
+            <div className="text-lg font-black tracking-tight uppercase text-foreground">
+              Medfluxo
+            </div>
+            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+              HNAS Assist
+            </div>
           </div>
         </div>
         <div className="bg-white border border-border rounded-[2rem] p-8 shadow-sm">
           <h1 className="text-xl font-black uppercase tracking-tight text-foreground">{titulo}</h1>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-1 mb-6">{subtitulo}</p>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-1 mb-6">
+            {subtitulo}
+          </p>
           {children}
         </div>
-        {rodape && <div className="mt-6 text-center text-xs font-bold text-muted-foreground">{rodape}</div>}
+        {rodape && (
+          <div className="mt-6 text-center text-xs font-bold text-muted-foreground">{rodape}</div>
+        )}
       </div>
     </div>
   );

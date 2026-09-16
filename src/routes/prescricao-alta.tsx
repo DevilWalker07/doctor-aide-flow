@@ -15,7 +15,12 @@ import { apiJson } from "@/lib/apiClient";
 import { formatReceitaWhatsApp } from "@/lib/documentos/formatters";
 import type { ReceitaDocumento, ReceitaItem } from "@/lib/documentos/types";
 import { useDocumentoBase } from "@/lib/documentos/useDocumentoBase";
-import { getMedicamento, MEDICAMENTOS, type Horario, type Medicamento } from "@/lib/medical/medicamentos";
+import {
+  getMedicamento,
+  MEDICAMENTOS,
+  type Horario,
+  type Medicamento,
+} from "@/lib/medical/medicamentos";
 
 export const Route = createFileRoute("/prescricao-alta")({
   component: PrescricaoAltaPage,
@@ -23,7 +28,10 @@ export const Route = createFileRoute("/prescricao-alta")({
   head: () => ({ meta: [{ title: "Receita de Alta — MEDFLUXO" }] }),
 });
 
-const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+const newId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 function itemFromMedicamento(m: Medicamento, presetId?: string): ReceitaItem {
   const preset = m.presets.find((p) => p.id === presetId) ?? m.presets[0];
@@ -45,7 +53,21 @@ function itemFromMedicamento(m: Medicamento, presetId?: string): ReceitaItem {
 }
 
 function itemManual(): ReceitaItem {
-  return { id: newId(), medicamentoId: null, nome: "", apresentacao: "", dose: "", quantidade: "", horarios: {}, instrucao: "", duracao: "Uso contínuo", observacao: "", acao: "comprimido", farmaciaPopular: false, controlado: null };
+  return {
+    id: newId(),
+    medicamentoId: null,
+    nome: "",
+    apresentacao: "",
+    dose: "",
+    quantidade: "",
+    horarios: {},
+    instrucao: "",
+    duracao: "Uso contínuo",
+    observacao: "",
+    acao: "comprimido",
+    farmaciaPopular: false,
+    controlado: null,
+  };
 }
 
 interface SugestaoItem {
@@ -68,25 +90,39 @@ function PrescricaoAltaPage() {
   const [vias, setVias] = useState<1 | 2>(1);
   const [suggesting, setSuggesting] = useState(false);
 
-  const doc: ReceitaDocumento = { paciente: base.pacienteForm, itens, observacoes, vias, data: base.data };
+  const doc: ReceitaDocumento = {
+    paciente: base.pacienteForm,
+    itens,
+    observacoes,
+    vias,
+    data: base.data,
+  };
 
   const addMed = (m: Medicamento) => {
     setItens((prev) => [...prev, itemFromMedicamento(m)]);
     toast.success(`${m.nome} adicionado.`);
   };
 
-  const updateItem = (id: string, next: ReceitaItem) => setItens((prev) => prev.map((i) => (i.id === id ? next : i)));
+  const updateItem = (id: string, next: ReceitaItem) =>
+    setItens((prev) => prev.map((i) => (i.id === id ? next : i)));
   const removeItem = (id: string) => setItens((prev) => prev.filter((i) => i.id !== id));
 
   const sugerir = async () => {
     if (!base.vinculado) return;
     setSuggesting(true);
     try {
-      const res = await apiJson<{ itens: SugestaoItem[]; observacoes: string[] }>("/api/ai/sugerir-receita", {
-        patient: base.vinculado.raw,
-        itensAtuais: itens.map((i) => ({ nome: i.nome, dose: i.dose })),
-        catalogo: MEDICAMENTOS.map((m) => ({ id: m.id, nome: m.nome, apresentacao: m.apresentacao })),
-      });
+      const res = await apiJson<{ itens: SugestaoItem[]; observacoes: string[] }>(
+        "/api/ai/sugerir-receita",
+        {
+          patient: base.vinculado.raw,
+          itensAtuais: itens.map((i) => ({ nome: i.nome, dose: i.dose })),
+          catalogo: MEDICAMENTOS.map((m) => ({
+            id: m.id,
+            nome: m.nome,
+            apresentacao: m.apresentacao,
+          })),
+        },
+      );
       const novos = res.itens
         .filter((s) => !itens.some((i) => i.nome.toLowerCase() === s.nome.toLowerCase()))
         .map((s): ReceitaItem => {
@@ -105,8 +141,13 @@ function PrescricaoAltaPage() {
           };
         });
       setItens((prev) => [...prev, ...novos]);
-      if (res.observacoes.length) setObservacoes((prev) => [prev, ...res.observacoes].filter(Boolean).join("\n"));
-      toast.success(novos.length ? `${novos.length} item(ns) sugerido(s) — revise antes de imprimir.` : "A IA não sugeriu itens novos.");
+      if (res.observacoes.length)
+        setObservacoes((prev) => [prev, ...res.observacoes].filter(Boolean).join("\n"));
+      toast.success(
+        novos.length
+          ? `${novos.length} item(ns) sugerido(s) — revise antes de imprimir.`
+          : "A IA não sugeriu itens novos.",
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao sugerir com IA.");
     } finally {
@@ -123,7 +164,12 @@ function PrescricaoAltaPage() {
       toast.error("Adicione ao menos um medicamento.");
       return;
     }
-    await base.salvar({ type: "receita", title: `Receita — ${base.pacienteForm.nome}`, patientId: base.pacienteForm.pacienteId ?? null, content: doc });
+    await base.salvar({
+      type: "receita",
+      title: `Receita — ${base.pacienteForm.nome}`,
+      patientId: base.pacienteForm.pacienteId ?? null,
+      content: doc,
+    });
   };
 
   return (
@@ -140,23 +186,52 @@ function PrescricaoAltaPage() {
           saving={base.saving}
           onSuggest={sugerir}
           suggesting={suggesting}
-          suggestDisabledReason={base.vinculado ? undefined : "Disponível apenas com paciente vinculado ao cadastro."}
+          suggestDisabledReason={
+            base.vinculado ? undefined : "Disponível apenas com paciente vinculado ao cadastro."
+          }
         />
       }
       editor={
         <>
-          <PacienteHeaderForm value={base.pacienteForm} onChange={base.setPacienteForm} vinculado={Boolean(base.vinculado)} />
-          <MedicamentoPicker onAdd={addMed} onAddManual={() => setItens((prev) => [...prev, itemManual()])} />
+          <PacienteHeaderForm
+            value={base.pacienteForm}
+            onChange={base.setPacienteForm}
+            vinculado={Boolean(base.vinculado)}
+          />
+          <MedicamentoPicker
+            onAdd={addMed}
+            onAddManual={() => setItens((prev) => [...prev, itemManual()])}
+          />
 
-          <Section title={`3. ITENS DA RECEITA (${itens.length})`} icon={<Pill className="h-4 w-4" />} className="p-0 bg-transparent border-0 shadow-none space-y-4">
-            {itens.length === 0 && <p className="text-xs font-bold text-muted-foreground uppercase text-center py-6 bg-white border border-dashed border-border rounded-[2rem]">Nenhum medicamento ainda. Busque acima ou use "Sugerir com IA".</p>}
+          <Section
+            title={`3. ITENS DA RECEITA (${itens.length})`}
+            icon={<Pill className="h-4 w-4" />}
+            className="p-0 bg-transparent border-0 shadow-none space-y-4"
+          >
+            {itens.length === 0 && (
+              <p className="text-xs font-bold text-muted-foreground uppercase text-center py-6 bg-white border border-dashed border-border rounded-[2rem]">
+                Nenhum medicamento ainda. Busque acima ou use "Sugerir com IA".
+              </p>
+            )}
             {itens.map((item, i) => (
-              <MedicamentoCard key={item.id} item={item} index={i} onChange={(next) => updateItem(item.id, next)} onRemove={() => removeItem(item.id)} />
+              <MedicamentoCard
+                key={item.id}
+                item={item}
+                index={i}
+                onChange={(next) => updateItem(item.id, next)}
+                onRemove={() => removeItem(item.id)}
+              />
             ))}
           </Section>
 
           <Section title="4. OBSERVAÇÕES E VIAS" icon={<StickyNote className="h-4 w-4" />}>
-            <ControlledTextarea value={observacoes} onValueChange={setObservacoes} placeholder="Observações gerais (ex.: retorno em 7 dias, trazer exames...)" rows={3} className="text-sm font-semibold mb-4" />
+            <ControlledTextarea
+              value={observacoes}
+              onValueChange={setObservacoes}
+              placeholder="Observações gerais (ex.: retorno em 7 dias, trazer exames...)"
+              rows={3}
+              className="text-sm font-semibold mb-4"
+            />
             <div className="flex gap-2">
               <Chip label="1 via" selected={vias === 1} onClick={() => setVias(1)} />
               <Chip label="2 vias" selected={vias === 2} onClick={() => setVias(2)} />

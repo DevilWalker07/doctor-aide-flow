@@ -52,17 +52,22 @@ export async function sniffKind(filePath: string, originalName: string): Promise
 }
 
 function hasUtf16Bom(buf: Buffer): boolean {
-  return buf.length >= 2 && ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff));
+  return (
+    buf.length >= 2 &&
+    ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff))
+  );
 }
 
 export function decodeTextBuffer(buf: Buffer): string {
-  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return buf.subarray(2).toString("utf16le");
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe)
+    return buf.subarray(2).toString("utf16le");
   if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
     const swapped = Buffer.from(buf.subarray(2));
     swapped.swap16();
     return swapped.toString("utf16le");
   }
-  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.subarray(3).toString("utf-8");
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf)
+    return buf.subarray(3).toString("utf-8");
   return buf.toString("utf-8");
 }
 

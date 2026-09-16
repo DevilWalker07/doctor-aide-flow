@@ -8,7 +8,15 @@ import { QuickActions } from "@/components/hub/QuickActions";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnsureProfile } from "@/hooks/useEnsureProfile";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { closeShift, getActiveShift, getClosedShifts, getHandoffsByShift, getProfile, updateShift, type Shift } from "@/lib/db";
+import {
+  closeShift,
+  getActiveShift,
+  getClosedShifts,
+  getHandoffsByShift,
+  getProfile,
+  updateShift,
+  type Shift,
+} from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 
@@ -62,7 +70,14 @@ function HubPage() {
         const shift = await getActiveShift(userId!);
         if (cancelled) return;
         if (shift) {
-          const ctx: PlantaoAtivoCtx = { id: shift.id, data: shift.date, data_formatada: formatDate(shift.date), hospital: shift.hospital, setor: shift.sector || null, tipo: shift.type || null };
+          const ctx: PlantaoAtivoCtx = {
+            id: shift.id,
+            data: shift.date,
+            data_formatada: formatDate(shift.date),
+            hospital: shift.hospital,
+            setor: shift.sector || null,
+            tipo: shift.type || null,
+          };
           setPlantaoAtivo(ctx);
           localStorage.setItem("da_plantao_ativo", JSON.stringify({ ...ctx, status: "active" }));
           storage.setShiftId(shift.id);
@@ -86,9 +101,16 @@ function HubPage() {
       const activeId = storage.getShiftId();
       if (activeId && !activeId.startsWith("temp_")) {
         try {
-          const { data: pats } = await supabase.from("patients").select("id, pending_issues").eq("shift_id", activeId).eq("user_id", userId!);
+          const { data: pats } = await supabase
+            .from("patients")
+            .select("id, pending_issues")
+            .eq("shift_id", activeId)
+            .eq("user_id", userId!);
           if (pats && !cancelled) {
-            setStats({ pacientes: pats.length, pendencias: pats.reduce((acc, p) => acc + (p.pending_issues?.length || 0), 0) });
+            setStats({
+              pacientes: pats.length,
+              pendencias: pats.reduce((acc, p) => acc + (p.pending_issues?.length || 0), 0),
+            });
           }
         } catch {
           /* offline */
@@ -119,7 +141,18 @@ function HubPage() {
       if (plantaoAtivo) await closeShift(plantaoAtivo.id, userId);
       await updateShift(shift.id, { status: "active" }, userId);
       storage.setShiftId(shift.id);
-      localStorage.setItem("da_plantao_ativo", JSON.stringify({ id: shift.id, data: shift.date, data_formatada: formatDate(shift.date), hospital: shift.hospital, setor: shift.sector, tipo: shift.type, status: "active" }));
+      localStorage.setItem(
+        "da_plantao_ativo",
+        JSON.stringify({
+          id: shift.id,
+          data: shift.date,
+          data_formatada: formatDate(shift.date),
+          hospital: shift.hospital,
+          setor: shift.sector,
+          tipo: shift.type,
+          status: "active",
+        }),
+      );
       if (shift.type) storage.setTipo(shift.type);
       toast.success("Plantão reaberto!");
       nav({ to: "/dashboard" });
@@ -154,14 +187,24 @@ function HubPage() {
           </div>
           <div className="min-w-0">
             <span className="block font-black tracking-tight text-lg leading-none">MEDFLUXO</span>
-            <span className="block text-[9px] font-black tracking-[0.3em] uppercase text-slate-500 mt-1 truncate">Central de atendimento</span>
+            <span className="block text-[9px] font-black tracking-[0.3em] uppercase text-slate-500 mt-1 truncate">
+              Central de atendimento
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/configuracoes" aria-label="Configurações" className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-slate-100 hover:border-slate-600 transition-colors">
+          <Link
+            to="/configuracoes"
+            aria-label="Configurações"
+            className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-slate-100 hover:border-slate-600 transition-colors"
+          >
             <Settings2 className="h-5 w-5" />
           </Link>
-          <button onClick={handleLogout} aria-label="Sair" className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-rose-300 hover:border-rose-500/50 transition-colors">
+          <button
+            onClick={handleLogout}
+            aria-label="Sair"
+            className="h-11 w-11 rounded-2xl border border-slate-800 bg-slate-900/60 flex items-center justify-center text-slate-400 hover:text-rose-300 hover:border-rose-500/50 transition-colors"
+          >
             <LogOut className="h-5 w-5" />
           </button>
         </div>
@@ -178,26 +221,43 @@ function HubPage() {
 
         <QuickActions />
 
-        <PlantaoPanel plantaoAtivo={plantaoAtivo} stats={stats} closedShifts={closedShifts} onViewHandoff={handleViewHandoff} onReopen={setShowReopenModal} formatDate={formatDate} />
+        <PlantaoPanel
+          plantaoAtivo={plantaoAtivo}
+          stats={stats}
+          closedShifts={closedShifts}
+          onViewHandoff={handleViewHandoff}
+          onReopen={setShowReopenModal}
+          formatDate={formatDate}
+        />
 
         <AmbienteMatrix />
       </main>
 
       <footer className="relative z-10 py-8 text-center">
-        <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">Medfluxo · HNAS Assist</p>
+        <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em]">
+          Medfluxo · HNAS Assist
+        </p>
       </footer>
 
       {selectedHandoff && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6">
           <div className="bg-slate-900 border border-slate-800 rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="p-5 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Arquivo de passagem</h2>
-              <button onClick={() => setSelectedHandoff(null)} aria-label="Fechar" className="p-2 hover:bg-slate-800 rounded-full">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">
+                Arquivo de passagem
+              </h2>
+              <button
+                onClick={() => setSelectedHandoff(null)}
+                aria-label="Fechar"
+                className="p-2 hover:bg-slate-800 rounded-full"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="p-5">
-              <pre className="w-full bg-slate-950 p-5 rounded-2xl text-[10px] font-bold overflow-y-auto max-h-[40vh] whitespace-pre-wrap font-mono leading-relaxed text-slate-200">{selectedHandoff}</pre>
+              <pre className="w-full bg-slate-950 p-5 rounded-2xl text-[10px] font-bold overflow-y-auto max-h-[40vh] whitespace-pre-wrap font-mono leading-relaxed text-slate-200">
+                {selectedHandoff}
+              </pre>
               <div className="flex gap-3 mt-5">
                 <button
                   onClick={() => {
@@ -208,7 +268,10 @@ function HubPage() {
                 >
                   <Copy className="h-4 w-4" /> Copiar texto
                 </button>
-                <button onClick={() => setSelectedHandoff(null)} className="flex-1 py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  onClick={() => setSelectedHandoff(null)}
+                  className="flex-1 py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest"
+                >
                   Fechar
                 </button>
               </div>
@@ -228,13 +291,25 @@ function HubPage() {
               <p className="text-xs text-slate-400 font-bold uppercase">
                 {showReopenModal.sector} · {formatDate(showReopenModal.date)}
               </p>
-              {plantaoAtivo && <p className="mt-4 text-[10px] text-rose-300 font-black uppercase tracking-widest bg-rose-500/10 p-3 rounded-xl">O plantão atual será encerrado.</p>}
+              {plantaoAtivo && (
+                <p className="mt-4 text-[10px] text-rose-300 font-black uppercase tracking-widest bg-rose-500/10 p-3 rounded-xl">
+                  O plantão atual será encerrado.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-3">
-              <button disabled={isProcessing} onClick={() => handleReopen(showReopenModal)} className="w-full py-3.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50">
+              <button
+                disabled={isProcessing}
+                onClick={() => handleReopen(showReopenModal)}
+                className="w-full py-3.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+              >
                 {isProcessing ? "Processando..." : "Sim, reabrir"}
               </button>
-              <button disabled={isProcessing} onClick={() => setShowReopenModal(null)} className="w-full py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest">
+              <button
+                disabled={isProcessing}
+                onClick={() => setShowReopenModal(null)}
+                className="w-full py-3.5 rounded-2xl bg-slate-800 text-slate-100 text-[10px] font-black uppercase tracking-widest"
+              >
                 Cancelar
               </button>
             </div>

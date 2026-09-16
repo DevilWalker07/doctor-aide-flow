@@ -38,7 +38,7 @@ function cell(
     align?: (typeof AlignmentType)[keyof typeof AlignmentType];
     vAlign?: Exclude<(typeof VerticalAlign)[keyof typeof VerticalAlign], "both">;
     wrap?: boolean;
-  } = {}
+  } = {},
 ): TableCell {
   const {
     bold = false,
@@ -76,7 +76,7 @@ function cell(
               font: "Calibri",
             }),
           ],
-        })
+        }),
     ),
   });
 }
@@ -132,7 +132,7 @@ const ALERT_COL = {
 export async function gerarMapaPlantaoDocx(
   data: MapaPlantaoData,
   setor: string,
-  dataPlantao: string
+  dataPlantao: string,
 ): Promise<Buffer> {
   const tituloHeader = new TableRow({
     height: { value: convertInchesToTwip(0.45), rule: HeightRule.EXACT },
@@ -195,7 +195,12 @@ export async function gerarMapaPlantaoDocx(
       children: [
         cell(leitoText, { bold: true, fontSize: 13, bgColor, width: COL.leito }),
         cell(diagText, { fontSize: 13, bgColor, width: COL.diagnostico }),
-        cell(p.atb, { fontSize: 13, bgColor, width: COL.atb, color: /^sem atb$/i.test(p.atb.trim()) ? "888888" : "000000" }),
+        cell(p.atb, {
+          fontSize: 13,
+          bgColor,
+          width: COL.atb,
+          color: /^sem atb$/i.test(p.atb.trim()) ? "888888" : "000000",
+        }),
         cell(p.ultimoLab, { fontSize: 13, bgColor, width: COL.ultimoLab }),
         cell(p.condutasHoje, { fontSize: 13, bgColor, width: COL.condutas }),
         cell(p.alertasPendencias, {
@@ -270,7 +275,11 @@ export async function gerarMapaPlantaoDocx(
           color: a.prioridade.includes("URGENTE") ? "9B0000" : "000000",
         }),
         cell(a.paciente, { fontSize: 13, bgColor: bg, width: ALERT_COL.paciente }),
-        cell(a.leito ? `[${a.leito}] ${a.acao}` : a.acao, { fontSize: 13, bgColor: bg, width: ALERT_COL.acao }),
+        cell(a.leito ? `[${a.leito}] ${a.acao}` : a.acao, {
+          fontSize: 13,
+          bgColor: bg,
+          width: ALERT_COL.acao,
+        }),
       ],
     });
   });

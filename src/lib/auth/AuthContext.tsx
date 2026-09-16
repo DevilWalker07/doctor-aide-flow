@@ -1,5 +1,13 @@
 import type { Session, User } from "@supabase/supabase-js";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { setTokenProvider, setUnauthorizedHandler } from "@/lib/apiClient";
 import { hasSupabaseConfig, supabase } from "@/lib/supabase";
 
@@ -25,7 +33,8 @@ function traduzErro(message: string): string {
   if (m.includes("user already registered")) return "Já existe uma conta com este e-mail.";
   if (m.includes("password should be at least")) return "A senha deve ter pelo menos 8 caracteres.";
   if (m.includes("rate limit")) return "Muitas tentativas. Aguarde um instante.";
-  if (m.includes("fetch") || m.includes("network")) return "Sem conexão com o servidor de autenticação.";
+  if (m.includes("fetch") || m.includes("network"))
+    return "Sem conexão com o servidor de autenticação.";
   return message;
 }
 
@@ -82,13 +91,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw new Error(traduzErro(error.message));
       },
       async signUp(email, password, name) {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() } } });
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { name: name.trim() } },
+        });
         if (error) throw new Error(traduzErro(error.message));
         return { needsConfirmation: !data.session };
       },
       signOut,
       async resetPassword(email) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/nova-senha` });
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/nova-senha`,
+        });
         if (error) throw new Error(traduzErro(error.message));
       },
       async updatePassword(newPassword) {

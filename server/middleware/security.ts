@@ -20,7 +20,8 @@ export function buildCors(): RequestHandler {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowlist.includes(origin)) return cb(null, true);
-      if (!isProduction && allowlist.length === 0 && LOCALHOST_RE.test(origin)) return cb(null, true);
+      if (!isProduction && allowlist.length === 0 && LOCALHOST_RE.test(origin))
+        return cb(null, true);
       cb(null, false);
     },
     credentials: false,
@@ -38,7 +39,10 @@ function limiter(max: number) {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: keyByUser,
-    message: { error: "rate_limited", message: "Muitas requisições. Tente novamente em instantes." },
+    message: {
+      error: "rate_limited",
+      message: "Muitas requisições. Tente novamente em instantes.",
+    },
   });
 }
 

@@ -1,6 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
-export const withSupabase = Boolean(process.env.E2E_SUPABASE_URL && process.env.E2E_SUPABASE_ANON_KEY);
+export const withSupabase = Boolean(
+  process.env.E2E_SUPABASE_URL && process.env.E2E_SUPABASE_ANON_KEY,
+);
 
 export function uniqueEmail() {
   return `e2e+${Date.now()}${Math.floor(Math.random() * 1000)}@test.local`;

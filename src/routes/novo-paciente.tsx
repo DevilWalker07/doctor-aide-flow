@@ -51,21 +51,26 @@ function NovoPacienteTriage() {
             className="group relative bg-white border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <div className="relative h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-8 group-hover:scale-110 transition-transform duration-500 shadow-sm">
               <Plus className="h-10 w-10" />
             </div>
-            
+
             <h3 className="relative font-extrabold text-foreground tracking-tight text-2xl mb-4">
               🆕 ADMISSÃO NOVA
             </h3>
             <div className="relative space-y-1 mb-8">
-              <p className="text-sm text-muted-foreground leading-relaxed">Paciente chegou agora.</p>
-              <p className="text-sm text-muted-foreground leading-relaxed font-bold">Vou preencher os dados iniciais.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Paciente chegou agora.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed font-bold">
+                Vou preencher os dados iniciais.
+              </p>
             </div>
-            
+
             <div className="relative flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest">
-              Selecionar <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              Selecionar{" "}
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
@@ -76,21 +81,26 @@ function NovoPacienteTriage() {
             className="group relative bg-white border border-border rounded-[2.5rem] p-10 text-left transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-ai/20 hover:border-ai/40 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-ai/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <div className="relative h-20 w-20 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-8 group-hover:scale-110 transition-transform duration-500 shadow-sm">
               <BedDouble className="h-10 w-10" />
             </div>
-            
+
             <h3 className="relative font-extrabold text-foreground tracking-tight text-2xl mb-4">
               📋 PACIENTE JÁ INTERNADO
             </h3>
             <div className="relative space-y-1 mb-8">
-              <p className="text-sm text-muted-foreground leading-relaxed">Paciente já está na enfermaria.</p>
-              <p className="text-sm text-muted-foreground leading-relaxed font-bold">Tenho evolução, prescrição ou foto de prontuário anterior.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Paciente já está na enfermaria.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed font-bold">
+                Tenho evolução, prescrição ou foto de prontuário anterior.
+              </p>
             </div>
-            
+
             <div className="relative flex items-center gap-2 text-ai text-xs font-bold uppercase tracking-widest">
-              Selecionar <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              Selecionar{" "}
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </div>

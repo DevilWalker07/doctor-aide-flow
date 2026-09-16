@@ -1,6 +1,12 @@
 import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { buscarMedicamentos, CLASSES_POR_ESPECIALIDADE, ESPECIALIDADES, type Especialidade, type Medicamento } from "@/lib/medical/medicamentos";
+import {
+  buscarMedicamentos,
+  CLASSES_POR_ESPECIALIDADE,
+  ESPECIALIDADES,
+  type Especialidade,
+  type Medicamento,
+} from "@/lib/medical/medicamentos";
 import { FarmaciaPopularBadge } from "./FarmaciaPopularBadge";
 import { Chip, Section } from "./Section";
 
@@ -15,7 +21,10 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
   const [classe, setClasse] = useState<string | null>(null);
   const [soFP, setSoFP] = useState(false);
 
-  const resultados = useMemo(() => buscarMedicamentos(query, { especialidade, classe, farmaciaPopular: soFP }), [query, especialidade, classe, soFP]);
+  const resultados = useMemo(
+    () => buscarMedicamentos(query, { especialidade, classe, farmaciaPopular: soFP }),
+    [query, especialidade, classe, soFP],
+  );
   const classes = especialidade ? CLASSES_POR_ESPECIALIDADE[especialidade] : [];
 
   return (
@@ -23,7 +32,12 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
       title="2. MEDICAMENTOS"
       icon={<Search className="h-4 w-4" />}
       right={
-        <button type="button" onClick={onAddManual} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline" data-testid="doc-add-manual">
+        <button
+          type="button"
+          onClick={onAddManual}
+          className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+          data-testid="doc-add-manual"
+        >
           + item manual
         </button>
       }
@@ -56,20 +70,39 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
       {classes.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4 pl-1 border-l-2 border-primary/30">
           {classes.map((c) => (
-            <Chip key={c} label={c} selected={classe === c} onClick={() => setClasse(classe === c ? null : c)} />
+            <Chip
+              key={c}
+              label={c}
+              selected={classe === c}
+              onClick={() => setClasse(classe === c ? null : c)}
+            />
           ))}
         </div>
       )}
 
-      <ul className="divide-y divide-border max-h-80 overflow-y-auto rounded-2xl border border-border" data-testid="doc-med-results">
-        {resultados.length === 0 && <li className="p-6 text-xs font-bold text-muted-foreground uppercase text-center">Nenhum medicamento encontrado. Use "+ item manual".</li>}
+      <ul
+        className="divide-y divide-border max-h-80 overflow-y-auto rounded-2xl border border-border"
+        data-testid="doc-med-results"
+      >
+        {resultados.length === 0 && (
+          <li className="p-6 text-xs font-bold text-muted-foreground uppercase text-center">
+            Nenhum medicamento encontrado. Use "+ item manual".
+          </li>
+        )}
         {resultados.map((m) => (
-          <li key={m.id} className="flex items-center justify-between gap-3 p-4 hover:bg-secondary/40">
+          <li
+            key={m.id}
+            className="flex items-center justify-between gap-3 p-4 hover:bg-secondary/40"
+          >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-black text-foreground">{m.nome}</span>
                 <span className="text-xs font-bold text-muted-foreground">{m.apresentacao}</span>
-                <FarmaciaPopularBadge farmaciaPopular={m.farmaciaPopular} controlado={m.controlado} compact />
+                <FarmaciaPopularBadge
+                  farmaciaPopular={m.farmaciaPopular}
+                  controlado={m.controlado}
+                  compact
+                />
               </div>
               <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
                 {m.especialidade} · {m.classe} · {m.presets[0]?.label}
