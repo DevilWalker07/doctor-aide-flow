@@ -105,15 +105,15 @@ const ATALHO_EXAMES: Atalho = {
   icon: FileText,
 };
 const ATALHO_PASSAGEM: Atalho = {
-  label: "Passagem de plantão",
-  descricao: "Mapa do setor em DOCX a partir das evoluções",
+  label: "Consolidar DOCX dos leitos",
+  descricao: "Mapa do setor a partir dos arquivos de cada leito",
   to: "/passagem-plantao",
   icon: ClipboardList,
 };
-const ATALHO_ROUND: Atalho = {
-  label: "Round do setor",
-  descricao: "Visão dos leitos e pendências do dia",
-  to: "/round",
+const ATALHO_PACIENTES: Atalho = {
+  label: "Lista de leitos",
+  descricao: "Visão dos pacientes e pendências do plantão",
+  to: "/dashboard",
   icon: Users,
 };
 const ATALHO_ENCAMINHAMENTO: Atalho = {
@@ -175,7 +175,7 @@ export const LOCAIS: Local[] = [
     icon: Building2,
     tipoEvolucao: "enfermaria_clinica",
     implementado: true,
-    atalhos: [ATALHO_PASSAGEM, ATALHO_ROUND, ATALHO_RECEITA],
+    atalhos: [ATALHO_PASSAGEM, ATALHO_PACIENTES, ATALHO_RECEITA],
   },
   {
     id: "enfermaria-clinica",
@@ -185,7 +185,7 @@ export const LOCAIS: Local[] = [
     icon: Stethoscope,
     tipoEvolucao: "enfermaria_clinica",
     implementado: true,
-    atalhos: [ATALHO_PASSAGEM, ATALHO_ROUND, ATALHO_RECEITA],
+    atalhos: [ATALHO_PASSAGEM, ATALHO_PACIENTES, ATALHO_RECEITA],
   },
   {
     id: "enfermaria-cirurgica",
@@ -195,7 +195,7 @@ export const LOCAIS: Local[] = [
     icon: Scissors,
     tipoEvolucao: "enfermaria_cirurgica",
     implementado: false,
-    atalhos: [ATALHO_PASSAGEM, ATALHO_ROUND, ATALHO_RECEITA],
+    atalhos: [ATALHO_PASSAGEM, ATALHO_PACIENTES, ATALHO_RECEITA],
   },
   {
     id: "ambulatorio-especialidade",

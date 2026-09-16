@@ -18,12 +18,11 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     await page.getByTestId("tipo-enfermaria_clinica").click();
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // 2. Novo paciente → admissão nova → upload IA
+    // 2. Novo paciente → upload IA (uma tela, não três)
     await page.getByTestId("dashboard-add-patient").click();
     await expect(page).toHaveURL(/\/novo-paciente/);
-    await page.getByTestId("patient-card-admissao").click();
-    await expect(page).toHaveURL(/\/admissao-nova/);
-    await page.getByTestId("admissao-upload").click();
+    await page.getByTestId("patient-situacao-admissao").click();
+    await page.getByTestId("patient-card-arquivo").click();
     await expect(page).toHaveURL(/\/upload-ia/);
 
     // 3. Upload → processando → revisar

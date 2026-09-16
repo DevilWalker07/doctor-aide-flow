@@ -367,11 +367,13 @@ function DashboardPage() {
           >
             <UserPlus className="h-5 w-5" aria-hidden="true" /> Adicionar paciente
           </button>
+          {/* Há duas passagens e elas fazem coisas diferentes: esta monta o
+              PDF a partir dos pacientes já cadastrados no plantão. */}
           <button
-            onClick={() => nav({ to: "/passagem-plantao" })}
+            onClick={() => nav({ to: "/passagem" })}
             className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl border px-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <FileText className="h-5 w-5" aria-hidden="true" /> Passagem
+            <FileText className="h-5 w-5" aria-hidden="true" /> Passagem destes pacientes
           </button>
           <button
             onClick={() => nav({ to: "/prescricao-alta", search: {} })}
@@ -380,12 +382,13 @@ function DashboardPage() {
           >
             <Pill className="h-5 w-5" aria-hidden="true" /> Documentos
           </button>
+          {/* ...e esta consolida arquivos DOCX de outros leitos, que não estão
+              cadastrados aqui. O ícone sem rótulo não dizia nada disso. */}
           <button
-            onClick={() => nav({ to: "/passagem" })}
-            aria-label="Passagem rápida em texto"
-            className="touch-target border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            onClick={() => nav({ to: "/passagem-plantao" })}
+            className="border-border text-foreground hover:bg-secondary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl border px-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <ClipboardList className="h-5 w-5" aria-hidden="true" />
+            <ClipboardList className="h-5 w-5" aria-hidden="true" /> Consolidar DOCX dos leitos
           </button>
         </div>
 

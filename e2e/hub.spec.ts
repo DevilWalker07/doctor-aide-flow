@@ -39,7 +39,7 @@ test.describe("hub de ambientes", () => {
     await expect(page.getByTestId("em-construcao")).toBeVisible();
 
     // Nunca um beco sem saída: daqui dá para chegar ao que já funciona.
-    await page.getByRole("link", { name: /Passagem de plantão/i }).click();
+    await page.getByRole("link", { name: /Consolidar DOCX dos leitos/i }).click();
     await expect(page).toHaveURL(/\/passagem-plantao/);
   });
 
@@ -87,5 +87,33 @@ test.describe("hub de ambientes", () => {
     await toggle.click();
     await expect.poll(escuro).toBe(false);
     expect(await page.evaluate(() => localStorage.getItem("da_tema"))).toBe("system");
+  });
+});
+
+test.describe("fluxo de cadastro de paciente", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedDoctor(page);
+    await ensureSession(page);
+  });
+
+  test("uma tela só oferece os três caminhos de cadastro", async ({ page }) => {
+    await page.goto("/novo-paciente");
+
+    // Antes eram três telas em sequência para chegar aqui.
+    for (const id of ["patient-card-manual", "patient-card-foto", "patient-card-arquivo"]) {
+      await expect(page.getByTestId(id)).toBeVisible();
+    }
+
+    await page.getByTestId("patient-situacao-internado").click();
+    await page.getByTestId("patient-card-manual").click();
+    await expect(page).toHaveURL(/\/cadastro-manual/);
+    await expect(page).toHaveURL(/tipo=internado/);
+  });
+
+  test("fotografar abre o upload em modo câmera", async ({ page }) => {
+    await page.goto("/novo-paciente");
+    await page.getByTestId("patient-card-foto").click();
+    await expect(page).toHaveURL(/engine=vision/);
+    await expect(page.getByRole("heading", { name: /Fotografar documento/i })).toBeVisible();
   });
 });

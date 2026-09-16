@@ -69,11 +69,9 @@ function UploadIAPage() {
     }
   };
 
-  const goBackUrl = patient_id
-    ? `/paciente/${patient_id}`
-    : tipo === "admissao"
-      ? "/admissao-nova"
-      : "/paciente-internado";
+  // As telas intermediárias de triagem foram removidas: o voltar agora leva
+  // de volta à escolha única de cadastro.
+  const goBackUrl = patient_id ? `/paciente/${patient_id}` : "/novo-paciente";
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
