@@ -6,6 +6,7 @@ import { EVOLUTION_REVIEWER_PROMPT } from "../prompts/evolutionReviewer.prompt.j
 import { GERADOR_ENCAMINHAMENTO_PROMPT } from "../prompts/geradorEncaminhamento.prompt.js";
 import { GERADOR_EVOLUCAO_PROMPT } from "../prompts/geradorEvolucao.prompt.js";
 import { LAB_EXTRACTOR_PROMPT } from "../prompts/labExtractor.prompt.js";
+import { LAUDO_IMAGEM_PROMPT } from "../prompts/laudoImagem.prompt.js";
 import { MAPA_PLANTAO_PROMPT } from "../prompts/mapaPlantao.prompt.js";
 import { ORQUESTRADOR_PROMPT } from "../prompts/orquestrador.prompt.js";
 import { PEDIATRIA_PROMPT } from "../prompts/pediatria.prompt.js";
@@ -15,6 +16,7 @@ import {
   ClinicalExtractionOutputSchema,
   EvolutionReviewSchema,
   LabExtractionSchema,
+  LaudoImagemSchema,
   OrquestradorOutputSchema,
   SugestaoReceitaSchema,
   type ClinicalExtractionOutput,
@@ -22,6 +24,7 @@ import {
   type EncaminhamentoBody,
   type EvolucaoBody,
   type EvolutionReviewBody,
+  type LaudoImagemBody,
   type MotorLuanTextBody,
   type RoundBody,
   type SugerirReceitaBody,
@@ -42,6 +45,16 @@ import {
 import { gerarBriefingLocal, gerarMapaPlantaoLocal } from "./round.service.js";
 
 const NO_PATIENTS_ALERT = "IA NÃO IDENTIFICOU PACIENTES NO TEXTO";
+
+/** Enquadramento por especialidade, somado ao prompt do copiloto. */
+const ENQUADRAMENTO_AGENTE: Record<string, string> = {
+  geral: "",
+  "clinica-medica":
+    "Especialidade: CLÍNICA MÉDICA DO ADULTO. Priorize ajuste renal e hepático, interação medicamentosa e metas de doença crônica.",
+  pediatria:
+    "Especialidade: PEDIATRIA. Doses SEMPRE por peso (mg/kg/dia) com o teto de adulto explícito. Se o peso não foi informado, peça o peso antes de sugerir dose.",
+  uti: "Especialidade: TERAPIA INTENSIVA. Considere droga vasoativa, ventilação mecânica, sedação e analgesia, e diluição em bomba de infusão.",
+};
 
 function unwrap<T>(result: SafeResult<T>): T {
   if (result.ok) return result.data;
@@ -181,12 +194,26 @@ export const motorLuanService = {
   },
 
   async copiloto(body: CopilotoBody) {
-    const system = body.ambiente
-      ? `${COPILOTO_PROMPT}\nambiente: ${body.ambiente}`
-      : COPILOTO_PROMPT;
-    const reply = await chatCompletion(system, body.messages, { mockKey: "copiloto" });
+    // O agente só enquadra a resposta; as regras de segurança do copiloto
+    // (citar referência, pedir o dado que falta, terminar com "Confira:")
+    // continuam vindo do COPILOTO_PROMPT e não são substituídas.
+    const partes = [COPILOTO_PROMPT];
+    const enquadramento = ENQUADRAMENTO_AGENTE[body.agente ?? "geral"];
+    if (enquadramento) partes.push(enquadramento);
+    if (body.ambiente) partes.push(`ambiente: ${body.ambiente}`);
+
+    const reply = await chatCompletion(partes.join("\n"), body.messages, { mockKey: "copiloto" });
     if (!reply) throw new AIResponseError("O copiloto não respondeu.");
     return { reply };
+  },
+
+  async organizarLaudoImagem(body: LaudoImagemBody) {
+    return unwrap(
+      await safeJsonCompletion(LAUDO_IMAGEM_PROMPT, body, LaudoImagemSchema, {
+        mockKey: "laudoImagem",
+        maxTokens: 3000,
+      }),
+    );
   },
 
   async sugerirReceita(body: SugerirReceitaBody) {

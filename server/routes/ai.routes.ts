@@ -5,6 +5,7 @@ import {
   EncaminhamentoBody,
   EvolucaoBody,
   EvolutionReviewBody,
+  LaudoImagemBody,
   MotorLuanTextBody,
   RoundBody,
   SugerirReceitaBody,
@@ -81,6 +82,10 @@ aiRouter.post(
 aiRouter.post(
   "/copiloto",
   route(CopilotoBody, (b) => motorLuanService.copiloto(b)),
+);
+aiRouter.post(
+  "/organizar-laudo-imagem",
+  route(LaudoImagemBody, (b) => motorLuanService.organizarLaudoImagem(b)),
 );
 
 const legacy = { deprecated: true };

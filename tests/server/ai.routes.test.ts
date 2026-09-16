@@ -189,6 +189,43 @@ describe("/api/ai/*", () => {
     expect(res.status).toBe(400);
   });
 
+  it("organiza laudo de imagem com schema validado", async () => {
+    const res = await request(app)
+      .post("/api/ai/organizar-laudo-imagem")
+      .set(auth)
+      .send({ inputText: "TC DE TORAX: OPACIDADES EM VIDRO FOSCO BILATERAIS." });
+    expect(res.status).toBe(200);
+    expect(res.body.tipo_exame).toMatch(/TOMOGRAFIA/i);
+    expect(Array.isArray(res.body.achados)).toBe(true);
+    expect(res.body.texto_formatado).toBeTruthy();
+    // Campos de incerteza precisam existir: é onde o agente registra o que
+    // não conseguiu ler, em vez de adivinhar.
+    expect(Array.isArray(res.body.achados_incertos)).toBe(true);
+  });
+
+  it("rejeita laudo de imagem curto demais", async () => {
+    const res = await request(app)
+      .post("/api/ai/organizar-laudo-imagem")
+      .set(auth)
+      .send({ inputText: "TC" });
+    expect(res.status).toBe(400);
+  });
+
+  it("aceita o agente escolhido no copiloto e rejeita agente inválido", async () => {
+    const ok = await request(app)
+      .post("/api/ai/copiloto")
+      .set(auth)
+      .send({ messages: [{ role: "user", content: "dose de amoxicilina" }], agente: "pediatria" });
+    expect(ok.status).toBe(200);
+    expect(ok.body.reply).toBeTruthy();
+
+    const ruim = await request(app)
+      .post("/api/ai/copiloto")
+      .set(auth)
+      .send({ messages: [{ role: "user", content: "x" }], agente: "cardiologia" });
+    expect(ruim.status).toBe(400);
+  });
+
   it("404 JSON para rota de API inexistente", async () => {
     const res = await request(app).get("/api/nada").set(auth);
     expect(res.status).toBe(404);

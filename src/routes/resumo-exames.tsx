@@ -6,31 +6,53 @@ import {
   Copy,
   FlaskConical,
   Loader2,
+  ScanLine,
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { extractLabWithAI } from "@/lib/ai/aiService";
-import type { LabExtractionResult } from "@/lib/types/lab";
+import { extractLabWithAI, organizarLaudoImagem } from "@/lib/ai/aiService";
+import type { LabExtractionResult, LaudoImagemResult } from "@/lib/types/lab";
 
 export const Route = createFileRoute("/resumo-exames")({
   component: ResumoExamesPage,
   head: () => ({ meta: [{ title: "Resumo de Exames — MEDFLUXO" }] }),
 });
 
+type Modo = "laboratorio" | "imagem";
+
 function ResumoExamesPage() {
+  const [modo, setModo] = useState<Modo>("laboratorio");
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<LabExtractionResult | null>(null);
+  const [laudo, setLaudo] = useState<LaudoImagemResult | null>(null);
+
+  const trocarModo = (novo: Modo) => {
+    if (novo === modo) return;
+    setModo(novo);
+    // O resultado do outro modo não se aplica a este: manter na tela daria a
+    // impressão de que o resumo corresponde ao texto atual.
+    setResultado(null);
+    setLaudo(null);
+  };
 
   const resumir = async () => {
     if (texto.trim().length < 10) {
-      toast.error("Cole o texto do laudo ou dos exames.");
+      toast.error(
+        modo === "laboratorio" ? "Cole o texto dos exames." : "Cole o texto do laudo de imagem.",
+      );
       return;
     }
     setLoading(true);
     try {
-      setResultado(await extractLabWithAI(texto));
+      if (modo === "laboratorio") {
+        setLaudo(null);
+        setResultado(await extractLabWithAI(texto));
+      } else {
+        setResultado(null);
+        setLaudo(await organizarLaudoImagem(texto));
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao resumir.");
     } finally {
@@ -47,16 +69,21 @@ function ResumoExamesPage() {
   };
 
   const copiar = () => {
-    if (!resultado?.texto_formatado) return;
-    navigator.clipboard.writeText(
-      [
-        resultado.texto_formatado,
-        resultado.eas_formatado,
-        ...(resultado.alertas ?? []).map((a) => `⚠ ${a}`),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    );
+    const linhas =
+      modo === "laboratorio"
+        ? [
+            resultado?.texto_formatado,
+            resultado?.eas_formatado,
+            ...(resultado?.alertas ?? []).map((a) => `⚠ ${a}`),
+          ]
+        : [
+            laudo?.texto_formatado,
+            laudo?.conclusao ? `CONCLUSÃO: ${laudo.conclusao}` : null,
+            ...(laudo?.alertas ?? []).map((a) => `⚠ ${a}`),
+          ];
+    const texto = linhas.filter(Boolean).join("\n");
+    if (!texto) return;
+    navigator.clipboard.writeText(texto);
     toast.success("Resumo copiado.");
   };
 
@@ -93,7 +120,7 @@ function ResumoExamesPage() {
         >
           <div className="flex items-center justify-between gap-2">
             <h2 id="resumo-entrada" className="t-title text-foreground">
-              Texto dos exames
+              {modo === "laboratorio" ? "Texto dos exames" : "Texto do laudo"}
             </h2>
             <button
               type="button"
@@ -103,8 +130,37 @@ function ResumoExamesPage() {
               <ClipboardPaste className="h-4 w-4" aria-hidden="true" /> Colar
             </button>
           </div>
+          <div
+            role="radiogroup"
+            aria-label="Tipo de exame"
+            className="bg-secondary flex gap-1.5 rounded-2xl p-1.5"
+          >
+            {(
+              [
+                { id: "laboratorio", label: "Laboratório", icon: FlaskConical },
+                { id: "imagem", label: "Imagem", icon: ScanLine },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={modo === m.id}
+                onClick={() => trocarModo(m.id)}
+                data-testid={`resumo-modo-${m.id}`}
+                className={`focus-visible:ring-ring inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                  modo === m.id
+                    ? "bg-card text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <m.icon className="h-4 w-4" aria-hidden="true" /> {m.label}
+              </button>
+            ))}
+          </div>
+
           <label htmlFor="resumo-input" className="sr-only">
-            Cole o laudo ou a lista de exames
+            {modo === "laboratorio" ? "Cole a lista de exames" : "Cole o laudo de imagem"}
           </label>
           <textarea
             id="resumo-input"
@@ -112,7 +168,9 @@ function ResumoExamesPage() {
             onChange={(e) => setTexto(e.target.value)}
             rows={14}
             placeholder={
-              "Cole aqui o laudo, o print transcrito ou a lista de exames.\nEx.: Hb 9,2  Ht 28  Leuco 14.400  Cr 1,8  K 5,6  PCR 87"
+              modo === "laboratorio"
+                ? "Cole a lista de exames ou o print transcrito.\nEx.: Hb 9,2  Ht 28  Leuco 14.400  Cr 1,8  K 5,6  PCR 87"
+                : "Cole o laudo do radiologista, com achados e conclusão."
             }
             data-testid="resumo-input"
             className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-2xl border p-4 font-mono text-base focus:ring-2 focus:outline-none"
@@ -142,7 +200,7 @@ function ResumoExamesPage() {
             <h2 id="resumo-saida" className="t-title text-foreground">
               Resumo
             </h2>
-            {resultado && (
+            {(resultado || laudo) && (
               <button
                 type="button"
                 onClick={copiar}
@@ -152,12 +210,77 @@ function ResumoExamesPage() {
               </button>
             )}
           </div>
-          {!resultado ? (
+          {!resultado && !laudo ? (
             <p className="t-body text-muted-foreground">
-              O resumo aparece aqui: a linha compacta no padrão da evolução, os valores extraídos e
-              os alertas.
+              {modo === "laboratorio"
+                ? "O resumo aparece aqui: a linha compacta no padrão da evolução, os valores extraídos e os alertas."
+                : "O laudo organizado aparece aqui: achados, conclusão do radiologista e a linha pronta para a evolução."}
             </p>
-          ) : (
+          ) : laudo ? (
+            <>
+              <pre className="bg-background border-border text-foreground rounded-2xl border p-4 font-mono text-[0.8125rem] whitespace-pre-wrap">
+                {laudo.texto_formatado || "—"}
+              </pre>
+
+              {(laudo.achados ?? []).length > 0 && (
+                <div>
+                  <p className="t-eyebrow text-muted-foreground">Achados</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {laudo.achados!.map((a, i) => (
+                      <li key={i} className="t-body text-foreground flex gap-2">
+                        <span className="text-muted-foreground shrink-0" aria-hidden="true">
+                          •
+                        </span>
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {laudo.conclusao && (
+                <div className="bg-secondary border-border rounded-2xl border p-4">
+                  <p className="t-eyebrow text-muted-foreground">Conclusão do radiologista</p>
+                  <p className="t-body text-foreground mt-1">{laudo.conclusao}</p>
+                </div>
+              )}
+
+              {laudo.comparacao && (
+                <p className="t-body text-muted-foreground">Comparação: {laudo.comparacao}</p>
+              )}
+
+              {(laudo.alertas ?? []).length > 0 && (
+                <ul className="space-y-2">
+                  {laudo.alertas!.map((a, i) => (
+                    <li
+                      key={i}
+                      className="t-body text-foreground flex gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2"
+                    >
+                      <AlertTriangle
+                        className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                        aria-hidden="true"
+                      />
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Trecho ambíguo vira aviso para conferir, não palpite. */}
+              {(laudo.achados_incertos ?? []).length > 0 && (
+                <div className="bg-secondary border-border rounded-2xl border p-4">
+                  <p className="t-eyebrow text-muted-foreground">Confira no laudo original</p>
+                  <ul className="mt-2 space-y-1">
+                    {laudo.achados_incertos!.map((a, i) => (
+                      <li key={i} className="t-body text-muted-foreground">
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : resultado ? (
             <>
               <pre className="bg-background border-border text-foreground rounded-2xl border p-4 font-mono text-[0.8125rem] whitespace-pre-wrap">
                 {resultado.texto_formatado || "—"}
@@ -199,7 +322,7 @@ function ResumoExamesPage() {
                 </p>
               )}
             </>
-          )}
+          ) : null}
         </section>
       </main>
     </div>

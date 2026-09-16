@@ -1,4 +1,4 @@
-import type { LabExtractionResult } from "../types/lab";
+import type { LabExtractionResult, LaudoImagemResult } from "../types/lab";
 import type { MotorLuanDocumentResult } from "../types/motorLuan";
 import type { ImportedRoundPatient } from "../types/round";
 import {
@@ -116,6 +116,15 @@ export async function extractLabWithAI(
     console.warn("Extração de laboratório indisponível, usando fallback local.", error);
     return fallbackLabExtraction(inputText);
   }
+}
+
+/**
+ * Organiza um laudo de imagem. Diferente do laboratório, aqui NÃO há fallback
+ * local: extrair achados de um laudo por heurística geraria texto clínico que
+ * ninguém escreveu. Falha da IA falha a chamada.
+ */
+export async function organizarLaudoImagem(inputText: string): Promise<LaudoImagemResult> {
+  return postBackend<LaudoImagemResult>("/api/ai/organizar-laudo-imagem", { inputText });
 }
 
 export const generateEvolutionWithAI = generateEvolutionWithMotorLuan;

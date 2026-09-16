@@ -103,6 +103,8 @@ export const CopilotoBody = z.object({
     .min(1)
     .max(20),
   ambiente: z.string().max(60).optional(),
+  /** Especialidade que enquadra a resposta; reusa os prompts já existentes. */
+  agente: z.enum(["geral", "clinica-medica", "pediatria", "uti"]).optional(),
 });
 export type CopilotoBody = z.infer<typeof CopilotoBody>;
 
@@ -298,6 +300,30 @@ export const LabExtractionSchema = z.object({
   campos_nao_encontrados: strArr,
 });
 export type LabExtraction = z.infer<typeof LabExtractionSchema>;
+
+/**
+ * Laudo de imagem organizado. Achados e conclusão são do radiologista — o
+ * agente compacta, não interpreta, e `achados_incertos` guarda o que veio
+ * ambíguo no texto em vez de adivinhar.
+ */
+export const LaudoImagemSchema = z.object({
+  tipo_exame: nullableStr,
+  regiao: nullableStr,
+  data_exame: nullableStr,
+  achados: strArr,
+  conclusao: nullableStr,
+  comparacao: nullableStr,
+  texto_formatado: str(""),
+  alertas: strArr,
+  achados_incertos: strArr,
+  campos_nao_encontrados: strArr,
+});
+export type LaudoImagem = z.infer<typeof LaudoImagemSchema>;
+
+export const LaudoImagemBody = z.object({
+  inputText: z.string().trim().min(10).max(30_000),
+});
+export type LaudoImagemBody = z.infer<typeof LaudoImagemBody>;
 
 export const HORARIOS = ["manha", "almoco", "tarde", "noite", "ao_deitar"] as const;
 export const SugestaoReceitaSchema = z.object({

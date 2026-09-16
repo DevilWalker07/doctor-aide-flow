@@ -15,10 +15,18 @@ type TextFn = (
   payload: unknown,
   opts?: { mockKey?: AiFixtureKey },
 ) => Promise<string>;
+type ChatFn = (
+  system: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  opts?: { mockKey?: AiFixtureKey },
+) => Promise<string>;
 
 export const aiMock = {
   json: vi.fn<JsonFn>(),
   text: vi.fn<TextFn>(),
+  // O copiloto usa chatCompletion, que não estava mockado — por isso qualquer
+  // teste dele caía no cliente real e devolvia 500.
+  chat: vi.fn<ChatFn>(),
   hasKey: vi.fn(() => true),
 };
 
@@ -32,6 +40,11 @@ export function resetAiMock() {
     return { ok: true, data: schema.parse(aiFixtures[key]) };
   });
   aiMock.text.mockImplementation(async (_s, _p, opts) => {
+    const fixture = opts?.mockKey ? aiFixtures[opts.mockKey] : "";
+    return typeof fixture === "string" ? fixture : "";
+  });
+  aiMock.chat.mockReset();
+  aiMock.chat.mockImplementation(async (_s, _m, opts) => {
     const fixture = opts?.mockKey ? aiFixtures[opts.mockKey] : "";
     return typeof fixture === "string" ? fixture : "";
   });
@@ -56,6 +69,7 @@ vi.mock("../../../server/services/openaiClient.js", async (importOriginal) => {
     ...orig,
     safeJsonCompletion: (...args: Parameters<JsonFn>) => aiMock.json(...args),
     textCompletion: (...args: Parameters<TextFn>) => aiMock.text(...args),
+    chatCompletion: (...args: Parameters<ChatFn>) => aiMock.chat(...args),
     hasOpenAIKey: () => aiMock.hasKey(),
     getOpenAIClient: () => null,
   };

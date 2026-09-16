@@ -16,6 +16,16 @@ interface Msg {
   content: string;
 }
 
+/** Espelha o enum de `agente` em server/schemas/ai.schemas.ts. */
+const AGENTES = [
+  { id: "geral", label: "Geral" },
+  { id: "clinica-medica", label: "Clínica médica" },
+  { id: "pediatria", label: "Pediatria" },
+  { id: "uti", label: "Terapia intensiva" },
+] as const;
+
+type AgenteId = (typeof AGENTES)[number]["id"];
+
 const SUGESTOES = [
   "Ajuste de dose de vancomicina para ClCr 25",
   "Critérios de sepse e bundle da 1ª hora",
@@ -28,6 +38,7 @@ function CopilotoPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [ambiente, setAmbiente] = useState<string>(() => storage.getTipo());
+  const [agente, setAgente] = useState<AgenteId>("geral");
   const fim = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +56,7 @@ function CopilotoPage() {
       const res = await apiJson<{ reply: string }>("/api/ai/copiloto", {
         messages: proximo.slice(-12),
         ambiente,
+        agente,
       });
       setMensagens([...proximo, { role: "assistant", content: res.reply }]);
     } catch (err) {
@@ -80,7 +92,25 @@ function CopilotoPage() {
             Apoio à decisão — não substitui julgamento médico
           </p>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <div>
+            <label htmlFor="copiloto-agente" className="sr-only">
+              Agente de IA
+            </label>
+            <select
+              id="copiloto-agente"
+              value={agente}
+              onChange={(e) => setAgente(e.target.value as AgenteId)}
+              data-testid="copiloto-agente"
+              className="t-label bg-card border-border text-foreground focus-visible:ring-ring min-h-[2.75rem] rounded-xl border px-3 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              {AGENTES.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <label htmlFor="copiloto-contexto" className="sr-only">
             Contexto de atendimento
           </label>
