@@ -46,6 +46,22 @@ describe("erro de modelo configurado errado", () => {
     expect(semCredito.message).toMatch(/sem crédito/i);
     expect(pegar(erroApi(429)).message).toMatch(/instantes/i);
 
+    // 400 com imagem é o caso do OPENAI_MODEL_VISAO apontando para um modelo
+    // que só aceita texto: o ID existe, o /health não reclama, e só a leitura
+    // de foto quebra. Sem imagem, 400 não é diagnóstico nosso e sobe intacto.
+    const semImagem = erroApi(400);
+    expect(() => traduzirErroOpenAI(semImagem, "modelo-x")).toThrow(semImagem);
+
+    let comImagem: HttpError | undefined;
+    try {
+      traduzirErroOpenAI(erroApi(400), "modelo-x", true);
+    } catch (e) {
+      comImagem = e as HttpError;
+    }
+    expect(comImagem?.code).toBe("modelo_indisponivel");
+    expect(comImagem?.message).toMatch(/OPENAI_MODEL_VISAO/);
+    expect(comImagem?.message).toMatch(/imagem na entrada/);
+
     // O que não é da API continua subindo intacto: inventar tradução para
     // erro desconhecido esconderia a causa real.
     const outro = new Error("socket hang up");
