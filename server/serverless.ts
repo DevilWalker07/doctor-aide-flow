@@ -16,6 +16,7 @@ import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
 import { getJobStore } from "./services/jobStore.js";
+import { modelosDesconhecidos } from "./services/openaiClient.js";
 import { APP_VERSION } from "./app.js";
 
 /**
@@ -76,6 +77,7 @@ export function createServerlessApp() {
       runtime: "vercel-function",
       version: APP_VERSION,
       modelos: modelosEmUso(),
+      modelosDesconhecidos: await modelosDesconhecidos(Object.values(modelosEmUso())),
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
       supabase: hasSupabase(),

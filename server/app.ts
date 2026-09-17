@@ -18,6 +18,7 @@ import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
 import { passagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { getJobStore, type JobStore } from "./services/jobStore.js";
+import { modelosDesconhecidos } from "./services/openaiClient.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,12 +54,13 @@ export function createApp(deps: AppDeps = {}) {
   app.use(buildCors());
   app.use(express.json({ limit: "2mb" }));
 
-  app.get("/health", (_req, res) => {
+  app.get("/health", async (_req, res) => {
     res.json({
       ok: true,
       service: "doutor-ajuda-motor-luan",
       version: APP_VERSION,
       modelos: modelosEmUso(),
+      modelosDesconhecidos: await modelosDesconhecidos(Object.values(modelosEmUso())),
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
       jobStore: jobStore.kind,

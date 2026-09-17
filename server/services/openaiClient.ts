@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { z } from "zod";
 import { env, hasOpenAIKey } from "../config.js";
-import { AIUnavailableError } from "../lib/errors.js";
+import { AIUnavailableError, HttpError, ModeloIndisponivelError } from "../lib/errors.js";
 import { aiFixtures, type AiFixtureKey } from "../mocks/aiFixtures.js";
 
 export const DEFAULT_MODEL = env.OPENAI_MODEL;
@@ -20,6 +20,43 @@ export function getOpenAIClient(): OpenAI | null {
     });
   }
   return client;
+}
+
+/**
+ * Traduz o erro da API da OpenAI em algo que o médico possa agir sobre.
+ *
+ * Sem isso, qualquer falha da API escapava até o errorHandler e virava
+ * "Erro interno no servidor" — inclusive o caso mais provável de todos, que é
+ * um ID de modelo digitado errado na variável de ambiente.
+ */
+export function traduzirErroOpenAI(err: unknown, modelo: string): never {
+  const status = (err as { status?: number })?.status;
+  const codigo = (err as { code?: string })?.code;
+  const mensagem = (err as { message?: string })?.message ?? "";
+
+  if (status === 404 || codigo === "model_not_found") {
+    throw new ModeloIndisponivelError(modelo, "a OpenAI não reconhece esse identificador.");
+  }
+  if (status === 403) {
+    throw new ModeloIndisponivelError(modelo, "esta chave não tem acesso a ele.");
+  }
+  if (status === 401) {
+    throw new HttpError(
+      503,
+      "chave_invalida",
+      "A OPENAI_API_KEY foi recusada. Gere uma nova chave e atualize a variável.",
+    );
+  }
+  if (status === 429) {
+    throw new HttpError(
+      503,
+      "limite_openai",
+      mensagem.toLowerCase().includes("quota")
+        ? "A conta da OpenAI está sem crédito. Adicione saldo para voltar a usar a IA."
+        : "Muitas chamadas à OpenAI agora. Tente de novo em instantes.",
+    );
+  }
+  throw err;
 }
 
 export type SafeResult<T> =
@@ -97,13 +134,15 @@ export async function safeJsonCompletion<T>(
   ];
 
   const attempt = async (): Promise<SafeResult<T> & { raw?: string }> => {
-    const response = await openai.chat.completions.create({
-      model: modelo,
-      temperature,
-      max_tokens: maxTokens,
-      response_format: { type: "json_object" },
-      messages,
-    });
+    const response = await openai.chat.completions
+      .create({
+        model: modelo,
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: "json_object" },
+        messages,
+      })
+      .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
     const choice = response.choices[0];
     const raw = choice?.message?.content ?? "";
     const usage = response.usage
@@ -165,12 +204,14 @@ export async function chatCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await openai.chat.completions.create({
-    model: modelo,
-    temperature,
-    max_tokens: maxTokens,
-    messages: [{ role: "system", content: system }, ...messages],
-  });
+  const response = await openai.chat.completions
+    .create({
+      model: modelo,
+      temperature,
+      max_tokens: maxTokens,
+      messages: [{ role: "system", content: system }, ...messages],
+    })
+    .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
@@ -189,17 +230,69 @@ export async function textCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await openai.chat.completions.create({
-    model: modelo,
-    temperature,
-    max_tokens: maxTokens,
-    messages: [
-      { role: "system", content: system },
-      {
-        role: "user",
-        content: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2),
-      },
-    ],
-  });
+  const response = await openai.chat.completions
+    .create({
+      model: modelo,
+      temperature,
+      max_tokens: maxTokens,
+      messages: [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2),
+        },
+      ],
+    })
+    .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
   return response.choices[0]?.message?.content?.trim() ?? "";
+}
+
+/**
+ * Quais dos modelos configurados a OpenAI não reconhece.
+ *
+ * O `/health` usa isso para você conferir o valor colado na variável sem
+ * disparar uma chamada clínica de verdade — o erro mais provável ao trocar de
+ * modelo é colar o nome de exibição em vez do ID, e esse erro só apareceria
+ * quando o médico tentasse usar o app.
+ *
+ * Devolve `null` quando não há como checar (sem chave, em mock, ou a própria
+ * consulta falhou). Não afirmar nada é melhor que afirmar errado.
+ */
+const CACHE_MODELOS_MS = 5 * 60_000;
+let cacheModelos: { chave: string; desconhecidos: string[] | null; em: number } | null = null;
+
+export async function modelosDesconhecidos(ids: string[]): Promise<string[] | null> {
+  const unicos = [...new Set(ids)].sort();
+  const chave = unicos.join(",");
+
+  if (cacheModelos?.chave === chave && Date.now() - cacheModelos.em < CACHE_MODELOS_MS) {
+    return cacheModelos.desconhecidos;
+  }
+
+  const openai = getOpenAIClient();
+  if (!openai || env.AI_MOCK) return null;
+
+  let desconhecidos: string[] | null;
+  try {
+    const checagens = await Promise.all(
+      unicos.map(async (id) => {
+        try {
+          await openai.models.retrieve(id);
+          return null;
+        } catch (err) {
+          const status = (err as { status?: number })?.status;
+          // 404/403 é resposta: o modelo não serve. Outro status é problema de
+          // rede ou da conta, e aí não dá para culpar o ID.
+          if (status === 404 || status === 403) return id;
+          throw err;
+        }
+      }),
+    );
+    desconhecidos = checagens.filter((id): id is string => id !== null);
+  } catch {
+    desconhecidos = null;
+  }
+
+  cacheModelos = { chave, desconhecidos, em: Date.now() };
+  return desconhecidos;
 }
