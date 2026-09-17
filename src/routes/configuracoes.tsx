@@ -23,11 +23,11 @@ const useLocalSignOut = () => ({
   },
 });
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { apiFetch } from "@/lib/apiClient";
 import { getProfile, upsertProfile, getSettings, upsertSettings } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "@tanstack/react-router";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useBackendHealth } from "@/hooks/useBackendHealth";
 import { storage } from "@/lib/storage";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -48,7 +48,9 @@ function SettingsPage() {
   const [atbAlertDays, setAtbAlertDays] = useState(() => String(storage.getAtbAlertDays()));
 
   // AI Status
-  const [aiStatus, setAiStatus] = useState<"loading" | "connected" | "disconnected">("loading");
+  // Mesma leitura que alimenta a faixa do hub — antes esta tela tinha a
+  // própria checagem, e as duas podiam discordar.
+  const { estado: aiStatus, motivos: aiMotivos, recarregar: checkHealth } = useBackendHealth();
   const nav = useNavigate();
   const { signOut } = useLocalSignOut();
 
@@ -95,19 +97,7 @@ function SettingsPage() {
       }
     }
     loadData();
-    checkHealth();
   }, [userId]);
-
-  const checkHealth = async () => {
-    setAiStatus("loading");
-    try {
-      const response = await apiFetch("/health");
-      if (response.ok) setAiStatus("connected");
-      else setAiStatus("disconnected");
-    } catch {
-      setAiStatus("disconnected");
-    }
-  };
 
   const saveProfile = async () => {
     if (!userId) return;
@@ -320,23 +310,25 @@ function SettingsPage() {
             <div className="flex items-center gap-4">
               <div className="bg-secondary border-border flex h-10 w-10 items-center justify-center rounded-2xl border">
                 <RefreshCw
-                  className={`h-5 w-5 text-primary ${aiStatus === "loading" ? "animate-spin" : ""}`}
+                  className={`h-5 w-5 text-primary ${aiStatus === "verificando" ? "animate-spin" : ""}`}
                 />
               </div>
               <div>
                 <p className="t-label text-muted-foreground">Status da conexão</p>
                 <div className="flex items-center gap-1.5">
-                  {aiStatus === "connected" ? (
+                  {aiStatus === "online" ? (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="t-body text-emerald-700 dark:text-emerald-300">
                         Conectado
                       </span>
                     </>
-                  ) : aiStatus === "disconnected" ? (
+                  ) : aiStatus === "offline" ? (
                     <>
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
-                      <span className="t-body text-destructive">Sem conexão com o servidor</span>
+                      <span className="t-body text-destructive">
+                        {aiMotivos[0] ?? "Sem conexão com o servidor"}
+                      </span>
                     </>
                   ) : (
                     <span className="t-body text-muted-foreground">Verificando…</span>

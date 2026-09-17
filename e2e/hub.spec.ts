@@ -63,6 +63,23 @@ test.describe("hub de ambientes", () => {
     await expect(page).toHaveURL(/\/resumo-exames/);
   });
 
+  test("com o servidor de IA fora do ar, o hub diz o que ainda funciona", async ({ page }) => {
+    // Antes cada botão de IA falhava sozinho: o médico descobria a queda
+    // depois de tentar quatro coisas diferentes.
+    await page.route("**/health", (route) => route.abort());
+    await page.goto("/");
+
+    const aviso = page.getByTestId("aviso-backend");
+    await expect(aviso).toBeVisible();
+    await expect(aviso).toContainText(/Servidor de IA fora do ar/i);
+    await expect(aviso).toContainText(/atestado/i);
+
+    // Volta ao normal sozinho quando o servidor responde de novo.
+    await page.unroute("**/health");
+    await page.getByRole("button", { name: /Verificar o servidor de novo/i }).click();
+    await expect(aviso).toBeHidden();
+  });
+
   test("o tema alterna, persiste e não pisca branco ao recarregar", async ({ page }) => {
     await page.goto("/");
 

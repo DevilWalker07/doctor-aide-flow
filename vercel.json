@@ -3,22 +3,13 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://doctor-aide-flow-production.up.railway.app/api/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "https://doctor-aide-flow-production.up.railway.app/health"
-    },
-    {
-      "source": "/clinical-agents/:path*",
-      "destination": "https://doctor-aide-flow-production.up.railway.app/:path*"
-    },
-    {
-      "source": "/((?!assets/.*|favicon.ico|robots.txt).*)",
-      "destination": "/index.html"
+  "functions": {
+    "api/[...rota].ts": {
+      "maxDuration": 60
     }
+  },
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/((?!api/.*|assets/.*|favicon.ico|robots.txt).*)", "destination": "/index.html" }
   ]
 }

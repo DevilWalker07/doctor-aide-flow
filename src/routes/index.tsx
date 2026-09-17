@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Copy, LogIn, LogOut, RefreshCw, Settings2, WifiOff, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AvisoBackend } from "@/components/AvisoBackend";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LocalPicker } from "@/components/hub/LocalPicker";
 import { PlantaoPanel, type PlantaoAtivoCtx } from "@/components/hub/PlantaoPanel";
@@ -258,6 +259,8 @@ function HubPage() {
             {precisaDeConta ? "Bem-vindo ao Medfluxo" : `Dr(a). ${primeiroNome}`}
           </h1>
         </div>
+
+        <AvisoBackend />
 
         {offline && (
           <div

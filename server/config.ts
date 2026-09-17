@@ -30,12 +30,30 @@ const EnvSchema = z.object({
 });
 
 const parsed = EnvSchema.safeParse(process.env);
+
+/**
+ * Motivos pelos quais a configuração está incompleta.
+ *
+ * Antes daqui saía um `process.exit(1)`. Em contêiner isso mata o serviço no
+ * boot — foi assim que o backend ficou fora do ar sem ninguém perceber. Em
+ * função serverless é pior ainda: derruba a invocação sem mensagem nenhuma.
+ * Agora o erro fica legível e vira um 503 com motivo.
+ */
+export const configErrors: string[] = [];
+
 if (!parsed.success) {
-  console.error("[config] Variáveis de ambiente inválidas:", parsed.error.flatten().fieldErrors);
-  process.exit(1);
+  const campos = Object.entries(parsed.error.flatten().fieldErrors)
+    .map(([campo, erros]) => `${campo} (${erros?.join(", ")})`)
+    .join(", ");
+  configErrors.push(`Variáveis de ambiente inválidas: ${campos}`);
 }
 
-export const env = parsed.data;
+/**
+ * Com o ambiente inválido caímos nos defaults do schema — `EnvSchema.parse({})`
+ * sempre passa, porque todo campo é opcional ou tem default. Serve só para o
+ * processo continuar de pé até responder 503; `configErrors` é a verdade.
+ */
+export const env = parsed.success ? parsed.data : EnvSchema.parse({});
 
 export const isProduction = env.NODE_ENV === "production";
 export const hasOpenAIKey = () => Boolean(env.OPENAI_API_KEY) || env.AI_MOCK;
@@ -45,11 +63,18 @@ export const hasSupabase = () => Boolean(env.SUPABASE_URL && env.SUPABASE_SERVIC
 export const authRequired = () => !env.AUTH_OPTIONAL;
 
 if (authRequired() && !hasSupabase()) {
-  console.error(
-    "[config] Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).",
+  configErrors.push(
+    "Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).",
   );
-  process.exit(1);
 }
+
+if (configErrors.length > 0) {
+  for (const motivo of configErrors) console.error(`[config] ${motivo}`);
+}
+
+/** Dá para atender requisição? Quando falso, a resposta é 503 com o motivo. */
+export const configOk = () => configErrors.length === 0;
+
 export const allowedOrigins = () =>
   env.ALLOWED_ORIGINS.split(",")
     .map((s) => s.trim())
