@@ -73,6 +73,8 @@ test.describe("hub de ambientes", () => {
     await expect(aviso).toBeVisible();
     await expect(aviso).toContainText(/Servidor de IA fora do ar/i);
     await expect(aviso).toContainText(/atestado/i);
+    // A faixa mostra a evidência, não só a conclusão.
+    await expect(page.getByTestId("aviso-backend-detalhe")).toContainText(/\/health/);
 
     // Volta ao normal sozinho quando o servidor responde de novo.
     await page.unroute("**/health");
