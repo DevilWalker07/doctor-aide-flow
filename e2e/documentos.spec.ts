@@ -39,6 +39,13 @@ test.describe("documentos ambulatoriais", () => {
     await expect(preview).toContainText(/espironolactona/i);
     await expect(preview).toContainText("Tomar 1 comprimido pela manhã");
     await expect(preview).toContainText("Farmácia Popular");
+    // A grade de horários passou a viver atrás de "Mostrar detalhes": a linha
+    // do medicamento é compacta por padrão, no espírito do receituário simples.
+    // Antes de abrir, o resumo dá a informação sem ocupar a tela.
+    const item = page.getByTestId("doc-item-0");
+    await expect(item).toContainText(/Manhã 1x/i);
+
+    await item.getByRole("button", { name: /Mostrar detalhes/i }).click();
     await expect(page.getByTestId("doc-item-0-manha")).toHaveText("1");
 
     await page.getByTestId("doc-copy").click();
