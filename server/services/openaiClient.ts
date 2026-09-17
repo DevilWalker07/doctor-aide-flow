@@ -29,7 +29,7 @@ export function getOpenAIClient(): OpenAI | null {
  * "Erro interno no servidor" — inclusive o caso mais provável de todos, que é
  * um ID de modelo digitado errado na variável de ambiente.
  */
-export function traduzirErroOpenAI(err: unknown, modelo: string): never {
+export function traduzirErroOpenAI(err: unknown, modelo: string, comImagem = false): never {
   const status = (err as { status?: number })?.status;
   const codigo = (err as { code?: string })?.code;
   const mensagem = (err as { message?: string })?.message ?? "";
@@ -45,6 +45,17 @@ export function traduzirErroOpenAI(err: unknown, modelo: string): never {
       503,
       "chave_invalida",
       "A OPENAI_API_KEY foi recusada. Gere uma nova chave e atualize a variável.",
+    );
+  }
+  // 400 com imagem na chamada é quase sempre um modelo que só aceita texto.
+  // O ID existe e o /health não reclama — só a leitura de foto quebra. Sem
+  // esta mensagem, virava "Erro interno no servidor" e ninguém ligaria o
+  // defeito à variável que acabou de ser configurada.
+  if (status === 400 && comImagem) {
+    throw new ModeloIndisponivelError(
+      modelo,
+      "ele recusou a imagem — provavelmente não aceita imagem na entrada. " +
+        "Para OPENAI_MODEL_VISAO use um modelo que liste imagem em 'Entrada'.",
     );
   }
   if (status === 429) {
@@ -142,7 +153,7 @@ export async function safeJsonCompletion<T>(
         response_format: { type: "json_object" },
         messages,
       })
-      .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
+      .catch((err: unknown) => traduzirErroOpenAI(err, modelo, Boolean(images?.length)));
     const choice = response.choices[0];
     const raw = choice?.message?.content ?? "";
     const usage = response.usage
