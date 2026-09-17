@@ -1,3 +1,4 @@
+import { modeloCopiloto } from "../config.js";
 import { AIResponseError } from "../lib/errors.js";
 import { BRIEFING_PROMPT } from "../prompts/briefing.prompt.js";
 import { CLINICA_MEDICA_PROMPT } from "../prompts/clinicaMedica.prompt.js";
@@ -202,7 +203,10 @@ export const motorLuanService = {
     if (enquadramento) partes.push(enquadramento);
     if (body.ambiente) partes.push(`ambiente: ${body.ambiente}`);
 
-    const reply = await chatCompletion(partes.join("\n"), body.messages, { mockKey: "copiloto" });
+    const reply = await chatCompletion(partes.join("\n"), body.messages, {
+      mockKey: "copiloto",
+      modelo: modeloCopiloto(),
+    });
     if (!reply) throw new AIResponseError("O copiloto não respondeu.");
     return { reply };
   },

@@ -5,6 +5,7 @@
  */
 
 import { apiFetch } from "./apiClient";
+import { supabase } from "./supabase";
 
 export interface JobStatusResponse {
   job_id: string;
@@ -60,22 +61,70 @@ const EXTRACTION_SESSION_KEY = "extracao_session";
 
 // ─── API calls ────────────────────────────────────────────────────────────────
 
+async function lerErro(response: Response, padrao: string): Promise<never> {
+  const payload = await response.json().catch(() => ({}) as Record<string, unknown>);
+  throw new Error(String(payload?.message || payload?.error || padrao));
+}
+
 /**
- * Sends the file to the backend and returns a job_id immediately.
- * Never waits for AI processing.
+ * Envia o arquivo e devolve um job_id na hora. Nunca espera pela IA.
+ *
+ * O arquivo **não passa pelo servidor**: vai direto para o Supabase Storage,
+ * num caminho dentro da pasta do próprio médico, e o backend recebe só esse
+ * caminho. Antes era multipart de até 20 MB pela API — o que não cabe no limite
+ * de corpo de uma função serverless, e fazia o documento trafegar duas vezes.
+ *
+ * `onProgresso` existe porque o envio agora é a parte lenta e visível: sem
+ * retorno na tela, quem está de pé no corredor acha que o app travou.
  */
-export async function startClinicalExtractionJob(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
+export async function startClinicalExtractionJob(
+  file: File,
+  onProgresso?: (etapa: "enviando" | "lendo") => void,
+): Promise<string> {
+  onProgresso?.("enviando");
 
-  const response = await apiFetch("/api/extract/extract-async", { method: "POST", body: formData });
+  const prep = await apiFetch("/api/extract/preparar-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_name: file.name }),
+  });
+  if (!prep.ok) await lerErro(prep, `Não foi possível preparar o envio (${prep.status}).`);
+  const plano = (await prep.json()) as {
+    modo: "storage" | "multipart";
+    bucket?: string;
+    storage_path?: string;
+  };
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(
-      payload?.message || payload?.error || `Erro ao enviar arquivo (${response.status}).`,
-    );
+  let response: Response;
+
+  if (plano.modo === "storage" && plano.bucket && plano.storage_path) {
+    const { error: erroUpload } = await supabase.storage
+      .from(plano.bucket)
+      .upload(plano.storage_path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+    if (erroUpload) throw new Error(`Falha ao enviar o arquivo: ${erroUpload.message}`);
+
+    onProgresso?.("lendo");
+    response = await apiFetch("/api/extract/extract-async", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storage_path: plano.storage_path, file_name: file.name }),
+    });
+  } else {
+    // Modo local: sem Supabase configurado, o arquivo vai pelo próprio
+    // servidor. É o que faz `npm run dev:all` funcionar sem nenhum serviço.
+    onProgresso?.("lendo");
+    const formData = new FormData();
+    formData.append("file", file);
+    response = await apiFetch("/api/extract/extract-async", {
+      method: "POST",
+      body: formData,
+    });
   }
+
+  if (!response.ok) await lerErro(response, `Erro ao iniciar a leitura (${response.status}).`);
 
   const data = await response.json();
   if (!data.job_id) throw new Error("Backend não retornou job_id.");

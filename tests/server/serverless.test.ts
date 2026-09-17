@@ -47,8 +47,13 @@ describe("função serverless da Vercel", () => {
     expect(res.body.error).toBe("not_found");
   });
 
-  it("diz que upload e passagem ainda não estão nesta implantação", async () => {
-    const res = await request(app).post("/api/extract").expect(503);
+  it("monta a rota de extração — o upload vai direto ao Storage", async () => {
+    const res = await request(app).post("/api/extract/extract-async").send({}).expect(400);
+    expect(res.body.error).toBe("missing_storage_path");
+  });
+
+  it("diz que a passagem de plantão ainda não está nesta implantação", async () => {
+    const res = await request(app).post("/api/passagem-plantao").expect(503);
     expect(res.body.error).toBe("rota_indisponivel");
   });
 

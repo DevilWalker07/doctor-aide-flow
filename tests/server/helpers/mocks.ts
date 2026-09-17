@@ -75,8 +75,50 @@ vi.mock("../../../server/services/openaiClient.js", async (importOriginal) => {
   };
 });
 
+/**
+ * Supabase Storage em memória.
+ *
+ * O upload não passa mais pelo servidor — o navegador envia direto ao bucket e
+ * a rota só recebe o caminho. Então o teste põe o arquivo aqui e manda o
+ * caminho, que é exatamente o que o navegador faz.
+ */
+export const storageMock = {
+  objetos: new Map<string, Buffer>(),
+  removidos: [] as string[],
+  put(caminho: string, conteudo: Buffer) {
+    this.objetos.set(caminho, conteudo);
+    return caminho;
+  },
+  reset() {
+    this.objetos.clear();
+    this.removidos = [];
+  },
+};
+
+const storageApi = {
+  from: () => ({
+    download: async (caminho: string) => {
+      const buf = storageMock.objetos.get(caminho);
+      if (!buf) return { data: null, error: { message: "not found" } };
+      return {
+        data: {
+          arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length),
+        },
+        error: null,
+      };
+    },
+    remove: async (caminhos: string[]) => {
+      for (const c of caminhos) {
+        storageMock.objetos.delete(c);
+        storageMock.removidos.push(c);
+      }
+      return { data: null, error: null };
+    },
+  }),
+};
+
 vi.mock("../../../server/lib/supabaseAdmin.js", () => ({
-  getSupabaseAdmin: () => ({ auth: { getUser: getUserMock } }),
+  getSupabaseAdmin: () => ({ auth: { getUser: getUserMock }, storage: storageApi }),
   hasSupabase: () => true,
 }));
 

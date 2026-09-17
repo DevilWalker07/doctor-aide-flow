@@ -3,7 +3,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import helmet from "helmet";
-import { authRequired, env, hasOpenAIKey, hasSupabase, STATIC_DIR } from "./config.js";
+import {
+  authRequired,
+  env,
+  hasOpenAIKey,
+  hasSupabase,
+  modelosEmUso,
+  STATIC_DIR,
+} from "./config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
@@ -11,7 +18,6 @@ import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
 import { passagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { getJobStore, type JobStore } from "./services/jobStore.js";
-import { DEFAULT_MODEL } from "./services/openaiClient.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,7 +58,7 @@ export function createApp(deps: AppDeps = {}) {
       ok: true,
       service: "doutor-ajuda-motor-luan",
       version: APP_VERSION,
-      model: DEFAULT_MODEL,
+      modelos: modelosEmUso(),
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
       jobStore: jobStore.kind,
@@ -64,7 +70,9 @@ export function createApp(deps: AppDeps = {}) {
 
   app.use("/api", requireAuth);
   app.use("/api/ai", limiters.ai, aiRouter);
-  app.use("/api/extract", createExtractRouter({ jobStore, limiters }));
+  // O contêiner aceita multipart: é o modo local (`npm run dev:all` sem
+  // Supabase) e é como os testes e2e rodam.
+  app.use("/api/extract", createExtractRouter({ jobStore, limiters, permitirMultipart: true }));
   app.use("/api/passagem-plantao", limiters.passagem, passagemPlantaoRouter);
   app.use("/api", apiNotFound);
 

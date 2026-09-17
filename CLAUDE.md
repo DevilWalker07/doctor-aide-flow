@@ -94,7 +94,31 @@ ele tinha caído sem ninguém perceber justamente porque não estava escrito aqu
 
 **Variáveis no projeto da Vercel** (Production e Preview):
 `OPENAI_API_KEY`, `OPENAI_MODEL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`ALLOWED_ORIGINS`.
+`ALLOWED_ORIGINS`. Opcionais: `OPENAI_MODEL_VISAO`, `OPENAI_MODEL_COPILOTO`,
+`EXTRACT_BUDGET_MS`.
+
+**Trabalho depois da resposta precisa de `waitUntil`.** Em função serverless tudo
+que roda após a resposta HTTP é interrompido. `/api/extract` devolve 202 e
+processa em seguida — sem o `waitUntil` injetado por `server/serverless.ts`, o
+job ficaria preso em `processing` e a tela de progresso giraria para sempre.
+Todo job assíncrono novo passa por ali, e leva um orçamento de tempo
+(`extractBudgetMs`) **abaixo** do `maxDuration`, porque job cortado pela
+plataforma não tem quem o marque como erro.
+
+**Upload de documento não passa pelo servidor.** O navegador envia direto ao
+bucket privado `documentos-clinicos` (migration `20260917000000`), num caminho
+prefixado por `auth.uid()`; a rota recebe só `storage_path`. O backend usa a
+service role, que **ignora RLS** — por isso `validarCaminho`
+(`server/lib/storageDocumentos.ts`) confere o dono também no código. O objeto é
+apagado depois de processado. `/api/extract/preparar-upload` diz ao cliente qual
+modo usar: sem Supabase (modo local, `npm run dev:all`) o contêiner aceita
+multipart; a função serverless, não.
+
+**Modelo de IA por finalidade.** `OPENAI_MODEL_VISAO` vale para leitura de
+imagem — foto de prontuário e OCR de PDF — e `OPENAI_MODEL_COPILOTO` para o
+copiloto; ausentes, caem em `OPENAI_MODEL`. A separação existe porque um número
+lido errado na foto atravessa o Zod e os guardrails sem ser notado: está errado
+na origem. Texto já extraído não corre esse risco.
 
 **Configuração incompleta não derruba o processo.** `server/config.ts` junta os
 motivos em `configErrors` e `configOk()`; o handler responde **503 com o

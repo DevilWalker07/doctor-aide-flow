@@ -31,6 +31,9 @@ function UploadIAPage() {
   const nav = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // O envio virou a parte lenta e visível: o arquivo vai direto ao Storage.
+  // Sem dizer em que etapa está, quem espera de pé acha que o app travou.
+  const [etapa, setEtapa] = useState<"enviando" | "lendo" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Uma só validação para o seletor e para o arrastar-e-soltar. Antes o drop
@@ -52,7 +55,7 @@ function UploadIAPage() {
     if (!file) return;
     setIsUploading(true);
     try {
-      const jobId = await startClinicalExtractionJob(file);
+      const jobId = await startClinicalExtractionJob(file, setEtapa);
 
       // Additional metadata for the flow
       storage.setTipo(tipo);
@@ -63,9 +66,11 @@ function UploadIAPage() {
 
       toast.success("Arquivo enviado! Iniciando leitura com IA...");
       nav({ to: "/processando/$jobId", params: { jobId } });
-    } catch (err: any) {
-      toast.error(`Erro ao iniciar extração: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido.";
+      toast.error(message);
       setIsUploading(false);
+      setEtapa(null);
     }
   };
 
@@ -177,7 +182,8 @@ function UploadIAPage() {
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Enviando…
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{" "}
+                    {etapa === "lendo" ? "Lendo com IA…" : "Enviando arquivo…"}
                   </>
                 ) : (
                   <>
