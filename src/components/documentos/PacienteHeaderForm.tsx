@@ -33,7 +33,7 @@ export function PacienteHeaderForm({ value, onChange, vinculado }: Props) {
           <select
             value={value.sexo ?? ""}
             onChange={(e) => set({ sexo: e.target.value as PacienteDocumento["sexo"] })}
-            className="w-full min-h-[3rem] bg-secondary/40 border border-border rounded-xl px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white"
+            className="w-full min-h-[3rem] bg-secondary/40 border border-border rounded-xl px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-card"
             aria-label="Sexo"
           >
             <option value="">Sexo</option>

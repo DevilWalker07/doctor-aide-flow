@@ -136,14 +136,14 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-foreground text-sm font-semibold">{m.nome}</span>
-                <span className="text-muted-foreground text-xs">{m.apresentacao}</span>
+                <span className="t-label text-muted-foreground font-normal">{m.apresentacao}</span>
                 <FarmaciaPopularBadge
                   farmaciaPopular={m.farmaciaPopular}
                   controlado={m.controlado}
                   compact
                 />
               </div>
-              <div className="text-muted-foreground mt-0.5 text-xs">
+              <div className="t-label text-muted-foreground mt-0.5 font-normal">
                 {m.especialidade} · {m.classe}
               </div>
             </div>

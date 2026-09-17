@@ -97,7 +97,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
                   key={p.id}
                   type="button"
                   onClick={() => aplicarPreset(p.id)}
-                  className="text-muted-foreground hover:border-primary/40 hover:text-primary rounded-md border border-border px-2 py-1 text-xs font-medium"
+                  className="t-label text-muted-foreground hover:border-primary/40 hover:text-primary rounded-md border border-border px-2 py-1"
                 >
                   {p.label}
                 </button>
@@ -162,7 +162,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
                       n > 0 ? "border-primary/40 bg-primary/5" : "border-border",
                     )}
                   >
-                    <span className="text-xs font-medium">{h.label}</span>
+                    <span className="t-label">{h.label}</span>
                     <button
                       type="button"
                       onClick={() => setHorario(h.id, -1)}
@@ -231,7 +231,7 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
           </div>
 
           {med?.alertas?.length ? (
-            <p className="text-warning-foreground bg-warning/15 rounded-lg px-3 py-2 text-xs font-medium">
+            <p className="t-label text-warning-foreground bg-warning/15 rounded-lg px-3 py-2">
               ⚠ {med.alertas.join(" ")}
             </p>
           ) : null}
