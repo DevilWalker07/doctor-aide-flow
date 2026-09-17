@@ -211,19 +211,63 @@ describe("/api/ai/*", () => {
     expect(res.status).toBe(400);
   });
 
-  it("aceita o agente escolhido no copiloto e rejeita agente inválido", async () => {
+  it("aceita o especialista escolhido no copiloto e rejeita id inválido", async () => {
+    const { aiMock } = await import("./helpers/mocks.js");
+    aiMock.chat.mockClear();
+
     const ok = await request(app)
       .post("/api/ai/copiloto")
       .set(auth)
-      .send({ messages: [{ role: "user", content: "dose de amoxicilina" }], agente: "pediatria" });
+      .send({ messages: [{ role: "user", content: "dose de amoxicilina" }], especialista: "cris" });
     expect(ok.status).toBe(200);
     expect(ok.body.reply).toBeTruthy();
+
+    // A persona entra no system prompt, e as regras de segurança do
+    // COPILOTO_PROMPT continuam por cima — persona não desliga contrato.
+    const system = aiMock.chat.mock.calls.at(-1)?.[0] ?? "";
+    expect(system).toContain("Dra. Cris");
+    expect(system).toContain("SBP");
+    expect(system).toMatch(/Confira:/);
 
     const ruim = await request(app)
       .post("/api/ai/copiloto")
       .set(auth)
-      .send({ messages: [{ role: "user", content: "x" }], agente: "cardiologia" });
+      .send({ messages: [{ role: "user", content: "x" }], especialista: "cardiologia" });
     expect(ruim.status).toBe(400);
+  });
+
+  it("parecer de especialista: validado por schema e com alerta determinístico", async () => {
+    const res = await request(app).post("/api/ai/parecer-especialista").set(auth).send({
+      especialista: "victor",
+      contexto_clinico: "HOMEM 72A, PNM. K 6,8. PA 80x50. CEFTRIAXONA 2G EV 24/24H - D9/7",
+      tipo_evolucao: "enfermaria_clinica",
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.nome).toBe("Dr. Victor");
+    expect(Array.isArray(res.body.sections)).toBe(true);
+    expect(Array.isArray(res.body.suggestions)).toBe(true);
+    expect(Array.isArray(res.body.references)).toBe(true);
+
+    // O potássio crítico e a hipotensão vêm dos guardrails determinísticos,
+    // não do modelo. É a mesma função que roda na extração de documento.
+    const auto = res.body.sections[0];
+    expect(auto.title).toBe("ALERTAS AUTOMÁTICOS");
+    expect(auto.alert).toBe(true);
+    expect(auto.content).toMatch(/6[.,]8|POTÁSSIO|K\b/i);
+  });
+
+  it("parecer rejeita especialista inexistente e contexto vazio", async () => {
+    const semEsp = await request(app)
+      .post("/api/ai/parecer-especialista")
+      .set(auth)
+      .send({ especialista: "house", contexto_clinico: "caso" });
+    expect(semEsp.status).toBe(400);
+
+    const semCtx = await request(app)
+      .post("/api/ai/parecer-especialista")
+      .set(auth)
+      .send({ especialista: "ana", contexto_clinico: "" });
+    expect(semCtx.status).toBe(400);
   });
 
   it("404 JSON para rota de API inexistente", async () => {

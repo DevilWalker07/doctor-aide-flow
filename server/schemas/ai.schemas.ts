@@ -103,10 +103,57 @@ export const CopilotoBody = z.object({
     .min(1)
     .max(20),
   ambiente: z.string().max(60).optional(),
-  /** Especialidade que enquadra a resposta; reusa os prompts já existentes. */
-  agente: z.enum(["geral", "clinica-medica", "pediatria", "uti"]).optional(),
+  /**
+   * Quem responde. Os cinco especialistas nomeados, ou nenhum (resposta geral).
+   *
+   * Substituiu um enum de quatro rótulos sem nome e sem persona. A persona
+   * muda o enquadramento; as regras de segurança do COPILOTO_PROMPT continuam
+   * somadas por cima e não podem ser desligadas por ela.
+   */
+  especialista: z.enum(["victor", "ana", "cris", "bruno", "lucia"]).optional(),
 });
 export type CopilotoBody = z.infer<typeof CopilotoBody>;
+
+/**
+ * Parecer consultivo de especialista.
+ *
+ * Espelha o contrato de JSON que os prompts dos especialistas exigem. Na versão
+ * anterior a saída ia direto para a tela sem validação nenhuma — um campo
+ * faltando virava tela quebrada, e um campo inventado entrava como dado
+ * clínico.
+ */
+export const ParecerEspecialistaSchema = z.object({
+  sections: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(120),
+        content: z.string().trim().min(1).max(4000),
+        alert: z.boolean().optional().default(false),
+      }),
+    )
+    .max(12)
+    .default([]),
+  suggestions: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1).max(40),
+        text: z.string().trim().min(1).max(600),
+        priority: z.enum(["alta", "media", "baixa"]).default("media"),
+      }),
+    )
+    .max(20)
+    .default([]),
+  references: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+});
+export type ParecerEspecialista = z.infer<typeof ParecerEspecialistaSchema>;
+
+export const ParecerEspecialistaBody = z.object({
+  especialista: z.enum(["victor", "ana", "cris", "bruno", "lucia"]),
+  /** Contexto montado pelo cliente a partir da ficha, via buildContextoClinico. */
+  contexto_clinico: z.string().trim().min(1).max(20_000),
+  tipo_evolucao: z.string().max(60).optional(),
+});
+export type ParecerEspecialistaBody = z.infer<typeof ParecerEspecialistaBody>;
 
 export const PassagemBodySchema = z
   .object({

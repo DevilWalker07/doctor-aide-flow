@@ -133,6 +133,20 @@ PENDÊNCIAS
   },
   copiloto:
     "RESPOSTA DO COPILOTO (MOCK)\n\n- Vancomicina com ClCr 25 mL/min: dose de ataque 20–25 mg/kg e manutenção guiada por nível sérico (vale 15–20 mg/L).\n- Reavaliar função renal a cada 48 h.\n\nConfira: peso real, ClCr atual e nível sérico antes da próxima dose.",
+  parecerEspecialista: {
+    sections: [
+      {
+        title: "AVALIAÇÃO DIAGNÓSTICA",
+        content:
+          "Diagnósticos coerentes com o quadro descrito. DADO AUSENTE: função renal recente.",
+        alert: false,
+      },
+    ],
+    suggestions: [
+      { id: "s1", text: "Solicitar creatinina e ureia para ajuste de dose.", priority: "alta" },
+    ],
+    references: ["Harrison's", "PCDT/MS"],
+  },
   laudoImagem: {
     tipo_exame: "TOMOGRAFIA DE TÓRAX",
     regiao: "TÓRAX",

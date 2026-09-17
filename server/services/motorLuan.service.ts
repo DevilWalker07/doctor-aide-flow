@@ -1,8 +1,10 @@
+import { ESPECIALISTAS, type EspecialistaId } from "../../shared/especialistas.js";
 import { modeloCopiloto } from "../config.js";
 import { AIResponseError } from "../lib/errors.js";
 import { BRIEFING_PROMPT } from "../prompts/briefing.prompt.js";
 import { CLINICA_MEDICA_PROMPT } from "../prompts/clinicaMedica.prompt.js";
 import { COPILOTO_PROMPT } from "../prompts/copiloto.prompt.js";
+import { PROMPTS_ESPECIALISTAS } from "../prompts/especialistas.prompt.js";
 import { EVOLUTION_REVIEWER_PROMPT } from "../prompts/evolutionReviewer.prompt.js";
 import { GERADOR_ENCAMINHAMENTO_PROMPT } from "../prompts/geradorEncaminhamento.prompt.js";
 import { GERADOR_EVOLUCAO_PROMPT } from "../prompts/geradorEvolucao.prompt.js";
@@ -19,6 +21,7 @@ import {
   LabExtractionSchema,
   LaudoImagemSchema,
   OrquestradorOutputSchema,
+  ParecerEspecialistaSchema,
   SugestaoReceitaSchema,
   type ClinicalExtractionOutput,
   type CopilotoBody,
@@ -27,6 +30,7 @@ import {
   type EvolutionReviewBody,
   type LaudoImagemBody,
   type MotorLuanTextBody,
+  type ParecerEspecialistaBody,
   type RoundBody,
   type SugerirReceitaBody,
 } from "../schemas/ai.schemas.js";
@@ -48,14 +52,22 @@ import { gerarBriefingLocal, gerarMapaPlantaoLocal } from "./round.service.js";
 const NO_PATIENTS_ALERT = "IA NÃO IDENTIFICOU PACIENTES NO TEXTO";
 
 /** Enquadramento por especialidade, somado ao prompt do copiloto. */
-const ENQUADRAMENTO_AGENTE: Record<string, string> = {
-  geral: "",
-  "clinica-medica":
-    "Especialidade: CLÍNICA MÉDICA DO ADULTO. Priorize ajuste renal e hepático, interação medicamentosa e metas de doença crônica.",
-  pediatria:
-    "Especialidade: PEDIATRIA. Doses SEMPRE por peso (mg/kg/dia) com o teto de adulto explícito. Se o peso não foi informado, peça o peso antes de sugerir dose.",
-  uti: "Especialidade: TERAPIA INTENSIVA. Considere droga vasoativa, ventilação mecânica, sedação e analgesia, e diluição em bomba de infusão.",
-};
+/**
+ * Persona no chat, montada da identidade do especialista.
+ *
+ * Não é o prompt do parecer: aquele exige JSON e análise por seções, e no chat
+ * o médico quer uma resposta curta. Aqui entram nome, título, personalidade e
+ * as bases de evidência que o próprio prompt dele cita — nada inventado.
+ */
+function personaDoChat(id: EspecialistaId): string {
+  const e = ESPECIALISTAS[id];
+  return [
+    `Você é ${e.nome}, ${e.titulo.toLowerCase()} (${e.especialidade}).`,
+    `Estilo: ${e.personalidade}.`,
+    `Fundamente em: ${e.bases.join(", ")}.`,
+    "Responda como um colega consultado no corredor: direto, sem se apresentar de novo.",
+  ].join("\n");
+}
 
 function unwrap<T>(result: SafeResult<T>): T {
   if (result.ok) return result.data;
@@ -195,12 +207,14 @@ export const motorLuanService = {
   },
 
   async copiloto(body: CopilotoBody) {
-    // O agente só enquadra a resposta; as regras de segurança do copiloto
-    // (citar referência, pedir o dado que falta, terminar com "Confira:")
-    // continuam vindo do COPILOTO_PROMPT e não são substituídas.
+    // A persona só enquadra a resposta. As regras de segurança do
+    // COPILOTO_PROMPT — citar referência e limites, pedir o dado que falta
+    // antes de sugerir dose, nunca inventar, terminar com "Confira:" —
+    // continuam somadas por cima e não podem ser desligadas por ela. Persona
+    // convida a confiar pela autoridade; o contrato de segurança é o que
+    // impede que isso vire risco.
     const partes = [COPILOTO_PROMPT];
-    const enquadramento = ENQUADRAMENTO_AGENTE[body.agente ?? "geral"];
-    if (enquadramento) partes.push(enquadramento);
+    if (body.especialista) partes.push(personaDoChat(body.especialista));
     if (body.ambiente) partes.push(`ambiente: ${body.ambiente}`);
 
     const reply = await chatCompletion(partes.join("\n"), body.messages, {
@@ -209,6 +223,55 @@ export const motorLuanService = {
     });
     if (!reply) throw new AIResponseError("O copiloto não respondeu.");
     return { reply };
+  },
+
+  /**
+   * Parecer consultivo de um especialista sobre um caso.
+   *
+   * Reusa o prompt original sem reescrever. A diferença é que a saída passa
+   * pelo Zod: na versão anterior ia direto para a tela, então um campo
+   * faltando quebrava a interface e um campo inventado entrava como dado
+   * clínico. E os guardrails determinísticos entram como seção de alerta —
+   * limiar de laboratório não é o modelo que decide.
+   */
+  async parecerEspecialista(body: ParecerEspecialistaBody) {
+    const parecer = unwrap(
+      await safeJsonCompletion(
+        PROMPTS_ESPECIALISTAS[body.especialista],
+        { contexto_clinico: body.contexto_clinico, setor: body.tipo_evolucao ?? null },
+        ParecerEspecialistaSchema,
+        { mockKey: "parecerEspecialista", maxTokens: 3000 },
+      ),
+    );
+
+    // Os guardrails leem o contexto em texto: laboratório, sinais vitais e
+    // antibiótico. É a mesma função que roda na extração de documento, então
+    // o critério de "crítico" é um só no app inteiro.
+    const alertas = findingsToAlerts(
+      runPatientGuardrails({
+        laboratorio: body.contexto_clinico,
+        antibioticos: body.contexto_clinico,
+        vitals: parseVitalsFromText(body.contexto_clinico),
+      }),
+    );
+    const sections = alertas.length
+      ? [
+          {
+            title: "ALERTAS AUTOMÁTICOS",
+            content: alertas.join(" "),
+            alert: true,
+          },
+          ...parecer.sections,
+        ]
+      : parecer.sections;
+
+    return {
+      especialista: body.especialista,
+      nome: ESPECIALISTAS[body.especialista].nome,
+      generated_at: new Date().toISOString(),
+      ...parecer,
+      sections,
+    };
   },
 
   async organizarLaudoImagem(body: LaudoImagemBody) {
