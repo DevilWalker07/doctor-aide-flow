@@ -1,11 +1,11 @@
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Minus, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { ControlledInput, ControlledTextarea } from "@/components/ui/controlled-input";
 import type { ReceitaItem } from "@/lib/documentos/types";
 import { getMedicamento, HORARIOS, type Acao, type Horario } from "@/lib/medical/medicamentos";
 import { cn } from "@/lib/utils";
-import { AcaoIcon, acaoLabel } from "./AcaoIcon";
+import { acaoLabel } from "./AcaoIcon";
 import { FarmaciaPopularBadge } from "./FarmaciaPopularBadge";
-import { HorarioIcon } from "./HorarioIcon";
 
 const ACOES: Acao[] = ["comprimido", "gotas", "injecao", "inalacao", "topico", "oftalmico"];
 
@@ -18,6 +18,7 @@ interface Props {
 
 export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
   const med = item.medicamentoId ? getMedicamento(item.medicamentoId) : undefined;
+  const [expandido, setExpandido] = useState(false);
   const set = (patch: Partial<ReceitaItem>) => onChange({ ...item, ...patch });
 
   const setHorario = (h: Horario, delta: number) => {
@@ -42,176 +43,200 @@ export function MedicamentoCard({ item, index, onChange, onRemove }: Props) {
     });
   };
 
+  const horariosResumo = HORARIOS.filter((h) => (item.horarios[h.id] ?? 0) > 0)
+    .map((h) => `${h.curto[0]}${h.curto.slice(1).toLowerCase()} ${item.horarios[h.id]}x`)
+    .join(" · ");
+
   return (
-    <article
-      className="border-border bg-card space-y-5 rounded-3xl border p-5 sm:p-6"
-      data-testid={`doc-item-${index}`}
-    >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <AcaoIcon acao={item.acao} />
-          <div className="min-w-0">
-            <div className="t-eyebrow text-muted-foreground">Item {index + 1}</div>
-            <ControlledInput
-              value={item.nome}
-              onValueChange={(v) => set({ nome: v })}
-              placeholder="Nome do medicamento"
-              className="px-3 py-2 text-base font-black"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <FarmaciaPopularBadge
-            farmaciaPopular={item.farmaciaPopular}
-            controlado={item.controlado}
-            compact
+    <article className="rounded-2xl border border-border bg-card" data-testid={`doc-item-${index}`}>
+      {/* Linha principal — nome + dose ------ quantidade, no espírito do receituário simples */}
+      <div className="flex items-start gap-3 p-4">
+        <span className="t-label text-muted-foreground shrink-0 pt-2.5">{index + 1})</span>
+
+        <div className="min-w-0 flex-1 space-y-2">
+          <ControlledInput
+            value={item.nome}
+            onValueChange={(v) => set({ nome: v })}
+            placeholder="Nome do medicamento"
+            className="min-h-0 w-full rounded-lg border-0 bg-transparent px-1 py-1 text-base font-bold focus:bg-secondary/40"
           />
+          <ControlledInput
+            value={item.quantidade}
+            onValueChange={(v) => set({ quantidade: v })}
+            placeholder="Quantidade (ex.: 30 comprimidos)"
+            className="min-h-0 w-full rounded-lg border-0 bg-transparent px-1 py-1 text-sm font-semibold focus:bg-secondary/40"
+          />
+          {(item.farmaciaPopular || item.controlado) && (
+            <div className="px-1">
+              <FarmaciaPopularBadge
+                farmaciaPopular={item.farmaciaPopular}
+                controlado={item.controlado}
+                compact
+              />
+            </div>
+          )}
+
+          <ControlledTextarea
+            value={item.instrucao}
+            onValueChange={(v) => set({ instrucao: v })}
+            placeholder="Instrução em linguagem simples (ex.: Tomar 1 comprimido pela manhã, todos os dias.)"
+            rows={2}
+            className="min-h-0 rounded-lg border-0 bg-transparent px-1 py-1 text-sm leading-relaxed focus:bg-secondary/40"
+          />
+
+          {!expandido && (horariosResumo || item.duracao) && (
+            <p className="t-label text-muted-foreground px-1">
+              {[horariosResumo, item.duracao].filter(Boolean).join(" · ")}
+            </p>
+          )}
+
+          {med && med.presets.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 px-1">
+              {med.presets.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => aplicarPreset(p.id)}
+                  className="text-muted-foreground hover:border-primary/40 hover:text-primary rounded-md border border-border px-2 py-1 text-xs font-medium"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setExpandido((v) => !v)}
+            aria-expanded={expandido}
+            aria-label={expandido ? "Ocultar detalhes" : "Mostrar detalhes"}
+            className="touch-target text-muted-foreground hover:bg-secondary inline-flex items-center justify-center rounded-full"
+          >
+            <ChevronDown
+              className={cn("h-4 w-4 transition-transform", expandido && "rotate-180")}
+            />
+          </button>
           <button
             type="button"
             onClick={onRemove}
             aria-label={`Remover ${item.nome || "item"}`}
-            className="p-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20"
+            className="touch-target text-muted-foreground hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center rounded-full"
             data-testid={`doc-item-remove-${index}`}
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      </header>
+      </div>
 
-      {med && med.presets.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {med.presets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => aplicarPreset(p.id)}
-              className="t-label border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-lg border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      {expandido && (
+        <div className="border-border space-y-4 border-t px-4 py-4">
+          <div className="grid grid-cols-1 gap-3">
+            <ControlledInput
+              value={item.apresentacao}
+              onValueChange={(v) => set({ apresentacao: v })}
+              placeholder="Apresentação (25 mg comprimido)"
+              className="px-3 py-2.5 text-sm"
+            />
+            <ControlledInput
+              value={item.dose}
+              onValueChange={(v) => set({ dose: v })}
+              placeholder="Dose (25 mg)"
+              className="px-3 py-2.5 text-sm"
+            />
+          </div>
+
+          <div>
+            <div className="t-label text-muted-foreground mb-2">
+              Horários (unidades por período)
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Horários">
+              {HORARIOS.map((h) => {
+                const n = item.horarios[h.id] ?? 0;
+                return (
+                  <div
+                    key={h.id}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-2.5 py-1.5",
+                      n > 0 ? "border-primary/40 bg-primary/5" : "border-border",
+                    )}
+                  >
+                    <span className="text-xs font-medium">{h.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => setHorario(h.id, -1)}
+                      aria-label={`Menos ${h.label}`}
+                      className="touch-target hover:bg-secondary inline-flex items-center justify-center rounded-full"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span
+                      className="w-4 text-center text-sm font-bold"
+                      data-testid={`doc-item-${index}-${h.id}`}
+                    >
+                      {n}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHorario(h.id, 1)}
+                      aria-label={`Mais ${h.label}`}
+                      className="touch-target hover:bg-secondary inline-flex items-center justify-center rounded-full"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <ControlledInput
+              value={item.duracao}
+              onValueChange={(v) => set({ duracao: v })}
+              placeholder="Duração (Uso contínuo / 7 dias)"
+              className="px-3 py-2.5 text-sm"
+            />
+            <ControlledInput
+              value={item.observacao}
+              onValueChange={(v) => set({ observacao: v })}
+              placeholder="Observação (opcional)"
+              className="px-3 py-2.5 text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <select
+              value={item.acao}
+              onChange={(e) => set({ acao: e.target.value as Acao })}
+              className="bg-secondary/40 border-border w-full min-h-[2.75rem] rounded-lg border px-2.5 py-2.5 text-sm"
+              aria-label="Forma de uso"
             >
-              {p.label}
-            </button>
-          ))}
+              {ACOES.map((a) => (
+                <option key={a} value={a}>
+                  {acaoLabel(a)}
+                </option>
+              ))}
+            </select>
+            <label className="text-muted-foreground flex items-center gap-2 text-sm whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={item.farmaciaPopular}
+                onChange={(e) => set({ farmaciaPopular: e.target.checked })}
+                className="accent-success h-4 w-4"
+              />
+              Farm. Popular
+            </label>
+          </div>
+
+          {med?.alertas?.length ? (
+            <p className="text-warning-foreground bg-warning/15 rounded-lg px-3 py-2 text-xs font-medium">
+              ⚠ {med.alertas.join(" ")}
+            </p>
+          ) : null}
         </div>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <ControlledInput
-          value={item.apresentacao}
-          onValueChange={(v) => set({ apresentacao: v })}
-          placeholder="APRESENTAÇÃO (25 mg comprimido)"
-          className="px-4 py-3 text-xs"
-        />
-        <ControlledInput
-          value={item.dose}
-          onValueChange={(v) => set({ dose: v })}
-          placeholder="DOSE (25 mg)"
-          className="px-4 py-3 text-xs"
-        />
-        <ControlledInput
-          value={item.quantidade}
-          onValueChange={(v) => set({ quantidade: v })}
-          placeholder="QUANTIDADE (30 comprimidos)"
-          className="px-4 py-3 text-xs"
-        />
-      </div>
-
-      <div>
-        <div className="t-eyebrow text-muted-foreground mb-2">Horários (unidades por período)</div>
-        <div className="grid grid-cols-5 gap-2" role="group" aria-label="Horários">
-          {HORARIOS.map((h) => {
-            const n = item.horarios[h.id] ?? 0;
-            return (
-              <div
-                key={h.id}
-                className={cn(
-                  "rounded-2xl border p-2 sm:p-3 flex flex-col items-center gap-2 transition-all",
-                  n > 0
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground",
-                )}
-              >
-                <HorarioIcon horario={h.id} size="md" />
-                <span className="t-eyebrow">{h.curto}</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setHorario(h.id, -1)}
-                    aria-label={`Menos ${h.label}`}
-                    className="h-7 w-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <span
-                    className="w-5 text-center text-sm font-black"
-                    data-testid={`doc-item-${index}-${h.id}`}
-                  >
-                    {n}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setHorario(h.id, 1)}
-                    aria-label={`Mais ${h.label}`}
-                    className="h-7 w-7 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <ControlledTextarea
-        value={item.instrucao}
-        onValueChange={(v) => set({ instrucao: v })}
-        placeholder="Instrução em linguagem simples (ex.: Tomar 1 comprimido pela manhã, todos os dias.)"
-        rows={2}
-        className="text-sm font-semibold"
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-start">
-        <ControlledInput
-          value={item.duracao}
-          onValueChange={(v) => set({ duracao: v })}
-          placeholder="DURAÇÃO (Uso contínuo / 7 dias)"
-          className="px-4 py-3 text-xs"
-        />
-        <ControlledInput
-          value={item.observacao}
-          onValueChange={(v) => set({ observacao: v })}
-          placeholder="OBSERVAÇÃO (opcional)"
-          className="px-4 py-3 text-xs"
-        />
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={item.acao}
-            onChange={(e) => set({ acao: e.target.value as Acao })}
-            className="bg-secondary/40 border-border t-label text-foreground focus:ring-ring min-h-[2.75rem] rounded-xl border px-3 uppercase focus:ring-2 focus:outline-none"
-            aria-label="Forma de uso"
-          >
-            {ACOES.map((a) => (
-              <option key={a} value={a}>
-                {acaoLabel(a)}
-              </option>
-            ))}
-          </select>
-          <label className="t-eyebrow text-muted-foreground flex items-center gap-2 px-2">
-            <input
-              type="checkbox"
-              checked={item.farmaciaPopular}
-              onChange={(e) => set({ farmaciaPopular: e.target.checked })}
-              className="accent-success"
-            />{" "}
-            Farm. Popular
-          </label>
-        </div>
-      </div>
-
-      {med?.alertas?.length ? (
-        <p className="t-body text-foreground bg-warning/15 rounded-xl px-4 py-2">
-          ⚠ {med.alertas.join(" ")}
-        </p>
-      ) : null}
     </article>
   );
 }

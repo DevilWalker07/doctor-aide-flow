@@ -1,4 +1,4 @@
-import { Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   buscarMedicamentos,
@@ -7,8 +7,9 @@ import {
   type Especialidade,
   type Medicamento,
 } from "@/lib/medical/medicamentos";
+import { cn } from "@/lib/utils";
 import { FarmaciaPopularBadge } from "./FarmaciaPopularBadge";
-import { Chip, Section } from "./Section";
+import { Section } from "./Section";
 
 interface Props {
   onAdd: (med: Medicamento) => void;
@@ -17,12 +18,18 @@ interface Props {
 
 export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
   const [query, setQuery] = useState("");
-  const [especialidade, setEspecialidade] = useState<Especialidade | null>(null);
-  const [classe, setClasse] = useState<string | null>(null);
+  const [especialidade, setEspecialidade] = useState<Especialidade | "">("");
+  const [classe, setClasse] = useState<string | "">("");
   const [soFP, setSoFP] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   const resultados = useMemo(
-    () => buscarMedicamentos(query, { especialidade, classe, farmaciaPopular: soFP }),
+    () =>
+      buscarMedicamentos(query, {
+        especialidade: especialidade || null,
+        classe: classe || null,
+        farmaciaPopular: soFP,
+      }),
     [query, especialidade, classe, soFP],
   );
   const classes = especialidade ? CLASSES_POR_ESPECIALIDADE[especialidade] : [];
@@ -35,87 +42,119 @@ export function MedicamentoPicker({ onAdd, onAddManual }: Props) {
         <button
           type="button"
           onClick={onAddManual}
-          className="t-label text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl px-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          className="text-primary text-sm font-medium hover:underline"
           data-testid="doc-add-manual"
         >
           + item manual
         </button>
       }
     >
-      <div className="relative mb-4">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="relative mb-3">
+        <Search className="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nome ou classe (ex.: espironolactona, antibiótico)"
-          className="bg-secondary/40 border-border text-foreground placeholder:text-muted-foreground focus:ring-ring focus:bg-card min-h-[3rem] w-full rounded-xl border py-3 pr-4 pl-11 text-base font-medium placeholder:font-normal focus:ring-2 focus:outline-none"
+          placeholder="Pesquisar medicamento"
+          className="border-border focus:ring-ring focus:bg-card w-full rounded-xl border bg-secondary/40 py-3 pr-4 pl-10 text-base focus:ring-2 focus:outline-none"
           data-testid="doc-med-search"
         />
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {ESPECIALIDADES.map((esp) => (
-          <Chip
-            key={esp}
-            label={esp}
-            selected={especialidade === esp}
-            onClick={() => {
-              setEspecialidade(especialidade === esp ? null : esp);
-              setClasse(null);
-            }}
-          />
-        ))}
-        <Chip label="Só Farmácia Popular" selected={soFP} onClick={() => setSoFP(!soFP)} />
-      </div>
-      {classes.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4 pl-1 border-l-2 border-primary/30">
-          {classes.map((c) => (
-            <Chip
-              key={c}
-              label={c}
-              selected={classe === c}
-              onClick={() => setClasse(classe === c ? null : c)}
+      <button
+        type="button"
+        onClick={() => setFiltrosAbertos((v) => !v)}
+        aria-expanded={filtrosAbertos}
+        className="text-muted-foreground mb-3 inline-flex items-center gap-1.5 text-sm font-medium"
+      >
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 transition-transform", filtrosAbertos && "rotate-180")}
+        />
+        Filtrar por especialidade
+      </button>
+
+      {filtrosAbertos && (
+        <div className="mb-4 space-y-3 rounded-xl bg-secondary/30 p-3">
+          <div className="grid grid-cols-1 gap-2">
+            <select
+              value={especialidade}
+              onChange={(e) => {
+                setEspecialidade(e.target.value as Especialidade | "");
+                setClasse("");
+              }}
+              className="border-border rounded-lg border bg-card px-3 py-2.5 text-sm"
+              aria-label="Especialidade"
+            >
+              <option value="">Todas as especialidades</option>
+              {ESPECIALIDADES.map((esp) => (
+                <option key={esp} value={esp}>
+                  {esp}
+                </option>
+              ))}
+            </select>
+            {classes.length > 0 && (
+              <select
+                value={classe}
+                onChange={(e) => setClasse(e.target.value)}
+                className="border-border rounded-lg border bg-card px-3 py-2.5 text-sm"
+                aria-label="Classe"
+              >
+                <option value="">Todas as classes</option>
+                {classes.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={soFP}
+              onChange={(e) => setSoFP(e.target.checked)}
+              className="accent-success h-4 w-4"
             />
-          ))}
+            Só Farmácia Popular
+          </label>
         </div>
       )}
 
       <ul
-        className="divide-y divide-border max-h-80 overflow-y-auto rounded-2xl border border-border"
+        className="divide-border border-border max-h-80 divide-y overflow-y-auto rounded-xl border"
         data-testid="doc-med-results"
       >
         {resultados.length === 0 && (
-          <li className="p-6 text-xs font-bold text-muted-foreground uppercase text-center">
+          <li className="text-muted-foreground p-6 text-center text-sm">
             Nenhum medicamento encontrado. Use "+ item manual".
           </li>
         )}
         {resultados.map((m) => (
           <li
             key={m.id}
-            className="flex items-center justify-between gap-3 p-4 hover:bg-secondary/40"
+            className="hover:bg-secondary/40 flex items-center justify-between gap-3 p-3"
           >
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-black text-foreground">{m.nome}</span>
-                <span className="text-xs font-bold text-muted-foreground">{m.apresentacao}</span>
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-foreground text-sm font-semibold">{m.nome}</span>
+                <span className="text-muted-foreground text-xs">{m.apresentacao}</span>
                 <FarmaciaPopularBadge
                   farmaciaPopular={m.farmaciaPopular}
                   controlado={m.controlado}
                   compact
                 />
               </div>
-              <div className="t-label text-muted-foreground mt-1 font-normal">
-                {m.especialidade} · {m.classe} · {m.presets[0]?.label}
+              <div className="text-muted-foreground mt-0.5 text-xs">
+                {m.especialidade} · {m.classe}
               </div>
             </div>
             <button
               type="button"
               onClick={() => onAdd(m)}
-              className="t-label bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[2.75rem] shrink-0 items-center gap-1 rounded-xl px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="touch-target text-primary hover:bg-primary/10 shrink-0 inline-flex items-center justify-center rounded-full"
               data-testid={`doc-add-med-${m.id}`}
               aria-label={`Adicionar ${m.nome}`}
             >
-              <Plus className="h-3.5 w-3.5" /> Adicionar
+              <Plus className="h-5 w-5" />
             </button>
           </li>
         ))}

@@ -14,48 +14,44 @@ export function PacienteHeaderForm({ value, onChange, vinculado }: Props) {
 
   return (
     <Section title="Paciente" icon={<User className="h-4 w-4" />}>
-      <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
-        <div className="sm:col-span-4">
+      <div className="grid grid-cols-1 gap-3">
+        <ControlledInput
+          value={value.nome}
+          onValueChange={(v) => set({ nome: v })}
+          placeholder="Nome completo do paciente"
+          uppercase
+          data-testid="doc-paciente-nome"
+        />
+        <div className="grid grid-cols-2 gap-3">
           <ControlledInput
-            value={value.nome}
-            onValueChange={(v) => set({ nome: v })}
-            placeholder="Nome completo do paciente"
-            uppercase
-            data-testid="doc-paciente-nome"
+            value={value.idade ?? ""}
+            onValueChange={(v) => set({ idade: v.replace(/\D/g, "").slice(0, 3) })}
+            placeholder="Idade"
+            inputMode="numeric"
+            data-testid="doc-paciente-idade"
           />
+          <select
+            value={value.sexo ?? ""}
+            onChange={(e) => set({ sexo: e.target.value as PacienteDocumento["sexo"] })}
+            className="w-full min-h-[3rem] bg-secondary/40 border border-border rounded-xl px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-white"
+            aria-label="Sexo"
+          >
+            <option value="">Sexo</option>
+            <option value="F">FEMININO</option>
+            <option value="M">MASCULINO</option>
+          </select>
         </div>
         <ControlledInput
-          value={value.idade ?? ""}
-          onValueChange={(v) => set({ idade: v.replace(/\D/g, "").slice(0, 3) })}
-          placeholder="Idade"
-          inputMode="numeric"
-          data-testid="doc-paciente-idade"
+          value={value.documento ?? ""}
+          onValueChange={(v) => set({ documento: v })}
+          placeholder="CPF ou CNS (opcional)"
         />
-        <select
-          value={value.sexo ?? ""}
-          onChange={(e) => set({ sexo: e.target.value as PacienteDocumento["sexo"] })}
-          className="bg-secondary/40 border-border text-foreground focus:ring-ring focus:bg-card min-h-[3rem] w-full rounded-xl border px-4 py-3 text-base font-medium focus:ring-2 focus:outline-none"
-          aria-label="Sexo"
-        >
-          <option value="">Sexo</option>
-          <option value="F">FEMININO</option>
-          <option value="M">MASCULINO</option>
-        </select>
-        <div className="sm:col-span-3">
-          <ControlledInput
-            value={value.documento ?? ""}
-            onValueChange={(v) => set({ documento: v })}
-            placeholder="CPF ou CNS (opcional)"
-          />
-        </div>
-        <div className="sm:col-span-3">
-          <ControlledInput
-            value={value.leito ?? ""}
-            onValueChange={(v) => set({ leito: v })}
-            placeholder={vinculado ? "Leito" : "Origem ou leito (opcional)"}
-            uppercase
-          />
-        </div>
+        <ControlledInput
+          value={value.leito ?? ""}
+          onValueChange={(v) => set({ leito: v })}
+          placeholder={vinculado ? "Leito" : "Origem ou leito (opcional)"}
+          uppercase
+        />
       </div>
     </Section>
   );
