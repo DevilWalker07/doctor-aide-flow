@@ -14,15 +14,26 @@ export interface SaudeBackend {
   estado: EstadoBackend;
   /** Motivos vindos do servidor quando ele sobe sem configuração completa. */
   motivos: string[];
+  /**
+   * O que exatamente falhou, em uma linha.
+   *
+   * A faixa mostra isto. Sem ele, a única forma de descobrir por que o app
+   * achava que o servidor tinha caído era abrir o inspetor do navegador — o
+   * que, num celular em plantão, é o mesmo que não ter diagnóstico. A faixa
+   * afirmava uma conclusão sem mostrar a evidência.
+   */
+  detalhe: string | null;
   recarregar: () => void;
 }
 
 interface Leitura {
   estado: EstadoBackend;
   motivos: string[];
+  detalhe: string | null;
   em: number;
 }
 
+const CAMINHO = "/health";
 const TTL_MS = 30_000;
 let cache: Leitura | null = null;
 let emVoo: Promise<Leitura> | null = null;
@@ -31,14 +42,16 @@ const ouvintes = new Set<(l: Leitura) => void>();
 async function consultar(): Promise<Leitura> {
   let leitura: Leitura;
   try {
-    const res = await apiFetch("/health");
+    const res = await apiFetch(CAMINHO);
     const corpo = (await res.json().catch(() => null)) as {
       ok?: boolean;
       configErrors?: string[];
     } | null;
+    const ok = res.ok && corpo?.ok !== false;
     leitura = {
-      estado: res.ok && corpo?.ok !== false ? "online" : "offline",
+      estado: ok ? "online" : "offline",
       motivos: corpo?.configErrors ?? [],
+      detalhe: ok ? null : `GET ${CAMINHO} respondeu ${res.status}`,
       em: Date.now(),
     };
   } catch (err) {
@@ -54,6 +67,9 @@ async function consultar(): Promise<Leitura> {
     leitura = {
       estado: inalcancavel ? "offline" : "verificando",
       motivos: [],
+      detalhe: inalcancavel
+        ? `GET ${CAMINHO} não respondeu (${window.location.origin})`
+        : `falha ao sondar: ${err instanceof Error ? err.message : String(err)}`,
       em: Date.now(),
     };
   }
@@ -102,6 +118,7 @@ export function useBackendHealth(): SaudeBackend {
   return {
     estado: leitura?.estado ?? "verificando",
     motivos: leitura?.motivos ?? [],
+    detalhe: leitura?.detalhe ?? null,
     recarregar,
   };
 }

@@ -9,7 +9,7 @@ import { useBackendHealth } from "@/hooks/useBackendHealth";
  * ou se insiste. Some sozinha quando o servidor volta.
  */
 export function AvisoBackend() {
-  const { estado, motivos, recarregar } = useBackendHealth();
+  const { estado, motivos, detalhe, recarregar } = useBackendHealth();
   if (estado !== "offline") return null;
 
   return (
@@ -31,6 +31,17 @@ export function AvisoBackend() {
               <li key={m}>{m}</li>
             ))}
           </ul>
+        )}
+        {/* A evidência, não só a conclusão. Sem isto, descobrir por que o app
+            achava que o servidor caiu exigia o inspetor do navegador — num
+            celular em plantão, o mesmo que não ter diagnóstico. */}
+        {detalhe && (
+          <p
+            className="t-label text-muted-foreground mt-2 font-normal"
+            data-testid="aviso-backend-detalhe"
+          >
+            {detalhe}
+          </p>
         )}
       </div>
       <button
