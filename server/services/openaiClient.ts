@@ -32,6 +32,8 @@ export interface CompletionOpts {
   images?: { base64: string; mime: string }[];
   mockKey?: AiFixtureKey;
   repairOnce?: boolean;
+  /** Sobrepõe o modelo nesta chamada. Ausente, usa `OPENAI_MODEL`. */
+  modelo?: string;
 }
 
 function userContent(payload: unknown, images?: CompletionOpts["images"]) {
@@ -69,7 +71,14 @@ export async function safeJsonCompletion<T>(
   schema: z.ZodType<T, z.ZodTypeDef, unknown>,
   opts: CompletionOpts = {},
 ): Promise<SafeResult<T>> {
-  const { maxTokens = 4096, temperature = 0.1, images, mockKey, repairOnce = true } = opts;
+  const {
+    maxTokens = 4096,
+    temperature = 0.1,
+    images,
+    mockKey,
+    repairOnce = true,
+    modelo = DEFAULT_MODEL,
+  } = opts;
 
   if (env.AI_MOCK) {
     if (!mockKey) return { ok: false, error: "AI_MOCK ativo sem fixture para esta chamada." };
@@ -89,7 +98,7 @@ export async function safeJsonCompletion<T>(
 
   const attempt = async (): Promise<SafeResult<T> & { raw?: string }> => {
     const response = await openai.chat.completions.create({
-      model: DEFAULT_MODEL,
+      model: modelo,
       temperature,
       max_tokens: maxTokens,
       response_format: { type: "json_object" },
@@ -144,9 +153,9 @@ export interface ChatMessage {
 export async function chatCompletion(
   system: string,
   messages: ChatMessage[],
-  opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey"> = {},
+  opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey" | "modelo"> = {},
 ): Promise<string> {
-  const { maxTokens = 1200, temperature = 0.3, mockKey } = opts;
+  const { maxTokens = 1200, temperature = 0.3, mockKey, modelo = DEFAULT_MODEL } = opts;
 
   if (env.AI_MOCK) {
     const fixture = mockKey ? aiFixtures[mockKey] : null;
@@ -157,7 +166,7 @@ export async function chatCompletion(
   if (!openai) throw new AIUnavailableError();
 
   const response = await openai.chat.completions.create({
-    model: DEFAULT_MODEL,
+    model: modelo,
     temperature,
     max_tokens: maxTokens,
     messages: [{ role: "system", content: system }, ...messages],
@@ -168,9 +177,9 @@ export async function chatCompletion(
 export async function textCompletion(
   system: string,
   payload: unknown,
-  opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey"> = {},
+  opts: Pick<CompletionOpts, "maxTokens" | "temperature" | "mockKey" | "modelo"> = {},
 ): Promise<string> {
-  const { maxTokens = 4096, temperature = 0.2, mockKey } = opts;
+  const { maxTokens = 4096, temperature = 0.2, mockKey, modelo = DEFAULT_MODEL } = opts;
 
   if (env.AI_MOCK) {
     const fixture = mockKey ? aiFixtures[mockKey] : null;
@@ -181,7 +190,7 @@ export async function textCompletion(
   if (!openai) throw new AIUnavailableError();
 
   const response = await openai.chat.completions.create({
-    model: DEFAULT_MODEL,
+    model: modelo,
     temperature,
     max_tokens: maxTokens,
     messages: [

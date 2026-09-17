@@ -1,10 +1,49 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { createCanvas } from "@napi-rs/canvas";
 
-const require = createRequire(import.meta.url);
-const pdfjsDir = path.dirname(require.resolve("pdfjs-dist/package.json"));
-const STANDARD_FONTS = path.join(pdfjsDir, "standard_fonts/") + path.sep;
+/**
+ * O canvas é nativo (@napi-rs/canvas) e só o OCR de PDF escaneado precisa dele.
+ *
+ * Era importado no topo, e `documentExtractor.service.ts` importa este módulo
+ * estaticamente: se o binário não carregasse na função serverless, a rota de
+ * extração morria no import — levando com ela TXT, DOCX e PDF com texto, que
+ * não usam canvas nenhum. Agora a carga é preguiçosa e a falha fica contida no
+ * único caminho que depende dela.
+ */
+type Canvas = typeof import("@napi-rs/canvas");
+let canvasPromise: Promise<Canvas> | null = null;
+
+function loadCanvas(): Promise<Canvas> {
+  if (!canvasPromise) {
+    canvasPromise = import("@napi-rs/canvas").catch(() => {
+      throw new Error(
+        "Não foi possível processar PDF escaneado neste ambiente. " +
+          "Envie o PDF com texto selecionável, ou fotografe as páginas.",
+      );
+    });
+  }
+  return canvasPromise;
+}
+
+/**
+ * O caminho das fontes do pdfjs também é preguiçoso: resolvê-lo na carga do
+ * módulo quebra o import inteiro quando o empacotamento muda o layout de
+ * `node_modules`.
+ */
+let standardFonts: string | null = null;
+
+function standardFontsDir(): string | undefined {
+  if (standardFonts === null) {
+    try {
+      const require = createRequire(import.meta.url);
+      const pdfjsDir = path.dirname(require.resolve("pdfjs-dist/package.json"));
+      standardFonts = path.join(pdfjsDir, "standard_fonts/") + path.sep;
+    } catch {
+      standardFonts = "";
+    }
+  }
+  return standardFonts || undefined;
+}
 
 type PdfJs = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 let pdfjsPromise: Promise<PdfJs> | null = null;
@@ -18,7 +57,7 @@ async function openDocument(buf: Buffer) {
   const pdfjs = await loadPdfJs();
   return pdfjs.getDocument({
     data: new Uint8Array(buf),
-    standardFontDataUrl: STANDARD_FONTS,
+    standardFontDataUrl: standardFontsDir(),
     isEvalSupported: false,
     useSystemFonts: true,
   }).promise;
@@ -63,6 +102,7 @@ export async function renderPdfPagesToJpeg(
       const base = page.getViewport({ scale: 1 });
       const scale = Math.min(2.5, MAX_SIDE / Math.max(base.width, base.height));
       const viewport = page.getViewport({ scale });
+      const { createCanvas } = await loadCanvas();
       const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#ffffff";

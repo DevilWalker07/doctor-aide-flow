@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { env } from "../config.js";
+import { env, modeloVisao } from "../config.js";
 import { AIResponseError } from "../lib/errors.js";
 import { extOf, readTextFile, safeUnlink } from "../lib/files.js";
 import { DOCUMENT_EXTRACTION_PROMPT } from "../prompts/documentExtraction.prompt.js";
@@ -102,6 +102,11 @@ async function runExtraction(
       images,
       mockKey: "documentExtraction",
       maxTokens: 3000,
+      // Só a leitura de imagem sobe de modelo: ler "K 3,5" onde estava "5,3"
+      // passa pelo Zod e pelos guardrails sem ser notado, porque o valor está
+      // errado na origem. Texto já extraído de PDF ou DOCX não corre esse
+      // risco e continua no modelo padrão.
+      ...(images?.length ? { modelo: modeloVisao() } : {}),
     },
   );
   if (!result.ok) throw new AIResponseError(result.error, result.raw);

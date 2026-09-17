@@ -1,12 +1,22 @@
+import { waitUntil } from "@vercel/functions";
 import express from "express";
 import helmet from "helmet";
-import { authRequired, configErrors, configOk, env, hasOpenAIKey, hasSupabase } from "./config.js";
+import {
+  authRequired,
+  configErrors,
+  configOk,
+  env,
+  hasOpenAIKey,
+  hasSupabase,
+  modelosEmUso,
+} from "./config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
+import { createExtractRouter } from "./routes/extract.routes.js";
+import { getJobStore } from "./services/jobStore.js";
 import { APP_VERSION } from "./app.js";
-import { DEFAULT_MODEL } from "./services/openaiClient.js";
 
 /**
  * A mesma aplicação, sem o que não cabe em função serverless.
@@ -17,9 +27,36 @@ import { DEFAULT_MODEL } from "./services/openaiClient.js";
  * documento e passagem de plantão —, e o servir de arquivo estático, que na
  * Vercel é o próprio CDN.
  */
+/**
+ * Os dois módulos nativos carregam nesta função?
+ *
+ * `sharp` normaliza imagem e HEIC; `@napi-rs/canvas` só é usado no OCR de PDF
+ * escaneado. Empacotamento de binário nativo em função serverless é o tipo de
+ * coisa que falha em produção e em nenhum teste — então o /health responde,
+ * e eu descubro pelo endpoint em vez de pelo médico.
+ */
+let nativosPromise: Promise<{ sharp: boolean; canvas: boolean }> | null = null;
+
+function checarNativos() {
+  if (!nativosPromise) {
+    nativosPromise = Promise.all([
+      import("sharp").then(
+        () => true,
+        () => false,
+      ),
+      import("@napi-rs/canvas").then(
+        () => true,
+        () => false,
+      ),
+    ]).then(([sharp, canvas]) => ({ sharp, canvas }));
+  }
+  return nativosPromise;
+}
+
 export function createServerlessApp() {
   const app = express();
   const limiters = buildRateLimiters();
+  const jobStore = getJobStore();
 
   app.set("trust proxy", 1);
   app.disable("x-powered-by");
@@ -32,17 +69,18 @@ export function createServerlessApp() {
   // Sem autenticação de propósito: é o que a faixa de aviso do app consulta
   // para saber se o servidor está de pé. Responde nos dois caminhos porque o
   // contêiner serve /health na raiz e a Vercel reescreve para /api/health.
-  const health: express.RequestHandler = (_req, res) => {
+  const health: express.RequestHandler = async (_req, res) => {
     res.status(configOk() ? 200 : 503).json({
       ok: configOk(),
       service: "medfluxo-motor-luan",
       runtime: "vercel-function",
       version: APP_VERSION,
-      model: DEFAULT_MODEL,
+      modelos: modelosEmUso(),
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
       supabase: hasSupabase(),
       authRequired: authRequired(),
+      nativos: await checarNativos(),
       configErrors,
     });
   };
@@ -63,13 +101,25 @@ export function createServerlessApp() {
   app.use("/api", requireAuth);
   app.use("/api/ai", limiters.ai, aiRouter);
 
-  // Ainda no contêiner (corpo de 20 MB e execução longa não cabem aqui).
+  // O upload não passa por aqui: o navegador envia direto ao Supabase Storage e
+  // esta rota recebe só o caminho. `waitUntil` mantém a invocação viva depois
+  // da resposta 202 — sem ele, o processamento seria interrompido e o job
+  // ficaria preso em "processing".
+  app.use(
+    "/api/extract",
+    createExtractRouter({
+      jobStore,
+      limiters,
+      manterVivo: (promise) => waitUntil(promise),
+    }),
+  );
+
+  // Passagem de plantão ainda depende de execução longa em lotes.
   // Melhor dizer isso do que devolver 404 e deixar o app adivinhar.
-  app.use(["/api/extract", "/api/passagem-plantao"], (_req, res) => {
+  app.use("/api/passagem-plantao", (_req, res) => {
     res.status(503).json({
       error: "rota_indisponivel",
-      message:
-        "Leitura de documento e passagem de plantão ainda não estão disponíveis nesta implantação.",
+      message: "A passagem de plantão em DOCX ainda não está disponível nesta implantação.",
     });
   });
 

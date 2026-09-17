@@ -19,6 +19,17 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+  /**
+   * Modelos por finalidade. Ausentes, caem em `OPENAI_MODEL` — nada muda até
+   * receberem valor, e nenhuma implantação existente quebra.
+   *
+   * A separação existe porque as chamadas não correm o mesmo risco. Ler um
+   * número errado na foto do prontuário é o erro que nenhum guardrail pega: o
+   * valor entra validado pelo Zod e errado na origem. Reformatar um texto já
+   * extraído não tem esse problema.
+   */
+  OPENAI_MODEL_VISAO: z.string().optional(),
+  OPENAI_MODEL_COPILOTO: z.string().optional(),
   OPENAI_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
@@ -27,6 +38,10 @@ const EnvSchema = z.object({
   AI_MOCK: bool.default(false),
   MAX_PDF_PAGES: z.coerce.number().int().min(1).max(30).default(15),
   STATIC_DIR: z.string().optional(),
+  /** Orçamento de tempo da extração de documento. Ver `extractBudgetMs`. */
+  EXTRACT_BUDGET_MS: z.coerce.number().int().positive().optional(),
+  /** Definida pela própria plataforma quando roda na Vercel. */
+  VERCEL: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -74,6 +89,32 @@ if (configErrors.length > 0) {
 
 /** Dá para atender requisição? Quando falso, a resposta é 503 com o motivo. */
 export const configOk = () => configErrors.length === 0;
+
+/**
+ * Quanto tempo a extração de um documento pode levar antes de o job ser
+ * marcado como erro.
+ *
+ * Em contêiner não há teto e o limite serve só para não deixar job preso. Em
+ * função serverless a plataforma corta a invocação no `maxDuration`; se o corte
+ * vier antes do nosso limite, o job fica em "processing" para sempre e a tela
+ * de progresso gira sem fim. Por isso o orçamento fica **abaixo** do
+ * `maxDuration` configurado no vercel.json (60 s), e quem estoura recebe uma
+ * mensagem legível.
+ */
+/** Modelo para leitura de imagem: foto de prontuário e OCR de PDF escaneado. */
+export const modeloVisao = () => env.OPENAI_MODEL_VISAO ?? env.OPENAI_MODEL;
+
+/** Modelo do copiloto clínico: dose, diluição e conduta. */
+export const modeloCopiloto = () => env.OPENAI_MODEL_COPILOTO ?? env.OPENAI_MODEL;
+
+/** O que o /health mostra, para conferir que a variável pegou sem abrir painel. */
+export const modelosEmUso = () => ({
+  padrao: env.OPENAI_MODEL,
+  visao: modeloVisao(),
+  copiloto: modeloCopiloto(),
+});
+
+export const extractBudgetMs = () => env.EXTRACT_BUDGET_MS ?? (env.VERCEL ? 55_000 : 240_000);
 
 export const allowedOrigins = () =>
   env.ALLOWED_ORIGINS.split(",")
