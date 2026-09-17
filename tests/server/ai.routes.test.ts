@@ -283,3 +283,49 @@ describe("/api/ai/*", () => {
     expect(res.body.jobStore).toBe("memory");
   });
 });
+
+describe("laboratório para o prontuário", () => {
+  beforeEach(resetAiMock);
+
+  it("organiza a partir de texto e devolve a linha do prontuário", async () => {
+    const res = await request(app)
+      .post("/api/ai/organizar-laboratorio")
+      .set(auth)
+      .send({ inputText: "Hb 9,2 Ht 28 Leuco 14.400 Cr 1,8 K 5,6 PCR 87" });
+    expect(res.status).toBe(200);
+    // Linha de prontuário, não resumo em prosa.
+    expect(res.body.texto_formatado).toBeTruthy();
+    expect(typeof res.body.valores).toBe("object");
+  });
+
+  it("aceita foto sem nenhum texto — é como o resultado chega no plantão", async () => {
+    const { aiMock } = await import("./helpers/mocks.js");
+    aiMock.json.mockClear();
+
+    const res = await request(app)
+      .post("/api/ai/organizar-laboratorio")
+      .set(auth)
+      .send({
+        imagens: [{ base64: "AAAA", mime: "image/jpeg" }],
+      });
+    expect(res.status).toBe(200);
+
+    // A imagem chega ao modelo, e pelo caminho de visão.
+    const opts = aiMock.json.mock.calls.at(-1)?.[3];
+    expect(opts?.images?.length).toBe(1);
+    expect(opts?.modelo).toBeTruthy();
+  });
+
+  it("400 quando não vem texto, nem imagem, nem PDF", async () => {
+    const res = await request(app).post("/api/ai/organizar-laboratorio").set(auth).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("rejeita mime de imagem fora da lista", async () => {
+    const res = await request(app)
+      .post("/api/ai/organizar-laboratorio")
+      .set(auth)
+      .send({ imagens: [{ base64: "AAAA", mime: "image/gif" }] });
+    expect(res.status).toBe(400);
+  });
+});

@@ -122,6 +122,38 @@ export type CopilotoBody = z.infer<typeof CopilotoBody>;
  * faltando virava tela quebrada, e um campo inventado entrava como dado
  * clínico.
  */
+/**
+ * Laboratório para organizar em linha de prontuário.
+ *
+ * Aceita texto colado **ou** imagens — foto do papel, print da tela do
+ * laboratório, página de PDF. O caminho só-texto existia e deixava de fora o
+ * jeito mais comum de receber resultado no plantão, que é uma foto.
+ *
+ * As imagens chegam já reduzidas pelo cliente: a função serverless tem limite
+ * de corpo bem abaixo do tamanho de um print de celular.
+ */
+export const LaboratorioBody = z
+  .object({
+    inputText: z.string().max(20_000).optional(),
+    imagens: z
+      .array(
+        z.object({
+          base64: z.string().min(1).max(3_000_000),
+          mime: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        }),
+      )
+      .max(6)
+      .optional(),
+    /** PDF do laboratório. O servidor extrai o texto; se for escaneado, lê as páginas. */
+    pdfBase64: z.string().min(1).max(4_000_000).optional(),
+    patientContext: z.unknown().optional(),
+  })
+  .refine(
+    (b) => Boolean(b.inputText?.trim()) || Boolean(b.imagens?.length) || Boolean(b.pdfBase64),
+    { message: "Cole o texto dos exames, anexe uma foto ou envie o PDF." },
+  );
+export type LaboratorioBody = z.infer<typeof LaboratorioBody>;
+
 export const ParecerEspecialistaSchema = z.object({
   sections: z
     .array(

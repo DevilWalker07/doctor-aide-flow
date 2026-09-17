@@ -1,10 +1,11 @@
 import { ESPECIALISTAS, type EspecialistaId } from "../../shared/especialistas.js";
-import { modeloCopiloto } from "../config.js";
+import { modeloCopiloto, modeloVisao } from "../config.js";
 import { AIResponseError } from "../lib/errors.js";
 import { BRIEFING_PROMPT } from "../prompts/briefing.prompt.js";
 import { CLINICA_MEDICA_PROMPT } from "../prompts/clinicaMedica.prompt.js";
 import { COPILOTO_PROMPT } from "../prompts/copiloto.prompt.js";
 import { PROMPTS_ESPECIALISTAS } from "../prompts/especialistas.prompt.js";
+import { extractPdfText, renderPdfPagesToJpeg } from "./pdf.service.js";
 import { EVOLUTION_REVIEWER_PROMPT } from "../prompts/evolutionReviewer.prompt.js";
 import { GERADOR_ENCAMINHAMENTO_PROMPT } from "../prompts/geradorEncaminhamento.prompt.js";
 import { GERADOR_EVOLUCAO_PROMPT } from "../prompts/geradorEvolucao.prompt.js";
@@ -19,6 +20,7 @@ import {
   ClinicalExtractionOutputSchema,
   EvolutionReviewSchema,
   LabExtractionSchema,
+  LaboratorioBody,
   LaudoImagemSchema,
   OrquestradorOutputSchema,
   ParecerEspecialistaSchema,
@@ -119,6 +121,54 @@ export const motorLuanService = {
       ...out,
       ...applyGuardrails({ patients: out.patients, globalAlerts: out.globalAlerts }),
     };
+  },
+
+  /**
+   * Organiza laboratório na linha do prontuário.
+   *
+   * Não é resumo: `texto_formatado` sai no padrão
+   * "LAB ATUAL (DATA): HB 9,2 / HT 28 / LEUCO 14.400", que é o que se escreve
+   * na evolução. Rota própria porque antes isto vivia escondido dentro de
+   * extrairClinicaMedica com task: "lab-extractor" — ninguém acharia.
+   */
+  async organizarLaboratorio(body: LaboratorioBody) {
+    let texto = body.inputText?.trim() ?? "";
+    const imagens = [...(body.imagens ?? [])];
+
+    // PDF: primeiro o texto, que é exato e sai de graça. Só se vier vazio —
+    // PDF que é foto de papel — renderizamos as páginas e lemos por visão.
+    // Mesma escada da leitura de documento, e as mesmas funções.
+    if (body.pdfBase64) {
+      const buf = Buffer.from(body.pdfBase64, "base64");
+      const { text } = await extractPdfText(buf);
+      if (text.trim().length >= 40) {
+        texto = [texto, text.trim()].filter(Boolean).join("\n\n");
+      } else {
+        const { images } = await renderPdfPagesToJpeg(buf, 4);
+        for (const img of images) {
+          imagens.push({ base64: img.toString("base64"), mime: "image/jpeg" as const });
+        }
+      }
+    }
+
+    if (!texto && imagens.length === 0) {
+      throw new AIResponseError("Não foi possível ler nada do que você enviou.");
+    }
+
+    return unwrap(
+      await safeJsonCompletion(
+        LAB_EXTRACTOR_PROMPT,
+        { inputText: texto, patientContext: body.patientContext ?? null },
+        LabExtractionSchema,
+        {
+          mockKey: "lab",
+          images: imagens.length ? imagens : undefined,
+          // Foto de exame é leitura de imagem: mesmo caminho da foto de
+          // prontuário, mesmo modelo.
+          ...(imagens.length ? { modelo: modeloVisao() } : {}),
+        },
+      ),
+    );
   },
 
   async extrairClinicaMedica(body: MotorLuanTextBody) {

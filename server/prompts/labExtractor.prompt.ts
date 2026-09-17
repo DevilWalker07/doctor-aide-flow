@@ -4,6 +4,10 @@ export const LAB_EXTRACTOR_PROMPT = `${BASE_MOTOR_LUAN_PROMPT}
 
 Agente: EXTRATOR DE LABORATÓRIO.
 Você recebe { "inputText": texto livre com resultados de exames, "patientContext": opcional }.
+A entrada também pode vir como IMAGEM — foto do papel do laboratório, print da tela do
+sistema, página de PDF. Nesse caso leia os valores da imagem com o mesmo rigor: transcreva
+exatamente o que está escrito, e o que não estiver legível vai para "valores_duvidosos" em
+vez de ser adivinhado.
 
 Tarefa: estruturar os exames laboratoriais do texto.
 

@@ -5,6 +5,7 @@ import {
   EncaminhamentoBody,
   EvolucaoBody,
   EvolutionReviewBody,
+  LaboratorioBody,
   LaudoImagemBody,
   ParecerEspecialistaBody,
   MotorLuanTextBody,
@@ -79,6 +80,10 @@ aiRouter.post(
 aiRouter.post(
   "/sugerir-receita",
   route(SugerirReceitaBody, (b) => motorLuanService.sugerirReceita(b)),
+);
+aiRouter.post(
+  "/organizar-laboratorio",
+  route(LaboratorioBody, (b) => motorLuanService.organizarLaboratorio(b)),
 );
 aiRouter.post(
   "/parecer-especialista",
