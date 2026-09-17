@@ -18,7 +18,14 @@ export default tseslint.config(
     ],
   },
   {
-    files: ["server/**/*.ts", "shared/**/*.ts", "tests/**/*.ts", "e2e/**/*.ts", "*.config.ts"],
+    files: [
+      "server/**/*.ts",
+      "shared/**/*.ts",
+      "tests/**/*.ts",
+      "e2e/**/*.ts",
+      "agents/**/*.ts",
+      "*.config.ts",
+    ],
     languageOptions: { globals: globals.node },
   },
   {

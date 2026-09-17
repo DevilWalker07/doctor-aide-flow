@@ -28,6 +28,10 @@ test-results
 !server/.env.example
 server/.env
 
+# Histórico bruto dos agentes internos (agents/) — só "latest" fica versionado
+docs/agentes/relatorios/historico/
+docs/agentes/consultor-medico/historico/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

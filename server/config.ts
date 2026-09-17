@@ -30,6 +30,8 @@ const EnvSchema = z.object({
    */
   OPENAI_MODEL_VISAO: z.string().optional(),
   OPENAI_MODEL_COPILOTO: z.string().optional(),
+  /** Modelo dos agentes internos (análise de produto e implementação). Ver `modeloAgentes`. */
+  OPENAI_MODEL_AGENTES: z.string().optional(),
   OPENAI_TIMEOUT_MS: z.coerce.number().int().positive().default(90_000),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
@@ -107,11 +109,21 @@ export const modeloVisao = () => env.OPENAI_MODEL_VISAO ?? env.OPENAI_MODEL;
 /** Modelo do copiloto clínico: dose, diluição e conduta. */
 export const modeloCopiloto = () => env.OPENAI_MODEL_COPILOTO ?? env.OPENAI_MODEL;
 
+/**
+ * Modelo dos agentes internos (`agents/`) — análise do produto e implementação
+ * de melhorias. Rodam fora da requisição HTTP (CLI, por um humano ou CI), mas
+ * usam a mesma chave e o mesmo padrão de "modelo por finalidade": tarefa mais
+ * cara e mais arriscada (escrever código sozinho) pode pedir um modelo mais
+ * forte que o `OPENAI_MODEL` do dia a dia clínico.
+ */
+export const modeloAgentes = () => env.OPENAI_MODEL_AGENTES ?? env.OPENAI_MODEL;
+
 /** O que o /health mostra, para conferir que a variável pegou sem abrir painel. */
 export const modelosEmUso = () => ({
   padrao: env.OPENAI_MODEL,
   visao: modeloVisao(),
   copiloto: modeloCopiloto(),
+  agentes: modeloAgentes(),
 });
 
 export const extractBudgetMs = () => env.EXTRACT_BUDGET_MS ?? (env.VERCEL ? 55_000 : 240_000);

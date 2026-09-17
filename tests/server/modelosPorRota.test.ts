@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { modeloCopiloto, modeloVisao, modelosEmUso, env } from "../../server/config.js";
+import {
+  modeloAgentes,
+  modeloCopiloto,
+  modeloVisao,
+  modelosEmUso,
+  env,
+} from "../../server/config.js";
 
 /**
  * Modelo por finalidade.
@@ -12,12 +18,15 @@ describe("modelo de IA por rota", () => {
   it("sem as variáveis específicas, tudo cai no OPENAI_MODEL", () => {
     expect(env.OPENAI_MODEL_VISAO).toBeUndefined();
     expect(env.OPENAI_MODEL_COPILOTO).toBeUndefined();
+    expect(env.OPENAI_MODEL_AGENTES).toBeUndefined();
     expect(modeloVisao()).toBe(env.OPENAI_MODEL);
     expect(modeloCopiloto()).toBe(env.OPENAI_MODEL);
+    expect(modeloAgentes()).toBe(env.OPENAI_MODEL);
     expect(modelosEmUso()).toEqual({
       padrao: env.OPENAI_MODEL,
       visao: env.OPENAI_MODEL,
       copiloto: env.OPENAI_MODEL,
+      agentes: env.OPENAI_MODEL,
     });
   });
 
