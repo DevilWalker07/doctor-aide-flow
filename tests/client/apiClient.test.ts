@@ -66,6 +66,19 @@ describe("apiFetch", () => {
     expect((erro as ApiError).inalcancavel).toBe(true);
   });
 
+  it("chama sempre o mesmo domínio, sem base configurável", async () => {
+    // A base vinha de VITE_CLINICAL_AGENTS_URL. Com a variável sobrando
+    // apontando para o Railway morto, todo fetch do navegador ia para um
+    // serviço inexistente e o app acusava "servidor fora do ar" — estando
+    // certo, mas sobre o servidor errado.
+    fetchMock.mockResolvedValue(resposta());
+    await apiFetch("/health");
+    expect(fetchMock.mock.calls[0][0]).toBe("/health");
+
+    await apiFetch("/api/ai/copiloto");
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/ai/copiloto");
+  });
+
   it("503 também conta como inalcançável para a faixa de aviso", async () => {
     fetchMock.mockResolvedValue(resposta(503, { ok: false }));
     const res = await apiFetch("/health");

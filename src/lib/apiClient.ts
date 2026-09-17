@@ -1,5 +1,3 @@
-import { API_BASE } from "./clinicalAgentsConfig";
-
 type TokenProvider = () => Promise<string | null>;
 let tokenProvider: TokenProvider = async () => null;
 let onUnauthorized: () => void = () => {};
@@ -56,7 +54,17 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+    // Mesmo domínio, sempre. A API é uma função da Vercel servida junto com o
+    // app — não existe segundo serviço.
+    //
+    // Isto já foi `${API_BASE}${path}`, com API_BASE vindo de
+    // VITE_CLINICAL_AGENTS_URL. Era da época em que o backend morava no
+    // Railway, e virou uma armadilha: com a variável sobrando apontando para o
+    // host antigo, todo fetch do navegador ia para um serviço que não existe
+    // mais — enquanto o /health consultado de fora respondia 200. O app
+    // acusava "servidor fora do ar" e estava certo, só não era o servidor
+    // certo. Endereço de API não é mais configurável por ambiente.
+    response = await fetch(path, { ...init, headers });
   } catch {
     throw new ApiError(
       0,

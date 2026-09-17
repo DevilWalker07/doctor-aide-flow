@@ -12,11 +12,6 @@ export default defineConfig({
     proxy: {
       "/api": { target: BACKEND, changeOrigin: true },
       "/health": { target: BACKEND, changeOrigin: true },
-      "/clinical-agents": {
-        target: BACKEND,
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/clinical-agents/, ""),
-      },
     },
   },
 });

@@ -74,7 +74,12 @@ O app é usado de pé, com pressa, com uma mão, muitas vezes à noite. Isso dit
 - `src/lib/ambientes.ts` é a **fonte única** dos ambientes e subambientes. Telas,
   formulários e seeds leem daí.
 - Chamadas HTTP do cliente passam por `apiJson`/`apiFetch` de `src/lib/apiClient.ts`,
-  que injeta o token do Supabase.
+  que injeta o token do Supabase. **O endereço da API não é configurável**: é
+  sempre o mesmo domínio, porque a API é uma função servida junto com o app.
+  Existia um `VITE_CLINICAL_AGENTS_URL` da época do Railway, e uma variável
+  sobrando apontando para o host antigo mandava todo fetch do navegador para um
+  serviço inexistente — com o `/health` consultado de fora respondendo 200. Não
+  reintroduza base de API por ambiente.
 - Chaves de localStorage têm prefixo `da_` e ficam centralizadas em `src/lib/storage.ts`.
 
 ## Deploy
