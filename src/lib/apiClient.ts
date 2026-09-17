@@ -40,7 +40,18 @@ export const SERVIDOR_INALCANCAVEL = "servidor_inalcancavel";
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
-  const token = await tokenProvider();
+
+  // Obter o token pode falhar sozinho — sessão guardada que não casa mais com
+  // a chave do Supabase, por exemplo. Isso não é motivo para abortar: rota
+  // pública como /health não precisa de token, e rota protegida responde 401,
+  // que já tem tratamento. Antes a exceção escapava daqui e era contada como
+  // "servidor fora do ar".
+  let token: string | null = null;
+  try {
+    token = await tokenProvider();
+  } catch (err) {
+    console.warn("[apiClient] não foi possível obter o token de acesso:", err);
+  }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let response: Response;

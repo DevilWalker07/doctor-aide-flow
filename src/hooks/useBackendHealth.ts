@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/apiClient";
+import { ApiError, SERVIDOR_INALCANCAVEL, apiFetch } from "@/lib/apiClient";
 
+/**
+ * `verificando` cobre também o caso "não deu para saber".
+ *
+ * A faixa de aviso só acende em `offline`, e isso é deliberado: dizer a um
+ * médico no meio do plantão que a IA caiu, quando ela está de pé, é pior que
+ * não dizer nada — ele troca de ferramenta sem precisar.
+ */
 export type EstadoBackend = "verificando" | "online" | "offline";
 
 export interface SaudeBackend {
@@ -11,7 +18,7 @@ export interface SaudeBackend {
 }
 
 interface Leitura {
-  estado: Exclude<EstadoBackend, "verificando">;
+  estado: EstadoBackend;
   motivos: string[];
   em: number;
 }
@@ -34,12 +41,25 @@ async function consultar(): Promise<Leitura> {
       motivos: corpo?.configErrors ?? [],
       em: Date.now(),
     };
-  } catch {
-    // apiFetch já converte falha de rede em ApiError; aqui só importa que
-    // não houve resposta.
-    leitura = { estado: "offline", motivos: [], em: Date.now() };
+  } catch (err) {
+    // Só é "fora do ar" quando o servidor realmente não respondeu — é o que
+    // `SERVIDOR_INALCANCAVEL` marca. Qualquer outra exceção quebrou a sondagem
+    // em si (obter token, por exemplo), e aí a resposta honesta é "não sei".
+    // O catch cego que estava aqui transformava falha de autenticação em
+    // "Servidor de IA fora do ar".
+    const inalcancavel = err instanceof ApiError && err.code === SERVIDOR_INALCANCAVEL;
+    if (!inalcancavel) {
+      console.warn("[useBackendHealth] não foi possível verificar o servidor:", err);
+    }
+    leitura = {
+      estado: inalcancavel ? "offline" : "verificando",
+      motivos: [],
+      em: Date.now(),
+    };
   }
-  cache = leitura;
+  // Estado desconhecido não entra em cache: queremos tentar de novo na
+  // próxima vez, em vez de ficar 30 s sem saber.
+  if (leitura.estado !== "verificando") cache = leitura;
   for (const ouvinte of ouvintes) ouvinte(leitura);
   return leitura;
 }
