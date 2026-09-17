@@ -15,6 +15,6 @@
     "sourceMap": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["server/**/*.ts", "shared/**/*.ts"],
+  "include": ["server/**/*.ts", "shared/**/*.ts", "api/**/*.ts"],
   "exclude": ["server/**/*.test.ts", "dist-server"]
 }

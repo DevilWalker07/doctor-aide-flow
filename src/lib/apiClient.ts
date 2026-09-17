@@ -22,14 +22,37 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+
+  /** O servidor não respondeu — não adianta reformular a chamada. */
+  get inalcancavel(): boolean {
+    return this.status === 0 || this.status === 503;
+  }
 }
+
+/**
+ * Servidor inalcançável: o `fetch` nem chegou a receber resposta.
+ *
+ * Não é o mesmo que uma chamada que falhou — e a diferença importa, porque o
+ * médico precisa saber se vale tentar de novo ou se o servidor caiu inteiro.
+ * `status` 0 marca isso; `ApiError.inalcancavel` é a leitura.
+ */
+export const SERVIDOR_INALCANCAVEL = "servidor_inalcancavel";
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = await tokenProvider();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(
+      0,
+      SERVIDOR_INALCANCAVEL,
+      "Servidor de IA fora do ar. Documentos e impressão continuam funcionando.",
+    );
+  }
   if (response.status === 401) onUnauthorized();
   return response;
 }

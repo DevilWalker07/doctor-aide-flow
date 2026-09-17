@@ -77,6 +77,31 @@ O app é usado de pé, com pressa, com uma mão, muitas vezes à noite. Isso dit
   que injeta o token do Supabase.
 - Chaves de localStorage têm prefixo `da_` e ficam centralizadas em `src/lib/storage.ts`.
 
+## Deploy
+
+Tudo na Vercel — projeto `medfluxo`, branch de produção `main`, domínio
+`medfluxo.vercel.app`. Não existe segundo serviço: o backend do Railway saiu, e
+ele tinha caído sem ninguém perceber justamente porque não estava escrito aqui.
+
+- **Frontend** — build do Vite em `dist`, servido pelo CDN.
+- **API** — uma única função em `api/[...rota].ts`, que monta
+  `createServerlessApp()` de `server/serverless.ts`. É a mesma aplicação de
+  `server/app.ts` sem o que não cabe em função: `/api/extract` e
+  `/api/passagem-plantao` (corpo de 20 MB e execução longa) respondem 503 com
+  motivo até as fases seguintes. `aiRouter`, prompts, schemas e guardrails são
+  os mesmos — a função é só a casca.
+- `server/index.ts` continua sendo o servidor local (`npm run dev:all`).
+
+**Variáveis no projeto da Vercel** (Production e Preview):
+`OPENAI_API_KEY`, `OPENAI_MODEL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`ALLOWED_ORIGINS`.
+
+**Configuração incompleta não derruba o processo.** `server/config.ts` junta os
+motivos em `configErrors` e `configOk()`; o handler responde **503 com o
+motivo**, e `useBackendHealth` acende a faixa no hub. Antes era `process.exit(1)`
+— o serviço morria calado no boot. Nunca volte a sair do processo por
+configuração ausente em caminho servido por requisição.
+
 ## Segurança
 
 Documentos de pacientes reais **nunca** entram no repositório — `/*.docx` e
