@@ -12,7 +12,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "paths": { "@/*": ["./src/*"] }
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
     "tests/**/*.ts",
@@ -21,7 +23,8 @@
     "shared/**/*.ts",
     "src/lib/**/*.ts",
     "vitest.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": ["dist-server", "node_modules"]
 }
