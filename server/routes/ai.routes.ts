@@ -5,7 +5,9 @@ import {
   EncaminhamentoBody,
   EvolucaoBody,
   EvolutionReviewBody,
+  LaboratorioBody,
   LaudoImagemBody,
+  ParecerEspecialistaBody,
   MotorLuanTextBody,
   RoundBody,
   SugerirReceitaBody,
@@ -78,6 +80,14 @@ aiRouter.post(
 aiRouter.post(
   "/sugerir-receita",
   route(SugerirReceitaBody, (b) => motorLuanService.sugerirReceita(b)),
+);
+aiRouter.post(
+  "/organizar-laboratorio",
+  route(LaboratorioBody, (b) => motorLuanService.organizarLaboratorio(b)),
+);
+aiRouter.post(
+  "/parecer-especialista",
+  route(ParecerEspecialistaBody, (b) => motorLuanService.parecerEspecialista(b)),
 );
 aiRouter.post(
   "/copiloto",

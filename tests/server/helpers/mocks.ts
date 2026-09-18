@@ -107,6 +107,16 @@ const storageApi = {
         error: null,
       };
     },
+    upload: async (caminho: string, conteudo: Buffer | Uint8Array) => {
+      storageMock.objetos.set(caminho, Buffer.from(conteudo));
+      return { data: { path: caminho }, error: null };
+    },
+    createSignedUrl: async (caminho: string) => {
+      if (!storageMock.objetos.has(caminho)) {
+        return { data: null, error: { message: "not found" } };
+      }
+      return { data: { signedUrl: `https://storage.teste/${caminho}?assinada` }, error: null };
+    },
     remove: async (caminhos: string[]) => {
       for (const c of caminhos) {
         storageMock.objetos.delete(c);

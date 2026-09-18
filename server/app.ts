@@ -16,7 +16,7 @@ import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
-import { passagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
+import { createPassagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { getJobStore, type JobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
 
@@ -75,7 +75,13 @@ export function createApp(deps: AppDeps = {}) {
   // O contêiner aceita multipart: é o modo local (`npm run dev:all` sem
   // Supabase) e é como os testes e2e rodam.
   app.use("/api/extract", createExtractRouter({ jobStore, limiters, permitirMultipart: true }));
-  app.use("/api/passagem-plantao", limiters.passagem, passagemPlantaoRouter);
+  // O contêiner aceita os dois: multipart (modo local, sem Supabase) e o job
+  // assíncrono a partir do Storage.
+  app.use(
+    "/api/passagem-plantao",
+    limiters.passagem,
+    createPassagemPlantaoRouter({ jobStore, permitirMultipart: true }),
+  );
   app.use("/api", apiNotFound);
 
   if (fs.existsSync(STATIC_DIR)) {

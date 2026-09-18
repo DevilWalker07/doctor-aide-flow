@@ -52,9 +52,19 @@ describe("função serverless da Vercel", () => {
     expect(res.body.error).toBe("missing_storage_path");
   });
 
-  it("diz que a passagem de plantão ainda não está nesta implantação", async () => {
-    const res = await request(app).post("/api/passagem-plantao").expect(503);
-    expect(res.body.error).toBe("rota_indisponivel");
+  it("monta a passagem de plantão — era a última rota em 503", async () => {
+    // Sem arquivo nenhum o erro é de entrada, não de rota indisponível: prova
+    // que o handler é o de verdade e não o aviso de "ainda não implantado".
+    const res = await request(app).post("/api/passagem-plantao/gerar").send({}).expect(400);
+    expect(res.body.error).toBe("missing_files");
+  });
+
+  it("a passagem recusa mais que o teto de arquivos", async () => {
+    const res = await request(app)
+      .post("/api/passagem-plantao/gerar")
+      .send({ storage_paths: Array.from({ length: 31 }, (_, i) => `user-1/${i}.docx`) })
+      .expect(400);
+    expect(res.body.error).toBe("too_many_files");
   });
 
   it("sem configuração completa responde 503 com o motivo, em vez de morrer", async () => {

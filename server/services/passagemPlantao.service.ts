@@ -121,6 +121,52 @@ export function applyLabGuardrails(data: MapaPlantaoData): MapaPlantaoData {
   return { pacientes, alertasCriticos: alertas };
 }
 
+/**
+ * Processa UM lote.
+ *
+ * Extraído de `gerarMapaPlantao` porque o fluxo assíncrono precisa chamar um
+ * lote por invocação: na Vercel do plano hobby o teto é 60 s, e 15 arquivos
+ * numa requisição só encostam nele. Se estourar, o médico fica sem nada no
+ * meio do plantão.
+ */
+export async function processarLote(
+  batch: EvolucaoInput[],
+  index: number,
+  total: number,
+  setor: string,
+  data: string,
+): Promise<PassagemPlantaoBatch> {
+  const payload = {
+    setor,
+    data,
+    lote: `${index + 1}/${total}`,
+    total_arquivos_no_lote: batch.length,
+    evolucoes: batch.map((b) => `=== ARQUIVO: ${b.fileName} ===\n${b.text.trim()}`).join("\n\n"),
+  };
+  const result = await safeJsonCompletion(
+    PASSAGEM_PLANTAO_BATCH_PROMPT,
+    payload,
+    PassagemPlantaoBatchSchema,
+    { maxTokens: 8000, mockKey: "passagemBatch" },
+  );
+  if (!result.ok) {
+    throw new Error(
+      `${result.error}${result.issues ? ` (${result.issues.length} campos inválidos)` : ""}`,
+    );
+  }
+  return result.data;
+}
+
+/** Consolida os lotes que deram certo. Mesma função nos dois fluxos. */
+export function consolidar(
+  ok: PassagemPlantaoBatch[],
+  warnings: string[],
+  batchesTotal: number,
+  batchesFailed: number,
+): GerarMapaResult {
+  return { data: mergeBatchResults(ok), warnings, batchesTotal, batchesFailed };
+}
+
 export interface GerarMapaResult {
   data: MapaPlantaoData;
   warnings: string[];
@@ -138,30 +184,9 @@ export async function gerarMapaPlantao(
   const batches = chunkEvolucoes(items, chunk);
   const warnings: string[] = [];
 
-  const settled = await mapLimit(batches, concurrency, async (batch, index) => {
-    const payload = {
-      setor,
-      data,
-      lote: `${index + 1}/${batches.length}`,
-      total_arquivos_no_lote: batch.length,
-      evolucoes: batch.map((b) => `=== ARQUIVO: ${b.fileName} ===\n${b.text.trim()}`).join("\n\n"),
-    };
-    const result = await safeJsonCompletion(
-      PASSAGEM_PLANTAO_BATCH_PROMPT,
-      payload,
-      PassagemPlantaoBatchSchema,
-      {
-        maxTokens: 8000,
-        mockKey: "passagemBatch",
-      },
-    );
-    if (!result.ok) {
-      throw new Error(
-        `${result.error}${result.issues ? ` (${result.issues.length} campos inválidos)` : ""}`,
-      );
-    }
-    return result.data;
-  });
+  const settled = await mapLimit(batches, concurrency, (batch, index) =>
+    processarLote(batch, index, batches.length, setor, data),
+  );
 
   const ok: PassagemPlantaoBatch[] = [];
   let failed = 0;
@@ -176,10 +201,5 @@ export async function gerarMapaPlantao(
     }
   });
 
-  return {
-    data: mergeBatchResults(ok),
-    warnings,
-    batchesTotal: batches.length,
-    batchesFailed: failed,
-  };
+  return consolidar(ok, warnings, batches.length, failed);
 }

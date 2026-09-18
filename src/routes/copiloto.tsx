@@ -2,9 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Loader2, MessageSquareText, SendHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { EspecialistaAvatar } from "@/components/especialistas/EspecialistaAvatar";
+import { EspecialistaPicker } from "@/components/especialistas/EspecialistaPicker";
 import { apiJson } from "@/lib/apiClient";
 import { LOCAIS } from "@/lib/ambientes";
 import { storage } from "@/lib/storage";
+import {
+  ESPECIALISTAS,
+  especialistaSugerido,
+  type EspecialistaId,
+} from "../../shared/especialistas";
 
 export const Route = createFileRoute("/copiloto")({
   component: CopilotoPage,
@@ -15,16 +22,6 @@ interface Msg {
   role: "user" | "assistant";
   content: string;
 }
-
-/** Espelha o enum de `agente` em server/schemas/ai.schemas.ts. */
-const AGENTES = [
-  { id: "geral", label: "Geral" },
-  { id: "clinica-medica", label: "Clínica médica" },
-  { id: "pediatria", label: "Pediatria" },
-  { id: "uti", label: "Terapia intensiva" },
-] as const;
-
-type AgenteId = (typeof AGENTES)[number]["id"];
 
 const SUGESTOES = [
   "Ajuste de dose de vancomicina para ClCr 25",
@@ -38,7 +35,10 @@ function CopilotoPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [ambiente, setAmbiente] = useState<string>(() => storage.getTipo());
-  const [agente, setAgente] = useState<AgenteId>("geral");
+  // Nenhum especialista escolhido no começo: a tela pergunta com quem falar,
+  // como se você fosse consultar um colega. Quatro rótulos num seletor não é
+  // a mesma coisa que chamar a Dra. Cris.
+  const [especialista, setEspecialista] = useState<EspecialistaId | null>(null);
   const fim = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ function CopilotoPage() {
       const res = await apiJson<{ reply: string }>("/api/ai/copiloto", {
         messages: proximo.slice(-12),
         ambiente,
-        agente,
+        especialista: especialista ?? undefined,
       });
       setMensagens([...proximo, { role: "assistant", content: res.reply }]);
     } catch (err) {
@@ -91,26 +91,20 @@ function CopilotoPage() {
           <p className="t-label text-muted-foreground font-normal">
             Apoio à decisão — não substitui julgamento médico
           </p>
+          {especialista && (
+            <button
+              type="button"
+              onClick={() => setEspecialista(null)}
+              data-testid="copiloto-trocar-especialista"
+              className="focus-visible:ring-ring mt-1 inline-flex items-center gap-1.5 rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <EspecialistaAvatar especialistaId={especialista} size={22} />
+              <span className="t-label text-foreground">{ESPECIALISTAS[especialista].nome}</span>
+              <span className="t-label text-primary font-normal">trocar</span>
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
-          <div>
-            <label htmlFor="copiloto-agente" className="sr-only">
-              Agente de IA
-            </label>
-            <select
-              id="copiloto-agente"
-              value={agente}
-              onChange={(e) => setAgente(e.target.value as AgenteId)}
-              data-testid="copiloto-agente"
-              className="t-label bg-card border-border text-foreground focus-visible:ring-ring min-h-[2.75rem] rounded-xl border px-3 focus-visible:ring-2 focus-visible:outline-none"
-            >
-              {AGENTES.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
           <label htmlFor="copiloto-contexto" className="sr-only">
             Contexto de atendimento
           </label>
@@ -135,11 +129,19 @@ function CopilotoPage() {
           data-testid="copiloto-thread"
           aria-live="polite"
         >
-          {mensagens.length === 0 && (
+          {!especialista && (
+            <EspecialistaPicker
+              sugerido={especialistaSugerido(ambiente).id}
+              onEscolher={setEspecialista}
+            />
+          )}
+          {especialista && mensagens.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
+              <EspecialistaAvatar especialistaId={especialista} size={72} />
               <p className="t-body text-muted-foreground max-w-md">
-                Pergunte sobre doses, ajuste renal, critérios diagnósticos ou peça um checklist. As
-                respostas trazem fontes e limites — confira antes de agir.
+                {ESPECIALISTAS[especialista].saudacao} Pergunte sobre doses, ajuste renal, critérios
+                diagnósticos ou peça um checklist. As respostas trazem fontes e limites — confira
+                antes de agir.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {SUGESTOES.map((sug) => (
@@ -179,38 +181,40 @@ function CopilotoPage() {
           <div ref={fim} />
         </div>
 
-        <form onSubmit={onSubmit} className="mt-4 flex gap-2">
-          <label htmlFor="copiloto-input" className="sr-only">
-            Sua dúvida clínica
-          </label>
-          <input
-            id="copiloto-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Escreva sua dúvida clínica…"
-            data-testid="copiloto-input"
-            className="bg-card border-border text-foreground placeholder:text-muted-foreground focus:ring-ring min-h-[3rem] flex-1 rounded-2xl border px-4 text-base focus:ring-2 focus:outline-none"
-          />
-          {mensagens.length > 0 && (
+        {especialista && (
+          <form onSubmit={onSubmit} className="mt-4 flex gap-2">
+            <label htmlFor="copiloto-input" className="sr-only">
+              Sua dúvida clínica
+            </label>
+            <input
+              id="copiloto-input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escreva sua dúvida clínica…"
+              data-testid="copiloto-input"
+              className="bg-card border-border text-foreground placeholder:text-muted-foreground focus:ring-ring min-h-[3rem] flex-1 rounded-2xl border px-4 text-base focus:ring-2 focus:outline-none"
+            />
+            {mensagens.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMensagens([])}
+                aria-label="Limpar conversa"
+                className="border-border text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => setMensagens([])}
-              aria-label="Limpar conversa"
-              className="border-border text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              type="submit"
+              disabled={loading || !input.trim()}
+              data-testid="copiloto-send"
+              aria-label="Enviar pergunta"
+              className="bg-ai focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
-              <Trash2 className="h-5 w-5" aria-hidden="true" />
+              <SendHorizontal className="h-5 w-5" aria-hidden="true" />
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            data-testid="copiloto-send"
-            aria-label="Enviar pergunta"
-            className="bg-ai focus-visible:ring-ring inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
-          >
-            <SendHorizontal className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </form>
+          </form>
+        )}
       </main>
     </div>
   );

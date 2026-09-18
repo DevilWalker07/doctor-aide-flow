@@ -102,19 +102,30 @@ export async function generateBriefing(
   }
 }
 
-export async function extractLabWithAI(
-  inputText: string,
-  patientContext?: unknown,
-): Promise<LabExtractionResult> {
+/**
+ * Organiza laboratório na linha do prontuário.
+ *
+ * Aceita texto, imagens (foto do papel, print da tela) e PDF. Rota própria:
+ * antes isto ia para `/api/ai/extrair-clinica-medica` com
+ * `task: "lab-extractor"`, escondido atrás de outro endpoint.
+ *
+ * O fallback local só vale quando há texto — não existe como montar a linha
+ * a partir de uma foto sem a IA, e devolver linha vazia seria pior que falhar.
+ */
+export async function organizarLaboratorio(entrada: {
+  inputText?: string;
+  imagens?: { base64: string; mime: string }[];
+  pdfBase64?: string;
+  patientContext?: unknown;
+}): Promise<LabExtractionResult> {
   try {
-    return await postBackend<LabExtractionResult>("/api/ai/extrair-clinica-medica", {
-      inputText,
-      patientContext,
-      task: "lab-extractor",
-    });
+    return await postBackend<LabExtractionResult>("/api/ai/organizar-laboratorio", entrada);
   } catch (error) {
-    console.warn("Extração de laboratório indisponível, usando fallback local.", error);
-    return fallbackLabExtraction(inputText);
+    if (entrada.inputText?.trim()) {
+      console.warn("Organização de laboratório indisponível, usando fallback local.", error);
+      return fallbackLabExtraction(entrada.inputText);
+    }
+    throw error;
   }
 }
 

@@ -4,14 +4,25 @@ import {
   ChevronLeft,
   ClipboardPaste,
   Copy,
+  FileType,
   FlaskConical,
+  Image as ImageIcon,
   Loader2,
+  Paperclip,
   ScanLine,
   Sparkles,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { extractLabWithAI, organizarLaudoImagem } from "@/lib/ai/aiService";
+import { organizarLaboratorio, organizarLaudoImagem } from "@/lib/ai/aiService";
+import {
+  arquivosDe,
+  classificar,
+  pdfParaBase64,
+  reduzirImagem,
+  type Anexo,
+} from "@/lib/anexosLaboratorio";
 import type { LabExtractionResult, LaudoImagemResult } from "@/lib/types/lab";
 
 export const Route = createFileRoute("/resumo-exames")({
@@ -27,6 +38,10 @@ function ResumoExamesPage() {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<LabExtractionResult | null>(null);
   const [laudo, setLaudo] = useState<LaudoImagemResult | null>(null);
+  // Foto do papel, print da tela, PDF. É como o resultado chega no plantão —
+  // o caminho só-texto deixava isso de fora.
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const inputArquivo = useRef<HTMLInputElement>(null);
 
   const trocarModo = (novo: Modo) => {
     if (novo === modo) return;
@@ -35,26 +50,52 @@ function ResumoExamesPage() {
     // impressão de que o resumo corresponde ao texto atual.
     setResultado(null);
     setLaudo(null);
+    setAnexos([]);
   };
 
-  const resumir = async () => {
-    if (texto.trim().length < 10) {
-      toast.error(
-        modo === "laboratorio" ? "Cole o texto dos exames." : "Cole o texto do laudo de imagem.",
-      );
+  const adicionar = (files: File[]) => {
+    const novos = files.map(classificar).filter((a): a is Anexo => a !== null);
+    if (novos.length === 0) {
+      toast.error("Só imagem ou PDF.");
       return;
     }
+    setAnexos((atual) => [...atual, ...novos].slice(0, 6));
+  };
+
+  const organizar = async () => {
+    const temTexto = texto.trim().length >= 10;
+    if (modo === "laboratorio" && !temTexto && anexos.length === 0) {
+      toast.error("Cole o texto dos exames, anexe uma foto ou envie o PDF.");
+      return;
+    }
+    if (modo === "imagem" && !temTexto) {
+      toast.error("Cole o texto do laudo de imagem.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (modo === "laboratorio") {
         setLaudo(null);
-        setResultado(await extractLabWithAI(texto));
+        const imagens = [];
+        let pdfBase64: string | undefined;
+        for (const a of anexos) {
+          if (a.tipo === "imagem") imagens.push(await reduzirImagem(a.arquivo));
+          else pdfBase64 = await pdfParaBase64(a.arquivo);
+        }
+        setResultado(
+          await organizarLaboratorio({
+            inputText: temTexto ? texto : undefined,
+            imagens: imagens.length ? imagens : undefined,
+            pdfBase64,
+          }),
+        );
       } else {
         setResultado(null);
         setLaudo(await organizarLaudoImagem(texto));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao resumir.");
+      toast.error(err instanceof Error ? err.message : "Falha ao organizar.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +125,7 @@ function ResumoExamesPage() {
     const texto = linhas.filter(Boolean).join("\n");
     if (!texto) return;
     navigator.clipboard.writeText(texto);
-    toast.success("Resumo copiado.");
+    toast.success("Copiado para o prontuário.");
   };
 
   const valores = Object.entries(resultado?.valores ?? {}).filter(([, v]) => v != null && v !== "");
@@ -105,10 +146,10 @@ function ResumoExamesPage() {
               className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-300"
               aria-hidden="true"
             />
-            Resumo de exames
+            Exames para o prontuário
           </h1>
           <p className="t-label text-muted-foreground font-normal">
-            Laboratório e laudos em uma linha
+            Laboratório e laudos na linha que você escreve na evolução
           </p>
         </div>
       </header>
@@ -173,11 +214,96 @@ function ResumoExamesPage() {
                 : "Cole o laudo do radiologista, com achados e conclusão."
             }
             data-testid="resumo-input"
+            onPaste={(e) => {
+              // Ctrl+V de um print vira anexo em vez de colar nada. É assim
+              // que chega o resultado copiado da tela do laboratório.
+              if (modo !== "laboratorio") return;
+              const arquivos = arquivosDe(e.clipboardData?.items ?? null);
+              if (arquivos.length) {
+                e.preventDefault();
+                adicionar(arquivos);
+                toast.success("Print anexado.");
+              }
+            }}
+            onDragOver={(e) => modo === "laboratorio" && e.preventDefault()}
+            onDrop={(e) => {
+              if (modo !== "laboratorio") return;
+              const arquivos = arquivosDe(e.dataTransfer?.files ?? null);
+              if (arquivos.length) {
+                e.preventDefault();
+                adicionar(arquivos);
+              }
+            }}
             className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-2xl border p-4 font-mono text-base focus:ring-2 focus:outline-none"
           />
+
+          {modo === "laboratorio" && (
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={inputArquivo}
+                accept="image/*,application/pdf"
+                multiple
+                className="hidden"
+                data-testid="resumo-arquivo-input"
+                onChange={(e) => {
+                  adicionar(arquivosDe(e.target.files));
+                  e.target.value = "";
+                }}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => inputArquivo.current?.click()}
+                  data-testid="resumo-anexar"
+                  className="t-label border-border bg-background text-foreground hover:border-primary hover:text-primary focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-2 rounded-xl border px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <Paperclip className="h-4 w-4" aria-hidden="true" /> Anexar foto ou PDF
+                </button>
+                <span className="t-label text-muted-foreground self-center font-normal">
+                  ou cole um print aqui (Ctrl+V), ou arraste o arquivo
+                </span>
+              </div>
+
+              {anexos.length > 0 && (
+                <ul className="space-y-1.5" data-testid="resumo-anexos">
+                  {anexos.map((a, i) => (
+                    <li
+                      key={`${a.nome}-${i}`}
+                      className="border-border bg-background flex items-center gap-2 rounded-xl border px-3 py-2"
+                    >
+                      {a.tipo === "pdf" ? (
+                        <FileType
+                          className="text-muted-foreground h-4 w-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ImageIcon
+                          className="text-muted-foreground h-4 w-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="t-label text-foreground min-w-0 flex-1 truncate font-normal">
+                        {a.nome}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAnexos((atual) => atual.filter((_, j) => j !== i))}
+                        aria-label={`Remover ${a.nome}`}
+                        className="touch-target text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           <button
             type="button"
-            onClick={resumir}
+            onClick={organizar}
             disabled={loading}
             data-testid="resumo-submit"
             className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
@@ -187,7 +313,11 @@ function ResumoExamesPage() {
             ) : (
               <Sparkles className="h-5 w-5" aria-hidden="true" />
             )}
-            {loading ? "Resumindo…" : "Resumir com IA"}
+            {loading
+              ? "Organizando…"
+              : modo === "laboratorio"
+                ? "Organizar para o prontuário"
+                : "Organizar o laudo"}
           </button>
         </section>
 

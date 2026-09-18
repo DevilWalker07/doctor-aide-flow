@@ -136,3 +136,37 @@ test.describe("fluxo de cadastro de paciente", () => {
     await expect(page.getByRole("heading", { name: /Fotografar documento/i })).toBeVisible();
   });
 });
+
+test.describe("copiloto com especialistas", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedDoctor(page);
+    await ensureSession(page);
+  });
+
+  test("escolhe o especialista antes de perguntar e dá para trocar", async ({ page }) => {
+    await page.goto("/copiloto");
+
+    // Sem ninguém escolhido, não há campo de pergunta: a tela pergunta com
+    // quem falar. Antes eram quatro rótulos num seletor, sem nome e sem cara.
+    await expect(page.getByTestId("especialista-picker")).toBeVisible();
+    await expect(page.getByTestId("copiloto-input")).toHaveCount(0);
+
+    // Os cinco estão disponíveis em qualquer local, sem restrição por setor.
+    for (const id of ["victor", "ana", "cris", "bruno", "lucia"]) {
+      await expect(page.getByTestId(`especialista-${id}`)).toBeVisible();
+    }
+
+    await page.getByTestId("especialista-cris").click();
+    await expect(page.getByTestId("especialista-picker")).toHaveCount(0);
+    await expect(page.getByTestId("copiloto-trocar-especialista")).toContainText("Dra. Cris");
+
+    const input = page.getByTestId("copiloto-input");
+    await input.fill("dose de amoxicilina para 12 kg");
+    await page.getByTestId("copiloto-send").click();
+    await expect(page.getByTestId("copiloto-msg-assistant")).toBeVisible({ timeout: 30_000 });
+
+    // Trocar volta para a escolha sem perder o caminho.
+    await page.getByTestId("copiloto-trocar-especialista").click();
+    await expect(page.getByTestId("especialista-picker")).toBeVisible();
+  });
+});

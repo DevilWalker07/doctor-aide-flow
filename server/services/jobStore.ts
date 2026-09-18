@@ -10,7 +10,15 @@ export interface JobRecord {
   status: JobStatus;
   stage: string;
   file_name: string | null;
-  result: ClinicalExtractionResult | null;
+  /**
+   * O resultado, no formato de quem consome.
+   *
+   * Era `ClinicalExtractionResult`, o formato de um consumidor só. O jobStore é
+   * persistência genérica — a passagem de plantão guarda outro estado aqui, e
+   * amarrar o armazenamento ao formato do primeiro caso de uso obrigaria a
+   * duplicar tabela.
+   */
+  result: unknown;
   error: string | null;
   created_at: string;
   updated_at: string;

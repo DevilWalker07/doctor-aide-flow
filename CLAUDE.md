@@ -131,6 +131,32 @@ motivo**, e `useBackendHealth` acende a faixa no hub. Antes era `process.exit(1)
 — o serviço morria calado no boot. Nunca volte a sair do processo por
 configuração ausente em caminho servido por requisição.
 
+## Agentes de manutenção
+
+Três ferramentas de bancada em `scripts/agentes/`, documentadas em
+`docs/agentes/README.md`. Não são recurso do produto: sem rota, sem tela, e
+nenhum código do app as chama.
+
+```bash
+npm run agente:analisar
+npm run agente:implementar -- --id <id>
+npm run agente:consultor-medico
+```
+
+**Limite de agente vai no código, nunca no prompt.** `scripts/agentes/lib/limites.ts`
+é o que impede a escrita; o prompt só informa que o limite existe. A checagem é
+no caminho **resolvido**, porque `src/../.env` só parece inofensivo antes de
+resolver.
+
+**A régua não é editável por quem ela mede.** `package.json`, os `tsconfig`, o
+`eslint.config.js` e o `vitest.config.ts` são bloqueados para o agente, e
+`portao()` confere que o diff não os tocou antes de confiar no resultado dos
+testes — senão bastaria redefinir `typecheck` como `exit 0`.
+
+**O portão roda de verdade.** `typecheck`, `lint` e `test:unit` são executados
+pelo script, e o que o modelo diz sobre eles não entra na decisão de commitar.
+Sem merge automático: abre PR e para.
+
 ## Segurança
 
 Documentos de pacientes reais **nunca** entram no repositório — `/*.docx` e

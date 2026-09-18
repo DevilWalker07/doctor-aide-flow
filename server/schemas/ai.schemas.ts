@@ -103,10 +103,89 @@ export const CopilotoBody = z.object({
     .min(1)
     .max(20),
   ambiente: z.string().max(60).optional(),
-  /** Especialidade que enquadra a resposta; reusa os prompts já existentes. */
-  agente: z.enum(["geral", "clinica-medica", "pediatria", "uti"]).optional(),
+  /**
+   * Quem responde. Os cinco especialistas nomeados, ou nenhum (resposta geral).
+   *
+   * Substituiu um enum de quatro rótulos sem nome e sem persona. A persona
+   * muda o enquadramento; as regras de segurança do COPILOTO_PROMPT continuam
+   * somadas por cima e não podem ser desligadas por ela.
+   */
+  especialista: z.enum(["victor", "ana", "cris", "bruno", "lucia"]).optional(),
 });
 export type CopilotoBody = z.infer<typeof CopilotoBody>;
+
+/**
+ * Parecer consultivo de especialista.
+ *
+ * Espelha o contrato de JSON que os prompts dos especialistas exigem. Na versão
+ * anterior a saída ia direto para a tela sem validação nenhuma — um campo
+ * faltando virava tela quebrada, e um campo inventado entrava como dado
+ * clínico.
+ */
+/**
+ * Laboratório para organizar em linha de prontuário.
+ *
+ * Aceita texto colado **ou** imagens — foto do papel, print da tela do
+ * laboratório, página de PDF. O caminho só-texto existia e deixava de fora o
+ * jeito mais comum de receber resultado no plantão, que é uma foto.
+ *
+ * As imagens chegam já reduzidas pelo cliente: a função serverless tem limite
+ * de corpo bem abaixo do tamanho de um print de celular.
+ */
+export const LaboratorioBody = z
+  .object({
+    inputText: z.string().max(20_000).optional(),
+    imagens: z
+      .array(
+        z.object({
+          base64: z.string().min(1).max(3_000_000),
+          mime: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        }),
+      )
+      .max(6)
+      .optional(),
+    /** PDF do laboratório. O servidor extrai o texto; se for escaneado, lê as páginas. */
+    pdfBase64: z.string().min(1).max(4_000_000).optional(),
+    patientContext: z.unknown().optional(),
+  })
+  .refine(
+    (b) => Boolean(b.inputText?.trim()) || Boolean(b.imagens?.length) || Boolean(b.pdfBase64),
+    { message: "Cole o texto dos exames, anexe uma foto ou envie o PDF." },
+  );
+export type LaboratorioBody = z.infer<typeof LaboratorioBody>;
+
+export const ParecerEspecialistaSchema = z.object({
+  sections: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(120),
+        content: z.string().trim().min(1).max(4000),
+        alert: z.boolean().optional().default(false),
+      }),
+    )
+    .max(12)
+    .default([]),
+  suggestions: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1).max(40),
+        text: z.string().trim().min(1).max(600),
+        priority: z.enum(["alta", "media", "baixa"]).default("media"),
+      }),
+    )
+    .max(20)
+    .default([]),
+  references: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+});
+export type ParecerEspecialista = z.infer<typeof ParecerEspecialistaSchema>;
+
+export const ParecerEspecialistaBody = z.object({
+  especialista: z.enum(["victor", "ana", "cris", "bruno", "lucia"]),
+  /** Contexto montado pelo cliente a partir da ficha, via buildContextoClinico. */
+  contexto_clinico: z.string().trim().min(1).max(20_000),
+  tipo_evolucao: z.string().max(60).optional(),
+});
+export type ParecerEspecialistaBody = z.infer<typeof ParecerEspecialistaBody>;
 
 export const PassagemBodySchema = z
   .object({
@@ -121,6 +200,14 @@ export const PassagemBodySchema = z
       .string()
       .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
       .default(todayBR),
+    /**
+     * Arquivos já enviados ao Storage pelo navegador.
+     *
+     * O schema é `strict`, então o campo precisa estar declarado aqui — sem
+     * isso a requisição inteira é recusada com "Unrecognized key". Ausente no
+     * envio multipart do contêiner, que manda os arquivos no corpo.
+     */
+    storage_paths: z.array(z.string().trim().min(1).max(300)).max(30).optional(),
   })
   .strict();
 export type PassagemBody = z.infer<typeof PassagemBodySchema>;

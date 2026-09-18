@@ -115,3 +115,55 @@ export async function apagarDoBucket(storagePath: string): Promise<void> {
   const { error } = await admin.storage.from(BUCKET_DOCUMENTOS).remove([storagePath]);
   if (error) console.warn(`[storage] não removeu ${storagePath}:`, error.message);
 }
+
+/** Onde ficam os arquivos que o app gera, separados do que o médico envia. */
+const PASTA_SAIDA = "saidas";
+
+/**
+ * Guarda um arquivo gerado pelo app e devolve o caminho.
+ *
+ * O DOCX da passagem não volta no corpo da resposta: o job é assíncrono, e o
+ * cliente que fez o POST já foi embora quando o arquivo fica pronto. Fica no
+ * mesmo bucket privado, sob a pasta do próprio médico.
+ */
+export async function guardarSaida(
+  userId: string | null,
+  nomeArquivo: string,
+  conteudo: Buffer,
+): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    throw new HttpError(503, "storage_indisponivel", "Armazenamento de arquivos não configurado.");
+  }
+  const caminho = `${userId ?? "local"}/${PASTA_SAIDA}/${Date.now()}-${sanitizeFilename(nomeArquivo)}`;
+  const { error } = await admin.storage.from(BUCKET_DOCUMENTOS).upload(caminho, conteudo, {
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    upsert: true,
+  });
+  if (error) {
+    throw new HttpError(
+      500,
+      "falha_ao_guardar",
+      `Não consegui guardar o arquivo: ${error.message}`,
+    );
+  }
+  return caminho;
+}
+
+/**
+ * URL temporária para o navegador baixar. O bucket é privado — sem isso o
+ * arquivo não sai de lá.
+ */
+export async function urlAssinada(caminho: string, segundos = 3600): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    throw new HttpError(503, "storage_indisponivel", "Armazenamento de arquivos não configurado.");
+  }
+  const { data, error } = await admin.storage
+    .from(BUCKET_DOCUMENTOS)
+    .createSignedUrl(caminho, segundos, { download: true });
+  if (error || !data?.signedUrl) {
+    throw new HttpError(404, "arquivo_nao_encontrado", "O arquivo expirou ou não está mais lá.");
+  }
+  return data.signedUrl;
+}
