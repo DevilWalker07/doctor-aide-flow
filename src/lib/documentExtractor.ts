@@ -6,6 +6,7 @@
 
 import { apiFetch } from "./apiClient";
 import { supabase } from "./supabase";
+import { mimeDoArquivo } from "./mimeDocumento";
 
 export interface JobStatusResponse {
   job_id: string;
@@ -104,7 +105,7 @@ export async function startClinicalExtractionJob(
     const { error: erroUpload } = await supabase.storage
       .from(plano.bucket)
       .uploadToSignedUrl(plano.storage_path, plano.token ?? "", file, {
-        contentType: file.type || undefined,
+        contentType: mimeDoArquivo(file),
       });
     if (erroUpload) throw new Error(`Falha ao enviar o arquivo: ${erroUpload.message}`);
 

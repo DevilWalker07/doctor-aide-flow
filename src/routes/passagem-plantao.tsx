@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/apiClient";
 import { supabase } from "@/lib/supabase";
+import { mimeDoArquivo } from "@/lib/mimeDocumento";
 import { storage } from "@/lib/storage";
 import {
   ChevronLeft,
@@ -204,7 +205,10 @@ function PassagemPlantaoPage() {
         const { error } = await supabase.storage
           .from(bucket)
           .uploadToSignedUrl(plano.storage_path, plano.token, f.file, {
-            contentType: f.file.type || undefined,
+            // Mime pela extensão: `File.type` vem vazio para .docx em boa
+            // parte dos navegadores, e mime fora da lista do bucket é envio
+            // recusado depois de ter subido.
+            contentType: mimeDoArquivo(f.file),
           });
         if (error) throw new Error(`Falha ao enviar ${f.file.name}: ${error.message}`);
         caminhos.push(plano.storage_path);
