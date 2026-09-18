@@ -177,6 +177,9 @@ describe("/api/extract/*", () => {
       expect(res.body.modo).toBe("storage");
       expect(res.body.bucket).toBe("documentos-clinicos");
       expect(res.body.storage_path.startsWith(`${USER}/`)).toBe(true);
+      // Sem login não há sessão no navegador: o servidor emite a autorização
+      // para o arquivo ir direto ao Storage assim mesmo.
+      expect(res.body.token).toBeTruthy();
       // Nome saneado: acento e espaço não viram caminho.
       expect(res.body.storage_path).toMatch(/Evolucao_do_paciente\.pdf$/);
     } finally {

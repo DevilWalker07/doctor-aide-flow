@@ -19,7 +19,7 @@ import {
 } from "../lib/storageDocumentos.js";
 import { safeUnlink, sanitizeFilename } from "../lib/files.js";
 import type { PassagemPlantaoBatch } from "../schemas/ai.schemas.js";
-import { gerarMapaPlantaoDocx } from "./docxGenerator.service.js";
+import { gerarMapaPlantaoDocx, type CabecalhoMapa } from "./docxGenerator.service.js";
 import type { JobStore } from "./jobStore.js";
 import {
   chunkEvolucoes,
@@ -34,6 +34,7 @@ export interface EstadoPassagem {
   tipo: "passagem-plantao";
   setor: string;
   data: string;
+  cabecalho: CabecalhoMapa;
   lotes: EvolucaoInput[][];
   proximo: number;
   parciais: PassagemPlantaoBatch[];
@@ -57,6 +58,7 @@ export interface IniciarArgs {
   storagePaths: string[];
   setor: string;
   data: string;
+  cabecalho?: CabecalhoMapa;
   userId: string | null;
   jobStore: JobStore;
 }
@@ -69,6 +71,7 @@ export async function iniciarPassagem({
   storagePaths,
   setor,
   data,
+  cabecalho = {},
   userId,
   jobStore,
 }: IniciarArgs): Promise<{ jobId: string; lotes: number; arquivos: number; warnings: string[] }> {
@@ -113,6 +116,7 @@ export async function iniciarPassagem({
     tipo: "passagem-plantao",
     setor,
     data,
+    cabecalho,
     lotes,
     proximo: 0,
     parciais: [],
@@ -178,7 +182,7 @@ export async function processarProximoLote(
   }
 
   const resultado = consolidar(e.parciais, e.warnings, e.lotes.length, e.falhas);
-  const buffer = await gerarMapaPlantaoDocx(resultado.data, e.setor, e.data);
+  const buffer = await gerarMapaPlantaoDocx(resultado.data, e.setor, e.data, e.cabecalho);
   const nome = sanitizeFilename(`MAPA_PASSAGEM_${e.setor}_${e.data.replace(/\//g, "-")}.docx`);
   const caminho = await guardarSaida(job.user_id, nome, buffer);
 

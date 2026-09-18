@@ -61,12 +61,18 @@ export function createPassagemPlantaoRouter({
     if (caminhos.length > MAX_FILES) {
       throw new HttpError(400, "too_many_files", `No máximo ${MAX_FILES} arquivos por vez.`);
     }
-    const { setor, data } = PassagemBodySchema.parse(req.body ?? {});
+    const corpoValidado = PassagemBodySchema.parse(req.body ?? {});
+    const { setor, data } = corpoValidado;
 
     const inicio = await iniciarPassagem({
       storagePaths: caminhos,
       setor,
       data,
+      cabecalho: {
+        hospital: corpoValidado.hospital,
+        periodo: corpoValidado.periodo,
+        passagemPara: corpoValidado.passagem_para,
+      },
       userId: req.userId,
       jobStore,
     });
@@ -214,7 +220,11 @@ const gerarSincrono: RequestHandler = async (req, res) => {
     );
   }
 
-  const docxBuffer = await gerarMapaPlantaoDocx(result.data, setor, data);
+  const docxBuffer = await gerarMapaPlantaoDocx(result.data, setor, data, {
+    hospital: body.hospital,
+    periodo: body.periodo,
+    passagemPara: body.passagem_para,
+  });
   const filename = sanitizeFilename(`MAPA_PASSAGEM_${setor}_${data.replace(/\//g, "-")}.docx`);
 
   res.setHeader(

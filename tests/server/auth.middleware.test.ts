@@ -47,9 +47,28 @@ describe("requireAuth", () => {
     expect(getUserMock).toHaveBeenCalledTimes(1);
   });
 
-  it("token inválido → 401 mesmo em modo opcional", async () => {
-    process.env.TEST_AUTH_REQUIRED = "0";
+  it("obrigatório: token inválido → 401", async () => {
+    process.env.TEST_AUTH_REQUIRED = "1";
     const res = await request(app()).get("/api/whoami").set("Authorization", "Bearer nope");
     expect(res.status).toBe(401);
+  });
+
+  /**
+   * Este caso mudou de resposta, de propósito.
+   *
+   * Antes devolvia 401 também em modo opcional. Mas com login opcional isso é
+   * a trava voltando pela porta dos fundos: o navegador guarda a sessão do
+   * Supabase, e uma sessão morta — de antes de rotacionar as chaves, por
+   * exemplo — é mandada em toda chamada pelo apiFetch. O médico que nunca
+   * pediu login perderia TODAS as ferramentas com 401, sem entender por quê.
+   *
+   * Não abre brecha: em modo opcional o anônimo já entra. Tratar token podre
+   * como anônimo não concede nada que o anônimo não tenha.
+   */
+  it("opcional: token inválido entra como anônimo, não derruba as ferramentas", async () => {
+    process.env.TEST_AUTH_REQUIRED = "0";
+    const res = await request(app()).get("/api/whoami").set("Authorization", "Bearer nope");
+    expect(res.status).toBe(200);
+    expect(res.body.userId).toBeNull();
   });
 });

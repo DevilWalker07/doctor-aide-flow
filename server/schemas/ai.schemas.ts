@@ -208,6 +208,13 @@ export const PassagemBodySchema = z
      * envio multipart do contêiner, que manda os arquivos no corpo.
      */
     storage_paths: z.array(z.string().trim().min(1).max(300)).max(30).optional(),
+    /** Cabeçalho do mapa, como no modelo do hospital. */
+    hospital: z.string().trim().max(120).optional(),
+    periodo: z.enum(["diurno", "noturno"]).optional(),
+    passagem_para: z
+      .string()
+      .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
+      .optional(),
   })
   .strict();
 export type PassagemBody = z.infer<typeof PassagemBodySchema>;
@@ -345,6 +352,17 @@ export const PatientRowSchema = z.object({
   alertasPendencias: str(""),
   dispositivos: nullableStr,
   anotacoesVisita: str(""),
+  /**
+   * Título da linha do leito na folha de sugestões: "DANIEL – HDA/HDB,
+   * ANEMIA EM ASCENSÃO, POSSÍVEL ALTA".
+   */
+  resumoLinha: str(""),
+  /**
+   * Raciocínio clínico por leito — a "FOLHA DE SUGESTÕES CLÍNICAS" do mapa.
+   * `.catch([])` de propósito: se o modelo não devolver, o mapa sai sem a
+   * folha, nunca com sugestão inventada no lugar de dado clínico.
+   */
+  sugestoesClinicas: strArr,
 });
 export type PatientRow = z.infer<typeof PatientRowSchema>;
 

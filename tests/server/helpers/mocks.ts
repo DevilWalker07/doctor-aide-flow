@@ -111,6 +111,14 @@ const storageApi = {
       storageMock.objetos.set(caminho, Buffer.from(conteudo));
       return { data: { path: caminho }, error: null };
     },
+    createSignedUploadUrl: async (caminho: string) => ({
+      data: {
+        path: caminho,
+        token: `token-de-${caminho}`,
+        signedUrl: `https://storage.teste/${caminho}`,
+      },
+      error: null,
+    }),
     createSignedUrl: async (caminho: string) => {
       if (!storageMock.objetos.has(caminho)) {
         return { data: null, error: { message: "not found" } };

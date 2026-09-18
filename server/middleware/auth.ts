@@ -52,6 +52,16 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
   const userId = await resolveUserId(token);
   if (!userId) {
+    // Token que não resolve com login OPCIONAL não pode barrar ninguém: seria
+    // a trava de login voltando pela porta dos fundos. O navegador do hospital
+    // pode ter uma sessão velha guardada — de antes de rotacionar as chaves do
+    // Supabase, por exemplo — e essa sessão morta derrubaria todas as
+    // ferramentas com 401, sem o médico ter pedido login nenhum.
+    if (!authRequired()) {
+      req.userId = null;
+      next();
+      return;
+    }
     res.status(401).json({ error: "unauthorized", message: "Token inválido ou expirado." });
     return;
   }

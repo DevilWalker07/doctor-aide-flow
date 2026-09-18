@@ -7,24 +7,6 @@ export interface RouterContext {
 }
 
 /**
- * Telas que funcionam sem conta. O médico abre o app e resolve um documento,
- * tira uma dúvida no copiloto ou organiza um laudo sem precisar de login. A
- * conta é exigida onde entram dados de paciente: plantão, ficha, evolução.
- */
-const PUBLIC_PATHS = new Set([
-  "/",
-  "/documentos",
-  "/atestado",
-  "/prescricao-alta",
-  "/encaminhamento",
-  "/orientacoes-paciente",
-  "/copiloto",
-  "/resumo-exames",
-  "/recuperar-senha",
-  "/nova-senha",
-]);
-
-/**
  * Telas que só fazem sentido para quem NÃO tem sessão. Ficavam no mesmo
  * conjunto das públicas, e por isso qualquer caminho público com sessão ativa
  * era jogado para o dashboard — o que agora tiraria o médico logado do hub.
@@ -58,11 +40,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const { auth } = context;
     if (!auth.configured) return;
     const { pathname } = location;
-    const aberta = PUBLIC_PATHS.has(pathname) || AUTH_ONLY_PATHS.has(pathname);
-
-    if (!aberta && !auth.session) {
-      throw redirect({ to: "/login", search: { redirect: location.href } });
-    }
+    // Sem trava de login: o app é de uso próprio, em plantão, e a tela de
+    // login só atrapalhava. /login e /cadastro continuam existindo para quem
+    // quiser entrar — mas nada exige sessão para funcionar.
     if (AUTH_ONLY_PATHS.has(pathname) && auth.session) {
       throw redirect({ to: "/dashboard" });
     }

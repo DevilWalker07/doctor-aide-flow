@@ -90,13 +90,18 @@ describe("/api/ai/*", () => {
     expect(res.status).toBe(200);
   });
 
-  it("rejeita token inválido com 401", async () => {
+  /**
+   * Com AUTH_OPTIONAL, sessão velha no navegador NÃO derruba a ferramenta.
+   * O apiFetch manda o token guardado em toda chamada; se ele estiver morto
+   * (chaves rotacionadas, por exemplo), responder 401 aqui tiraria o copiloto,
+   * a evolução e o resumo de exames de quem nunca pediu login.
+   */
+  it("token inválido em modo opcional entra como anônimo, não 401", async () => {
     const res = await request(app)
       .post("/api/ai/gerar-briefing")
       .set("Authorization", "Bearer nope")
       .send({ patients: [] });
-    expect(res.status).toBe(401);
-    expect(res.body.error).toBe("unauthorized");
+    expect(res.status).toBe(200);
   });
 
   it("400 em body inválido com issues", async () => {

@@ -70,6 +70,11 @@ export const aiFixtures = {
         alertasPendencias: "! RX TÓRAX PENDENTE",
         dispositivos: "JELCO MSD",
         anotacoesVisita: "",
+        resumoLinha: "PACIENTE TESTE UM – PAC EM TRATAMENTO, PCR EM QUEDA",
+        sugestoesClinicas: [
+          "PCR em queda com ATB em D3 sugere boa resposta — manter esquema.",
+          "RX de controle define se há complicação (derrame? consolidação nova?).",
+        ],
       },
       {
         leito: "L02",
@@ -84,6 +89,11 @@ export const aiFixtures = {
         alertasPendencias: "!! K 5,7 — REAVALIAR ELETRÓLITOS",
         dispositivos: "SVD (D3)",
         anotacoesVisita: "",
+        resumoLinha: "PACIENTE TESTE DOIS – ITU COMPLICADA, K 5,7 EM CORREÇÃO",
+        sugestoesClinicas: [
+          "K 5,7 com CR 2,1: ECG de base e repetir K após glicoinsulina.",
+          "Ciprofloxacino precisa de ajuste para o ClCr estimado.",
+        ],
       },
     ],
     alertasCriticos: [

@@ -34,7 +34,18 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   ALLOWED_ORIGINS: z.string().default(""),
-  AUTH_OPTIONAL: bool.default(false),
+  /**
+   * Login obrigatório?
+   *
+   * Passou a ser opcional por decisão do dono do app: ele usa sozinho, em
+   * plantão, e a tela de login só atrapalhava. `AUTH_OPTIONAL=false` volta a
+   * exigir sessão.
+   *
+   * O que isso significa, para ficar registrado: sem login, quem tiver o
+   * endereço usa o app, e os arquivos enviados ficam numa pasta comum em vez
+   * de uma por médico.
+   */
+  AUTH_OPTIONAL: bool.default(true),
   AI_MOCK: bool.default(false),
   MAX_PDF_PAGES: z.coerce.number().int().min(1).max(30).default(15),
   STATIC_DIR: z.string().optional(),
@@ -74,12 +85,11 @@ export const isProduction = env.NODE_ENV === "production";
 export const hasOpenAIKey = () => Boolean(env.OPENAI_API_KEY) || env.AI_MOCK;
 export const hasSupabase = () => Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Autenticação é obrigatória por padrão. AUTH_OPTIONAL=true só para dev/testes sem Supabase.
 export const authRequired = () => !env.AUTH_OPTIONAL;
 
 if (authRequired() && !hasSupabase()) {
   configErrors.push(
-    "Sem SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY o backend não valida tokens. Defina as variáveis ou AUTH_OPTIONAL=true (apenas dev).",
+    "Com AUTH_OPTIONAL=false é preciso SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY para validar tokens.",
   );
 }
 
