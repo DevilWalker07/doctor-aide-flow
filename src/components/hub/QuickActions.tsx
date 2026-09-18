@@ -1,13 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FlaskConical, Lock, MessageSquareText, Stethoscope } from "lucide-react";
+import {
+  ArrowUpRight,
+  ClipboardList,
+  FlaskConical,
+  MessageSquareText,
+  Stethoscope,
+} from "lucide-react";
 import { FileStack } from "lucide-react";
 
 /**
- * As quatro ações da tela inicial.
+ * As ações da tela inicial. Nenhuma exige conta: o médico abre o app e
+ * resolve. A descrição diz QUANDO usar, não o que a tela é.
  *
- * As três primeiras não exigem conta — o médico abre o app e resolve. A quarta
- * é o plantão, que mexe com dados de paciente e por isso pede login.
- * A descrição diz QUANDO usar, não o que a tela é.
+ * A passagem de plantão não tinha porta de entrada nenhuma aqui — só existia
+ * digitando /passagem-plantao na barra do navegador. Era a ferramenta mais
+ * usada sem atalho na primeira tela.
  */
 const ACOES = [
   {
@@ -37,15 +44,24 @@ const ACOES = [
     fundo: "bg-sky-500/10",
     testid: "hub-resumo-exames",
   },
+  {
+    to: "/passagem-plantao" as const,
+    label: "Passagem de plantão",
+    descricao: "Suba as evoluções e saia com o mapa em DOCX",
+    icon: ClipboardList,
+    tom: "text-amber-700 dark:text-amber-300",
+    fundo: "bg-amber-500/10",
+    testid: "hub-passagem-plantao",
+  },
 ];
 
-export function QuickActions({ precisaDeConta = false }: { precisaDeConta?: boolean }) {
+export function QuickActions() {
   return (
     <section aria-labelledby="hub-acoes" className="space-y-3">
       <h2 id="hub-acoes" className="t-eyebrow text-muted-foreground">
         Ações rápidas
       </h2>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {ACOES.map((a) => (
           <Link
             key={a.to}
@@ -83,16 +99,10 @@ export function QuickActions({ precisaDeConta = false }: { precisaDeConta?: bool
             <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl">
               <Stethoscope className="h-5 w-5" aria-hidden="true" />
             </div>
-            {precisaDeConta ? (
-              <span className="t-eyebrow text-muted-foreground inline-flex items-center gap-1">
-                <Lock className="h-3 w-3" aria-hidden="true" /> Conta
-              </span>
-            ) : (
-              <ArrowUpRight
-                className="text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors"
-                aria-hidden="true"
-              />
-            )}
+            <ArrowUpRight
+              className="text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors"
+              aria-hidden="true"
+            />
           </div>
           <div className="mt-3">
             <p className="t-title text-foreground">Plantão</p>

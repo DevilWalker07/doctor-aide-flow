@@ -201,9 +201,13 @@ function HubPage() {
 
   const primeiroNome =
     nomeExibicao(nomeMedico.replace(/^dr\(a\)\.?\s*/i, "").split(" ")[0]) || "Doutor(a)";
-  // Sem conta o médico usa documentos, copiloto e exames; o plantão é que
-  // exige login, porque é ali que entram dados de paciente.
-  const precisaDeConta = auth.configured && !auth.session;
+  // Nada no app exige conta. Isto aqui só decide o que o cabeçalho mostra
+  // (Entrar ou Sair) e como saudar — não porta trancada nenhuma.
+  //
+  // O nome antes era `precisaDeConta`, e o nome era o bug: ele acendia selo
+  // de cadeado nas ações e escrevia "abrir um plantão precisa de conta" na
+  // primeira tela, o que deixou de ser verdade quando a trava saiu.
+  const semSessao = auth.configured && !auth.session;
 
   return (
     <div className="bg-background min-h-screen">
@@ -231,7 +235,7 @@ function HubPage() {
           >
             <Settings2 className="h-5 w-5" aria-hidden="true" />
           </Link>
-          {precisaDeConta ? (
+          {semSessao ? (
             <Link
               to="/login"
               search={{}}
@@ -256,7 +260,7 @@ function HubPage() {
         <div>
           <p className="t-eyebrow text-primary">{saudacao()}</p>
           <h1 className="t-display text-foreground mt-1">
-            {precisaDeConta ? "Bem-vindo ao Medfluxo" : `Dr(a). ${primeiroNome}`}
+            {semSessao ? "Bem-vindo ao Medfluxo" : `Dr(a). ${primeiroNome}`}
           </h1>
         </div>
 
@@ -285,10 +289,10 @@ function HubPage() {
         />
 
         {/* 2. As quatro ações. As três primeiras funcionam sem conta. */}
-        <QuickActions precisaDeConta={precisaDeConta} />
+        <QuickActions />
 
         {/* 3. Abrir um plantão novo. */}
-        <LocalPicker precisaDeConta={precisaDeConta} />
+        <LocalPicker />
       </main>
 
       <footer className="py-8 text-center">

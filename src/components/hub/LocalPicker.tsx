@@ -1,15 +1,17 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Lock } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { acentoDo, LOCAIS } from "@/lib/ambientes";
 
 /**
  * "Onde você está agora?" — os dez locais de atendimento em lista plana.
  *
- * Um toque leva ao destino final. O selo "Em breve" aparece antes do clique e
- * o selo de conta avisa que o plantão exige login, em vez de deixar o médico
- * descobrir no meio do caminho.
+ * Um toque leva ao destino final. O selo "Em breve" aparece antes do clique.
+ *
+ * Existia aqui um selo "Conta" dizendo que abrir plantão exigia login. Depois
+ * que a trava saiu, esse aviso passou a ser falso — e aviso falso na primeira
+ * tela é pior que aviso nenhum: faz o médico não tentar o que funciona.
  */
-export function LocalPicker({ precisaDeConta = false }: { precisaDeConta?: boolean }) {
+export function LocalPicker() {
   return (
     <section aria-labelledby="hub-locais" className="space-y-4" id="locais">
       <div>
@@ -17,9 +19,7 @@ export function LocalPicker({ precisaDeConta = false }: { precisaDeConta?: boole
           Onde você está agora?
         </h2>
         <p className="t-body text-muted-foreground mt-1">
-          {precisaDeConta
-            ? "Abrir um plantão precisa de conta — os dados de paciente ficam protegidos por ela."
-            : "O local define o modelo de evolução e os agentes usados no plantão."}
+          O local define o modelo de evolução e os agentes usados no plantão.
         </p>
       </div>
 
@@ -46,11 +46,6 @@ export function LocalPicker({ precisaDeConta = false }: { precisaDeConta?: boole
                     {!local.implementado && (
                       <span className="t-eyebrow bg-muted text-muted-foreground rounded-full px-2 py-1">
                         Em breve
-                      </span>
-                    )}
-                    {local.implementado && precisaDeConta && (
-                      <span className="t-eyebrow text-muted-foreground inline-flex items-center gap-1">
-                        <Lock className="h-3 w-3" aria-hidden="true" /> Conta
                       </span>
                     )}
                   </div>
