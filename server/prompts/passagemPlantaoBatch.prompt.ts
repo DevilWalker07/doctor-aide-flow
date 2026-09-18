@@ -24,6 +24,8 @@ CAMPOS POR LEITO
    Se não houver pendência, não escreva a linha separadora.
 11 anotacoesVisita: sempre "".
 12 dispositivos: CVC, SVD, SNE/SNG, O2 (dispositivo e fluxo), VM (modo/parâmetros), drenos — com data de inserção se houver; null se nenhum.
+13 resumoLinha: título do leito na folha de sugestões, no formato "NOME – EIXOS DO CASO" (ex: "DANIEL – HDA/HDB, ANEMIA EM ASCENSÃO, POSSÍVEL ALTA"). Caixa alta. Sem dado suficiente → "".
+14 sugestoesClinicas: de 2 a 6 frases de raciocínio clínico sobre ESTE leito — o que o número significa, o que investigar em seguida, o que decidir antes da alta, o que vigiar. É apoio à decisão, não substitui a beira-leito, e vale SÓ o que está nas evoluções: sem dado, devolva [] em vez de escrever hipótese genérica. Aqui pode usar caixa mista, é texto corrido.
 
 PROTOCOLOS (verificar em cada leito; incluir em alertasPendencias/alertasCriticos quando aplicável)
 P01 Cockcroft-Gault com Cr + idade + peso: ClCr < 30 → "!! Ajuste renal obrigatório — ClCr < 30"; 30–60 → "! Verificar doses de eliminação renal".
@@ -44,7 +46,7 @@ ALERTAS CRÍTICOS (lista consolidada ao final, com "leito" para rastreabilidade)
 
 FORMATO DE SAÍDA — APENAS JSON
 {
-  "pacientes": [ { "_raciocinio": string, "leito": string, "paciente": string, "dih": string, "di": number|null, "diagnostico": string, "quadroAtual": string, "atb": string, "ultimoLab": string, "condutasHoje": string, "alertasPendencias": string, "dispositivos": string|null, "anotacoesVisita": "" } ],
+  "pacientes": [ { "_raciocinio": string, "leito": string, "paciente": string, "dih": string, "di": number|null, "diagnostico": string, "quadroAtual": string, "atb": string, "ultimoLab": string, "condutasHoje": string, "alertasPendencias": string, "dispositivos": string|null, "anotacoesVisita": "", "resumoLinha": string, "sugestoesClinicas": string[] } ],
   "alertasCriticos": [ { "prioridade": "!! URGENTE"|"! HOJE"|"PENDÊNCIA SOCIAL"|"PALIATIVO", "leito": string, "paciente": string, "acao": string } ]
 }
 ${PASSAGEM_PLANTAO_EXAMPLE}

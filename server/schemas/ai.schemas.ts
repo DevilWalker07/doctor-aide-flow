@@ -352,6 +352,17 @@ export const PatientRowSchema = z.object({
   alertasPendencias: str(""),
   dispositivos: nullableStr,
   anotacoesVisita: str(""),
+  /**
+   * Título da linha do leito na folha de sugestões: "DANIEL – HDA/HDB,
+   * ANEMIA EM ASCENSÃO, POSSÍVEL ALTA".
+   */
+  resumoLinha: str(""),
+  /**
+   * Raciocínio clínico por leito — a "FOLHA DE SUGESTÕES CLÍNICAS" do mapa.
+   * `.catch([])` de propósito: se o modelo não devolver, o mapa sai sem a
+   * folha, nunca com sugestão inventada no lugar de dado clínico.
+   */
+  sugestoesClinicas: strArr,
 });
 export type PatientRow = z.infer<typeof PatientRowSchema>;
 
