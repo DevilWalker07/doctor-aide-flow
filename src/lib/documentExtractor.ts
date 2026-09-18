@@ -93,16 +93,18 @@ export async function startClinicalExtractionJob(
     modo: "storage" | "multipart";
     bucket?: string;
     storage_path?: string;
+    token?: string;
   };
 
   let response: Response;
 
   if (plano.modo === "storage" && plano.bucket && plano.storage_path) {
+    // Autorização emitida pelo servidor: sem login não há sessão aqui, e o RLS
+    // do bucket barraria o envio direto.
     const { error: erroUpload } = await supabase.storage
       .from(plano.bucket)
-      .upload(plano.storage_path, file, {
+      .uploadToSignedUrl(plano.storage_path, plano.token ?? "", file, {
         contentType: file.type || undefined,
-        upsert: false,
       });
     if (erroUpload) throw new Error(`Falha ao enviar o arquivo: ${erroUpload.message}`);
 

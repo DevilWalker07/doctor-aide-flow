@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/apiClient";
 import { supabase } from "@/lib/supabase";
+import { storage } from "@/lib/storage";
 import {
   ChevronLeft,
   Upload,
@@ -37,9 +38,36 @@ function isAllowed(file: File) {
   return ALLOWED_EXTS.includes(ext);
 }
 
+/**
+ * Dia seguinte a uma data DD/MM/AAAA. É para quem a passagem vai — o
+ * cabeçalho do modelo traz essa data, e digitá-la à mão de madrugada é
+ * exatamente o tipo de erro que ninguém confere.
+ * Data que não dá para ler vira `undefined`: o cabeçalho sai sem a linha,
+ * nunca com uma data inventada.
+ */
+function diaSeguinte(dataBr: string): string | undefined {
+  const m = dataBr.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return undefined;
+  const [, dd, mm, aaaa] = m;
+  const d = new Date(Number(aaaa), Number(mm) - 1, Number(dd));
+  if (
+    d.getFullYear() !== Number(aaaa) ||
+    d.getMonth() !== Number(mm) - 1 ||
+    d.getDate() !== Number(dd)
+  ) {
+    return undefined;
+  }
+  d.setDate(d.getDate() + 1);
+  return format(d, "dd/MM/yyyy");
+}
+
 function PassagemPlantaoPage() {
   const nav = useNavigate();
   const [setor, setSetor] = useState<"CMF" | "CMM" | "CMF/CMM">("CMF/CMM");
+  // Vão para o cabeçalho do mapa, como no modelo do hospital. Ficam guardados
+  // porque não mudam de um plantão para o outro.
+  const [hospital, setHospital] = useState(() => storage.getHospitalPadrao() ?? "");
+  const [periodo, setPeriodo] = useState<"diurno" | "noturno">("diurno");
   const [data, setData] = useState(format(new Date(), "dd/MM/yyyy"));
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [progresso, setProgresso] = useState<string | null>(null);
@@ -136,10 +164,17 @@ function PassagemPlantaoPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_name: f.file.name }),
         });
-        const { storage_path } = (await destino.json()) as { storage_path: string };
+        const { storage_path, token } = (await destino.json()) as {
+          storage_path: string;
+          token: string;
+        };
+        // Envia com a autorização emitida pelo servidor. Sem login não há
+        // sessão do Supabase aqui, e o RLS barraria o envio direto.
         const { error } = await supabase.storage
           .from(plano.bucket!)
-          .upload(storage_path, f.file, { contentType: f.file.type || undefined });
+          .uploadToSignedUrl(storage_path, token, f.file, {
+            contentType: f.file.type || undefined,
+          });
         if (error) throw new Error(`Falha ao enviar ${f.file.name}: ${error.message}`);
         caminhos.push(storage_path);
       }
@@ -148,7 +183,14 @@ function PassagemPlantaoPage() {
       const inicio = await apiFetch("/api/passagem-plantao/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storage_paths: caminhos, setor, data }),
+        body: JSON.stringify({
+          storage_paths: caminhos,
+          setor,
+          data,
+          hospital: hospital.trim() || undefined,
+          periodo,
+          passagem_para: diaSeguinte(data),
+        }),
       });
       if (!inicio.ok) {
         const erro = (await inicio.json().catch(() => ({}))) as {
@@ -207,6 +249,10 @@ function PassagemPlantaoPage() {
     const formData = new FormData();
     formData.append("setor", setor);
     formData.append("data", data);
+    if (hospital.trim()) formData.append("hospital", hospital.trim());
+    formData.append("periodo", periodo);
+    const proxima = diaSeguinte(data);
+    if (proxima) formData.append("passagem_para", proxima);
     readyFiles.forEach((f) => formData.append("files", f.file));
 
     const res = await apiFetch("/api/passagem-plantao/gerar", { method: "POST", body: formData });
@@ -290,13 +336,56 @@ function PassagemPlantaoPage() {
 
             {/* Data */}
             <div className="flex flex-col gap-1.5">
-              <label className="t-label text-muted-foreground">Data do Plantão</label>
+              <label htmlFor="passagem-data" className="t-label text-muted-foreground">
+                Data do plantão
+              </label>
               <input
+                id="passagem-data"
                 type="text"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
-                placeholder="DD/MM/YYYY"
+                placeholder="DD/MM/AAAA"
+                data-testid="handoff-data"
                 className="bg-card border-border text-foreground focus:ring-ring min-h-[2.75rem] w-40 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
+              />
+            </div>
+
+            {/* Período */}
+            <div className="flex flex-col gap-1.5">
+              <label className="t-label text-muted-foreground">Período</label>
+              <div className="flex gap-2">
+                {(["diurno", "noturno"] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriodo(p)}
+                    aria-pressed={periodo === p}
+                    data-testid={`handoff-periodo-${p}`}
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                      periodo === p
+                        ? "bg-navy text-navy-foreground border-navy"
+                        : "bg-card text-muted-foreground border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {p === "diurno" ? "Diurno" : "Noturno"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hospital */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="passagem-hospital" className="t-label text-muted-foreground">
+                Hospital
+              </label>
+              <input
+                id="passagem-hospital"
+                type="text"
+                value={hospital}
+                onChange={(e) => setHospital(e.target.value)}
+                onBlur={() => storage.setHospitalPadrao(hospital)}
+                placeholder="Nome do hospital"
+                data-testid="handoff-hospital"
+                className="bg-card border-border text-foreground focus:ring-ring min-h-[2.75rem] w-64 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
               />
             </div>
           </div>

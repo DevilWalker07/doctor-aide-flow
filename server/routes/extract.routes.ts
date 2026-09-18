@@ -9,6 +9,7 @@ import { safeUnlink, sniffKind } from "../lib/files.js";
 import {
   apagarDoBucket,
   baixarParaTemporario,
+  autorizarEnvio,
   montarCaminho,
   validarCaminho,
   BUCKET_DOCUMENTOS,
@@ -107,28 +108,32 @@ export function createExtractRouter({
    * serverless tem limite de corpo muito abaixo dos 20 MB que a tela aceita —
    * e, de quebra, o documento deixa de trafegar duas vezes.
    */
-  const prepararUpload: RequestHandler = (req, res) => {
+  const prepararUpload: RequestHandler = async (req, res) => {
     const fileName = String((req.body as { file_name?: unknown })?.file_name ?? "documento");
 
-    // Sem Supabase (modo local) ou sem sessão, o envio direto não tem para onde
-    // ir — e aí o contêiner recebe o arquivo pelo próprio servidor. Dizer o
-    // modo aqui evita o cliente adivinhar e falhar no meio do upload.
-    if (!hasSupabase() || !req.userId) {
+    // Sem Supabase (modo local) o envio direto não tem para onde ir, e o
+    // contêiner recebe o arquivo pelo próprio servidor.
+    if (!hasSupabase()) {
       if (!permitirMultipart) {
         throw new HttpError(
-          401,
-          "unauthorized",
-          "Envio de documento exige sessão. Entre na sua conta e tente novamente.",
+          503,
+          "storage_indisponivel",
+          "Armazenamento de arquivos não configurado nesta implantação.",
         );
       }
       res.json({ modo: "multipart" as const });
       return;
     }
 
+    // Sem login não há sessão do Supabase no navegador; o servidor emite a
+    // autorização de envio para que o arquivo vá direto ao Storage assim mesmo.
+    const caminho = montarCaminho(req.userId ?? "comum", fileName);
+    const autorizacao = await autorizarEnvio(caminho);
     res.json({
       modo: "storage" as const,
       bucket: BUCKET_DOCUMENTOS,
-      storage_path: montarCaminho(req.userId, fileName),
+      storage_path: autorizacao.caminho,
+      token: autorizacao.token,
     });
   };
 

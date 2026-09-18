@@ -208,6 +208,13 @@ export const PassagemBodySchema = z
      * envio multipart do contêiner, que manda os arquivos no corpo.
      */
     storage_paths: z.array(z.string().trim().min(1).max(300)).max(30).optional(),
+    /** Cabeçalho do mapa, como no modelo do hospital. */
+    hospital: z.string().trim().max(120).optional(),
+    periodo: z.enum(["diurno", "noturno"]).optional(),
+    passagem_para: z
+      .string()
+      .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
+      .optional(),
   })
   .strict();
 export type PassagemBody = z.infer<typeof PassagemBodySchema>;

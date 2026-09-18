@@ -41,12 +41,13 @@ export function validarCaminho(storagePath: unknown, userId: string | null): str
     throw new HttpError(400, "invalid_storage_path", "Caminho de arquivo inválido.");
   }
 
-  // Sem autenticação obrigatória (dev/testes) não há dono a conferir.
-  if (userId) {
-    const [pasta] = caminho.split("/");
-    if (pasta !== userId) {
-      throw new HttpError(403, "forbidden_path", "Este arquivo não pertence a você.");
-    }
+  // Com login, o caminho tem que estar na pasta do próprio médico: o backend
+  // usa a service role, que ignora RLS, então sem esta checagem um caminho
+  // forjado leria documento alheio. Sem login existe uma pasta comum, e aí não
+  // há dono a conferir — é a consequência de tirar a trava.
+  const [pasta] = caminho.split("/");
+  if (userId && pasta !== userId && pasta !== "comum") {
+    throw new HttpError(403, "forbidden_path", "Este arquivo não pertence a você.");
   }
 
   const ext = extOf(caminho);
@@ -58,6 +59,32 @@ export function validarCaminho(storagePath: unknown, userId: string | null): str
     );
   }
   return caminho;
+}
+
+/**
+ * Autorização de envio direto, emitida pelo servidor.
+ *
+ * Sem login não existe sessão do Supabase no navegador, então o RLS do bucket
+ * barraria o envio. O servidor, que tem a service role, emite um token de uso
+ * único para aquele caminho — o arquivo continua indo direto do aparelho para
+ * o Storage, sem passar pelo servidor, e sem exigir conta.
+ */
+export async function autorizarEnvio(caminho: string): Promise<{ caminho: string; token: string }> {
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    throw new HttpError(503, "storage_indisponivel", "Armazenamento de arquivos não configurado.");
+  }
+  const { data, error } = await admin.storage
+    .from(BUCKET_DOCUMENTOS)
+    .createSignedUploadUrl(caminho);
+  if (error || !data?.token) {
+    throw new HttpError(
+      500,
+      "falha_ao_autorizar",
+      `Não consegui autorizar o envio: ${error?.message ?? ""}`,
+    );
+  }
+  return { caminho, token: data.token };
 }
 
 /** Caminho que o navegador deve usar ao enviar: sempre sob a pasta do médico. */

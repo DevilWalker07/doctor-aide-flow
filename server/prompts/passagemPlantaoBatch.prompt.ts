@@ -17,7 +17,11 @@ CAMPOS POR LEITO
 7 atb: "SEM ATB" se não houver. Vários → um por linha ("\\n"). Formato "[Nome] [dose] [via] [frequência] — D[atual]/[total]" (ex: "Ceftriaxona 1g EV 12/12h — D3/7"). D0 = dia do início. Oral → sufixo "(VO)". Sem total → "D4". Sem data de início → "D?". Empírico sem nome → "ATB empírico (sem nome registrado) — D[n]".
 8 ultimoLab: "EXAME valor[seta][!!]" separados por vírgula (ex: "PCR 87↑!!, Hb 7,2↓!!, Cr 1,4→"). Setas só com dois valores (R6); "!!" pelos limiares de R7. Sem lab → "Sem lab recente".
 9 condutasHoje: itens com "- " (mudanças de ATB, exames solicitados, ajustes, procedimentos).
-10 alertasPendencias: DHE não corrigida, infecção sem controle, imagem pendente, ATB finalizando, pendências sociais. "!!" para urgente, "!" para hoje.
+10 alertasPendencias: duas partes, nesta ordem e com esta separação literal.
+   Primeiro os ALERTAS — o que o plantonista precisa saber ao assumir: DHE não corrigida, infecção sem controle, achado novo, ATB finalizando. "!!" urgente, "!" hoje.
+   Depois, numa linha isolada, exatamente: "— PENDÊNCIAS —"
+   E abaixo dela as PENDÊNCIAS — o que falta fazer ou receber: exame a solicitar, parecer a pedir, resultado a resgatar, conversa com família, agendamento a confirmar.
+   Se não houver pendência, não escreva a linha separadora.
 11 anotacoesVisita: sempre "".
 12 dispositivos: CVC, SVD, SNE/SNG, O2 (dispositivo e fluxo), VM (modo/parâmetros), drenos — com data de inserção se houver; null se nenhum.
 
