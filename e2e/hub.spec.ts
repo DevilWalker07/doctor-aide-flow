@@ -21,11 +21,33 @@ test.describe("hub de ambientes", () => {
     await expect(page.getByTestId("shift-ambiente")).toContainText(/Enfermaria Clínica/i);
   });
 
-  test("mostra as quatro ações rápidas", async ({ page }) => {
+  test("mostra as cinco ações rápidas", async ({ page }) => {
     await page.goto("/");
-    for (const id of ["hub-documentos", "hub-copiloto", "hub-resumo-exames", "hub-plantao-acao"]) {
+    for (const id of [
+      "hub-documentos",
+      "hub-copiloto",
+      "hub-resumo-exames",
+      "hub-passagem-plantao",
+      "hub-plantao-acao",
+    ]) {
       await expect(page.getByTestId(id)).toBeVisible();
     }
+  });
+
+  test("a passagem de plantão tem porta de entrada na primeira tela", async ({ page }) => {
+    // Antes só existia digitando /passagem-plantao na barra do navegador.
+    await page.goto("/");
+    await page.getByTestId("hub-passagem-plantao").click();
+    await expect(page).toHaveURL(/\/passagem-plantao/);
+  });
+
+  test("nenhuma ação promete que precisa de conta", async ({ page }) => {
+    // O selo de cadeado e o texto "precisa de conta" sobreviveram à remoção da
+    // trava e passaram a mentir — aviso falso faz o médico não tentar o que
+    // funciona.
+    await page.goto("/");
+    await expect(page.getByText(/precisa de conta/i)).toHaveCount(0);
+    await expect(page.getByTestId("hub-plantao-acao")).not.toContainText(/Conta/i);
   });
 
   test("avisa 'Em breve' antes do toque e a tela de construção oferece saída", async ({ page }) => {
