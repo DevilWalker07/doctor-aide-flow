@@ -15,6 +15,7 @@ import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
+import { createPassagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { getJobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
 import { APP_VERSION } from "./app.js";
@@ -116,14 +117,17 @@ export function createServerlessApp() {
     }),
   );
 
-  // Passagem de plantão ainda depende de execução longa em lotes.
-  // Melhor dizer isso do que devolver 404 e deixar o app adivinhar.
-  app.use("/api/passagem-plantao", (_req, res) => {
-    res.status(503).json({
-      error: "rota_indisponivel",
-      message: "A passagem de plantão em DOCX ainda não está disponível nesta implantação.",
-    });
-  });
+  // Passagem de plantão: job assíncrono, um lote por invocação. O teto de 60 s
+  // do plano hobby não comporta 15 arquivos numa requisição só, e requisição
+  // que estoura o teto deixa o médico sem nada no meio do plantão.
+  app.use(
+    "/api/passagem-plantao",
+    limiters.passagem,
+    createPassagemPlantaoRouter({
+      jobStore,
+      manterVivo: (promise) => waitUntil(promise),
+    }),
+  );
 
   app.use("/api", apiNotFound);
   app.use(errorHandler);

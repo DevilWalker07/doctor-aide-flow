@@ -7,9 +7,22 @@ import { safeUnlink, sanitizeFilename } from "../lib/files.js";
 import { PassagemBodySchema } from "../schemas/ai.schemas.js";
 import { gerarMapaPlantaoDocx } from "../services/docxGenerator.service.js";
 import { gerarMapaPlantao, type EvolucaoInput } from "../services/passagemPlantao.service.js";
+import type { JobStore } from "../services/jobStore.js";
+import {
+  ehEstadoPassagem,
+  iniciarPassagem,
+  processarAteOFim,
+} from "../services/passagemJob.service.js";
+import { urlAssinada } from "../lib/storageDocumentos.js";
 import { extractTextFromFile } from "../services/textExtraction.service.js";
 
-export const passagemPlantaoRouter = Router();
+export interface PassagemRouterDeps {
+  jobStore: JobStore;
+  /** Prolonga a invocação além da resposta 202. Ver server/serverless.ts. */
+  manterVivo?: (promise: Promise<unknown>) => void;
+  /** Só o contêiner: 15 arquivos não cabem no corpo de uma função serverless. */
+  permitirMultipart?: boolean;
+}
 
 const ALLOWED_EXTS = new Set([".docx", ".txt", ".md", ".pdf"]);
 const MAX_FILES = 30;
@@ -24,7 +37,115 @@ const upload = multer({
   },
 });
 
-const gerar: RequestHandler = async (req, res) => {
+export function createPassagemPlantaoRouter({
+  jobStore,
+  manterVivo,
+  permitirMultipart = false,
+}: PassagemRouterDeps) {
+  const router = Router();
+  const agendar = manterVivo ?? ((p: Promise<unknown>) => void p);
+
+  /**
+   * Começa a passagem a partir de arquivos já no Storage.
+   *
+   * Devolve 202 e um job. O processamento vai lote a lote, porque o teto de
+   * 60 s por invocação no plano hobby não comporta 15 arquivos de uma vez — e
+   * requisição que estoura o teto deixa o médico sem nada.
+   */
+  const iniciar: RequestHandler = async (req, res) => {
+    const corpo = (req.body ?? {}) as { storage_paths?: unknown };
+    const caminhos = Array.isArray(corpo.storage_paths) ? corpo.storage_paths.map(String) : [];
+    if (caminhos.length === 0) {
+      throw new HttpError(400, "missing_files", "Nenhum arquivo enviado.");
+    }
+    if (caminhos.length > MAX_FILES) {
+      throw new HttpError(400, "too_many_files", `No máximo ${MAX_FILES} arquivos por vez.`);
+    }
+    const { setor, data } = PassagemBodySchema.parse(req.body ?? {});
+
+    const inicio = await iniciarPassagem({
+      storagePaths: caminhos,
+      setor,
+      data,
+      userId: req.userId,
+      jobStore,
+    });
+
+    agendar(
+      processarAteOFim(inicio.jobId, jobStore).catch(async (err: unknown) => {
+        console.error(`[passagem] job ${inicio.jobId} falhou:`, err);
+        await jobStore.update(inicio.jobId, {
+          status: "error",
+          stage: "Erro na passagem",
+          error: err instanceof Error ? err.message : "Falha inesperada.",
+        });
+      }),
+    );
+
+    res.status(202).json({
+      job_id: inicio.jobId,
+      lotes: inicio.lotes,
+      arquivos: inicio.arquivos,
+      warnings: inicio.warnings,
+    });
+  };
+
+  /** Andamento do job, e o link do DOCX quando fica pronto. */
+  const consultar: RequestHandler = async (req, res) => {
+    const jobId = String(req.params.jobId ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
+      throw new HttpError(400, "invalid_job_id", "job_id inválido.");
+    }
+    const job = await jobStore.get(jobId, req.userId);
+    if (!job) throw new HttpError(404, "job_not_found", "Job não encontrado. Pode ter expirado.");
+
+    const estado = ehEstadoPassagem(job.result) ? job.result : null;
+    res.set("Cache-Control", "no-store");
+    res.json({
+      job_id: job.job_id,
+      status: job.status,
+      stage: job.stage,
+      error: job.error,
+      lotes: estado ? estado.lotes.length || estado.proximo : 0,
+      lote_atual: estado?.proximo ?? 0,
+      warnings: estado?.warnings ?? [],
+      contagem: estado?.contagem ?? null,
+      docx: estado?.docx
+        ? { nome: estado.docx.nome, url: await urlAssinada(estado.docx.caminho) }
+        : null,
+    });
+  };
+
+  if (permitirMultipart) {
+    // Um endereço só, dois envios. Multipart cai no caminho síncrono que o
+    // contêiner sempre teve — é o que os testes provam e o que roda no
+    // `npm run dev:all` sem Supabase. JSON com storage_paths vira job.
+    router.post(
+      "/gerar",
+      (req, res, next) => {
+        if (req.is("multipart/form-data")) return upload.array("files", MAX_FILES)(req, res, next);
+        next();
+      },
+      (req, res, next) => {
+        const temArquivos = Array.isArray(req.files) && req.files.length > 0;
+        return temArquivos ? gerarSincrono(req, res, next) : iniciar(req, res, next);
+      },
+    );
+  } else {
+    router.post("/gerar", iniciar);
+  }
+
+  router.get("/job/:jobId", consultar);
+
+  router.get("/health", (_req, res) => {
+    res.json({ ok: true, endpoint: "passagem-plantao", maxFiles: MAX_FILES });
+  });
+
+  return router;
+}
+
+/** Caminho síncrono do contêiner: devolve o DOCX na própria resposta. */
+const gerarSincrono: RequestHandler = async (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   if (files.length === 0) {
     throw new HttpError(
@@ -110,9 +231,3 @@ const gerar: RequestHandler = async (req, res) => {
   }
   res.send(docxBuffer);
 };
-
-passagemPlantaoRouter.post("/gerar", upload.array("files", MAX_FILES), gerar);
-
-passagemPlantaoRouter.get("/health", (_req, res) => {
-  res.json({ ok: true, endpoint: "passagem-plantao", maxFiles: MAX_FILES });
-});

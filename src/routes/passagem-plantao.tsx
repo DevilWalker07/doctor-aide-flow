@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase";
 import {
   ChevronLeft,
   Upload,
@@ -41,6 +42,7 @@ function PassagemPlantaoPage() {
   const [setor, setSetor] = useState<"CMF" | "CMM" | "CMF/CMM">("CMF/CMM");
   const [data, setData] = useState(format(new Date(), "dd/MM/yyyy"));
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [progresso, setProgresso] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -98,7 +100,7 @@ function PassagemPlantaoPage() {
 
   const handleGenerate = async () => {
     if (readyFiles.length === 0) {
-      toast.error("Adicione pelo menos um arquivo DOCX.");
+      toast.error("Adicione pelo menos um arquivo.");
       return;
     }
 
@@ -106,57 +108,135 @@ function PassagemPlantaoPage() {
     setDownloadUrl(null);
     setStats(null);
     setWarnings([]);
+    setProgresso("Enviando arquivos…");
 
     try {
-      const formData = new FormData();
-      formData.append("setor", setor);
-      formData.append("data", data);
-      readyFiles.forEach((f) => formData.append("files", f.file));
-
-      const res = await apiFetch("/api/passagem-plantao/gerar", {
+      // Os arquivos vão direto ao Storage. Quinze arquivos não cabem no corpo
+      // de uma função serverless, e mandá-los pelo servidor os faria trafegar
+      // duas vezes.
+      const prep = await apiFetch("/api/extract/preparar-upload", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_name: "passagem" }),
       });
+      if (!prep.ok) throw new Error("Não foi possível preparar o envio.");
+      const plano = (await prep.json()) as { modo: "storage" | "multipart"; bucket?: string };
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({ error: "Erro desconhecido" }));
-        const detalhes = Array.isArray(errJson.details) ? ` (${errJson.details.join("; ")})` : "";
-        throw new Error((errJson.message || errJson.error || `HTTP ${res.status}`) + detalhes);
+      if (plano.modo === "multipart") {
+        await gerarPorMultipart();
+        return;
       }
 
-      const pacientesCount = Number(res.headers.get("X-Pacientes-Count") || 0);
-      const alertasCount = Number(res.headers.get("X-Alertas-Count") || 0);
-      const warningsHeader = res.headers.get("X-File-Warnings");
+      const caminhos: string[] = [];
+      for (let i = 0; i < readyFiles.length; i++) {
+        setProgresso(`Enviando arquivo ${i + 1} de ${readyFiles.length}…`);
+        const f = readyFiles[i];
+        const destino = await apiFetch("/api/extract/preparar-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file_name: f.file.name }),
+        });
+        const { storage_path } = (await destino.json()) as { storage_path: string };
+        const { error } = await supabase.storage
+          .from(plano.bucket!)
+          .upload(storage_path, f.file, { contentType: f.file.type || undefined });
+        if (error) throw new Error(`Falha ao enviar ${f.file.name}: ${error.message}`);
+        caminhos.push(storage_path);
+      }
 
-      if (warningsHeader) {
-        let decoded = warningsHeader;
-        try {
-          decoded = decodeURIComponent(warningsHeader);
-        } catch {
-          /* header já legível */
+      setProgresso("Lendo os arquivos…");
+      const inicio = await apiFetch("/api/passagem-plantao/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storage_paths: caminhos, setor, data }),
+      });
+      if (!inicio.ok) {
+        const erro = (await inicio.json().catch(() => ({}))) as {
+          message?: string;
+          details?: string[];
+        };
+        const detalhes = Array.isArray(erro.details) ? ` (${erro.details.join("; ")})` : "";
+        throw new Error((erro.message ?? `HTTP ${inicio.status}`) + detalhes);
+      }
+      const { job_id } = (await inicio.json()) as { job_id: string };
+
+      // Acompanhamento real: o médico vê em que lote está, não uma barra que
+      // não sabe de nada.
+      const limite = Date.now() + 10 * 60_000;
+      for (;;) {
+        if (Date.now() > limite)
+          throw new Error("A passagem demorou demais. Tente com menos arquivos.");
+        await new Promise((r) => setTimeout(r, 2500));
+        const res = await apiFetch(`/api/passagem-plantao/job/${job_id}`);
+        if (!res.ok) throw new Error("Perdi o acompanhamento do processamento.");
+        const job = (await res.json()) as {
+          status: string;
+          stage: string;
+          error: string | null;
+          warnings: string[];
+          contagem: { pacientes: number; alertas: number } | null;
+          docx: { nome: string; url: string } | null;
+        };
+
+        setProgresso(job.stage);
+        if (job.status === "error") throw new Error(job.error ?? "Falha ao montar a passagem.");
+        if (job.status === "done" && job.docx) {
+          setWarnings(job.warnings ?? []);
+          setStats({
+            pacientes: job.contagem?.pacientes ?? 0,
+            alertas: job.contagem?.alertas ?? 0,
+          });
+          setDownloadUrl(job.docx.url);
+          setDownloadName(job.docx.nome);
+          toast.success(
+            `Mapa pronto — ${job.contagem?.pacientes ?? 0} leitos, ${job.contagem?.alertas ?? 0} alertas.`,
+          );
+          return;
         }
-        setWarnings(
-          decoded
-            .split(";")
-            .map((s) => s.trim())
-            .filter(Boolean),
-        );
       }
-
-      setStats({ pacientes: pacientesCount, alertas: alertasCount });
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const filename = `MAPA_PASSAGEM_${setor.replace("/", "-")}_${data.replace(/\//g, "_")}.docx`;
-
-      setDownloadUrl(url);
-      setDownloadName(filename);
-      toast.success(`Mapa gerado! ${pacientesCount} pacientes, ${alertasCount} alertas.`);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao gerar o mapa.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar o mapa.");
     } finally {
       setIsGenerating(false);
+      setProgresso(null);
     }
+  };
+
+  /** Modo local (`npm run dev:all` sem Supabase): o DOCX volta na resposta. */
+  const gerarPorMultipart = async () => {
+    const formData = new FormData();
+    formData.append("setor", setor);
+    formData.append("data", data);
+    readyFiles.forEach((f) => formData.append("files", f.file));
+
+    const res = await apiFetch("/api/passagem-plantao/gerar", { method: "POST", body: formData });
+    if (!res.ok) {
+      const erro = (await res.json().catch(() => ({}))) as { message?: string; details?: string[] };
+      const detalhes = Array.isArray(erro.details) ? ` (${erro.details.join("; ")})` : "";
+      throw new Error((erro.message ?? `HTTP ${res.status}`) + detalhes);
+    }
+
+    const pacientes = Number(res.headers.get("X-Pacientes-Count") || 0);
+    const alertas = Number(res.headers.get("X-Alertas-Count") || 0);
+    const avisos = res.headers.get("X-File-Warnings");
+    if (avisos) {
+      let texto = avisos;
+      try {
+        texto = decodeURIComponent(avisos);
+      } catch {
+        /* já legível */
+      }
+      setWarnings(
+        texto
+          .split(";")
+          .map((t) => t.trim())
+          .filter(Boolean),
+      );
+    }
+    setStats({ pacientes, alertas });
+    setDownloadUrl(URL.createObjectURL(await res.blob()));
+    setDownloadName(`MAPA_PASSAGEM_${setor.replace("/", "-")}_${data.replace(/\//g, "_")}.docx`);
+    toast.success(`Mapa pronto — ${pacientes} leitos, ${alertas} alertas.`);
   };
 
   return (
@@ -332,7 +412,10 @@ function PassagemPlantaoPage() {
             {isGenerating ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                Processando {readyFiles.length} leito{readyFiles.length !== 1 ? "s" : ""}…
+                {/* Em que passo está, não uma barra que não sabe de nada. Com 15
+                    arquivos são três lotes, e saber disso é a diferença entre
+                    esperar e achar que travou. */}
+                {progresso ?? `Processando ${readyFiles.length} leitos…`}
               </>
             ) : (
               <>

@@ -200,6 +200,14 @@ export const PassagemBodySchema = z
       .string()
       .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
       .default(todayBR),
+    /**
+     * Arquivos já enviados ao Storage pelo navegador.
+     *
+     * O schema é `strict`, então o campo precisa estar declarado aqui — sem
+     * isso a requisição inteira é recusada com "Unrecognized key". Ausente no
+     * envio multipart do contêiner, que manda os arquivos no corpo.
+     */
+    storage_paths: z.array(z.string().trim().min(1).max(300)).max(30).optional(),
   })
   .strict();
 export type PassagemBody = z.infer<typeof PassagemBodySchema>;
