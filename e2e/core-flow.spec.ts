@@ -62,9 +62,44 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     expect(Buffer.concat(chunks).subarray(0, 2).toString("latin1")).toBe("PK");
   });
 
-  test("sem sessão, rotas protegidas redirecionam para /login", async ({ page }) => {
-    test.skip(!withSupabase, "exige Supabase local (E2E_SUPABASE_*)");
+  /**
+   * Este teste existe por causa de um erro real em produção.
+   *
+   * A tela mostrava só "Não foi possível preparar o envio." e descartava o
+   * corpo da resposta — onde estava a causa. Eu fiquei sem diagnóstico e o
+   * médico, sem saber o que fazer. A regra vale aqui como no resto do app:
+   * quando algo falha, dizer O QUÊ falhou.
+   */
+  test("quando o envio falha, a tela mostra o motivo do servidor, não um resumo", async ({
+    page,
+  }) => {
+    await page.route("**/api/extract/preparar-upload", (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "storage_indisponivel",
+          message: "Armazenamento de arquivos não configurado nesta implantação.",
+        }),
+      }),
+    );
+
+    await page.goto("/passagem-plantao");
+    await page.getByTestId("handoff-files").setInputFiles([fixture("evolucao.txt")]);
+    await page.getByTestId("handoff-generate").click();
+
+    // O motivo do servidor e o código, para dar para agir sem abrir o inspetor.
+    await expect(page.getByText(/Armazenamento de arquivos não configurado/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/503/)).toBeVisible();
+  });
+
+  test("sem trava de login, o dashboard abre direto — sem redirecionar", async ({ page }) => {
+    // O teste antigo afirmava o contrário: que /dashboard mandava para /login.
+    // Isso deixou de valer quando a trava saiu, e teste que afirma o que não é
+    // mais verdade só serve para dar falsa segurança.
     await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/login\?redirect=/);
+    await expect(page).not.toHaveURL(/\/login/);
   });
 });

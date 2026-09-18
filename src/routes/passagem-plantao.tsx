@@ -61,6 +61,26 @@ function diaSeguinte(dataBr: string): string | undefined {
   return format(d, "dd/MM/yyyy");
 }
 
+/**
+ * Levanta o erro com o motivo que o SERVIDOR deu, não com um resumo meu.
+ *
+ * A tela dizia só "Não foi possível preparar o envio." e jogava fora o corpo
+ * da resposta — onde estava a causa: armazenamento não configurado (503),
+ * falha ao autorizar com a mensagem do Supabase (500), limite de requisições
+ * (429). Sem isso, o médico vê uma conclusão e nenhuma evidência, e eu fico
+ * chutando de longe. Mesma regra do resto do app: dizer O QUÊ falhou.
+ */
+async function falharComMotivo(res: Response, acao: string): Promise<never> {
+  const corpo = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    error?: string;
+    details?: string[];
+  };
+  const detalhes = Array.isArray(corpo.details) ? ` (${corpo.details.join("; ")})` : "";
+  const motivo = corpo.message || corpo.error || `HTTP ${res.status}`;
+  throw new Error(`Falha ao ${acao}: ${motivo}${detalhes} [${res.status}]`);
+}
+
 function PassagemPlantaoPage() {
   const nav = useNavigate();
   const [setor, setSetor] = useState<"CMF" | "CMM" | "CMF/CMM">("CMF/CMM");
@@ -142,41 +162,52 @@ function PassagemPlantaoPage() {
       // Os arquivos vão direto ao Storage. Quinze arquivos não cabem no corpo
       // de uma função serverless, e mandá-los pelo servidor os faria trafegar
       // duas vezes.
-      const prep = await apiFetch("/api/extract/preparar-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_name: "passagem" }),
-      });
-      if (!prep.ok) throw new Error("Não foi possível preparar o envio.");
-      const plano = (await prep.json()) as { modo: "storage" | "multipart"; bucket?: string };
-
-      if (plano.modo === "multipart") {
-        await gerarPorMultipart();
-        return;
-      }
-
+      //
+      // Uma autorização por arquivo, e nada mais. Existia antes uma chamada
+      // extra só para descobrir o modo, com `file_name: "passagem"`: ela
+      // emitia um token de envio que ninguém usava e dobrava o número de
+      // requisições contra o limitador. O modo vem na resposta da primeira.
       const caminhos: string[] = [];
+      let bucket: string | undefined;
+
       for (let i = 0; i < readyFiles.length; i++) {
         setProgresso(`Enviando arquivo ${i + 1} de ${readyFiles.length}…`);
         const f = readyFiles[i];
+
         const destino = await apiFetch("/api/extract/preparar-upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_name: f.file.name }),
         });
-        const { storage_path, token } = (await destino.json()) as {
-          storage_path: string;
-          token: string;
+        if (!destino.ok) await falharComMotivo(destino, "preparar o envio");
+
+        const plano = (await destino.json()) as {
+          modo: "storage" | "multipart";
+          bucket?: string;
+          storage_path?: string;
+          token?: string;
         };
+
+        // Sem Supabase (contêiner local) o arquivo vai pelo próprio servidor.
+        if (plano.modo === "multipart") {
+          await gerarPorMultipart();
+          return;
+        }
+        if (!plano.storage_path || !plano.token || !(bucket ??= plano.bucket)) {
+          throw new Error(
+            "O servidor autorizou o envio sem dizer para onde. Tente novamente; se repetir, me avise.",
+          );
+        }
+
         // Envia com a autorização emitida pelo servidor. Sem login não há
         // sessão do Supabase aqui, e o RLS barraria o envio direto.
         const { error } = await supabase.storage
-          .from(plano.bucket!)
-          .uploadToSignedUrl(storage_path, token, f.file, {
+          .from(bucket)
+          .uploadToSignedUrl(plano.storage_path, plano.token, f.file, {
             contentType: f.file.type || undefined,
           });
         if (error) throw new Error(`Falha ao enviar ${f.file.name}: ${error.message}`);
-        caminhos.push(storage_path);
+        caminhos.push(plano.storage_path);
       }
 
       setProgresso("Lendo os arquivos…");
@@ -192,14 +223,7 @@ function PassagemPlantaoPage() {
           passagem_para: diaSeguinte(data),
         }),
       });
-      if (!inicio.ok) {
-        const erro = (await inicio.json().catch(() => ({}))) as {
-          message?: string;
-          details?: string[];
-        };
-        const detalhes = Array.isArray(erro.details) ? ` (${erro.details.join("; ")})` : "";
-        throw new Error((erro.message ?? `HTTP ${inicio.status}`) + detalhes);
-      }
+      if (!inicio.ok) await falharComMotivo(inicio, "iniciar a leitura dos arquivos");
       const { job_id } = (await inicio.json()) as { job_id: string };
 
       // Acompanhamento real: o médico vê em que lote está, não uma barra que
@@ -256,11 +280,7 @@ function PassagemPlantaoPage() {
     readyFiles.forEach((f) => formData.append("files", f.file));
 
     const res = await apiFetch("/api/passagem-plantao/gerar", { method: "POST", body: formData });
-    if (!res.ok) {
-      const erro = (await res.json().catch(() => ({}))) as { message?: string; details?: string[] };
-      const detalhes = Array.isArray(erro.details) ? ` (${erro.details.join("; ")})` : "";
-      throw new Error((erro.message ?? `HTTP ${res.status}`) + detalhes);
-    }
+    if (!res.ok) await falharComMotivo(res, "gerar o mapa");
 
     const pacientes = Number(res.headers.get("X-Pacientes-Count") || 0);
     const alertas = Number(res.headers.get("X-Alertas-Count") || 0);
