@@ -125,6 +125,17 @@ no pacote e o caminho do import ignorado nunca roda. `includeFiles` no
 texto": afirma que o worker **foi registrado**, que é o que separa produção de
 local.
 
+**Nada de biblioteca para ler assinatura de arquivo.** Era `file-type`, e a
+cadeia dele (`strtok3` → `@tokenizer/token`, mais `token-types` e
+`@tokenizer/inflate`) não sobrevive ao empacotamento: `strtok3` declara exports
+condicionais (`{"node": "./lib/index.js", "default": "./lib/core.js"}`), o
+rastreador da Vercel levou o `core.js` da condição `default` e o Node, em
+execução, pediu o `index.js` da condição `node`. Toda leitura de arquivo morria
+com `Cannot find module` — e aqui nunca falhava, porque no disco o
+`node_modules` está inteiro. `assinaturaDe` (`server/lib/files.ts`) lê os
+primeiros 16 bytes e cobre os oito formatos que o app aceita. `includeFiles`
+não resolveria: seria enumerar uma árvore de dependências à mão.
+
 **Formato de arquivo se decide pelos bytes, nunca pela extensão.** A rota de
 extração já usava `sniffKind` (`server/lib/files.ts`); a da passagem despachava
 por `extOf(originalName)`, e um Word chamado `.pdf` ia para o leitor de PDF e
