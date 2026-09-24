@@ -165,6 +165,15 @@ apagado depois de processado. `/api/extract/preparar-upload` diz ao cliente qual
 modo usar: sem Supabase (modo local, `npm run dev:all`) o contêiner aceita
 multipart; a função serverless, não.
 
+**O limite de saída se descobre, não se adivinha.** A OpenAI trocou
+`max_tokens` por `max_completion_tokens` nos modelos novos, e quem manda o
+antigo leva 400 — derrubou TODA chamada de IA em produção. Lista de nomes de
+modelo não resolve: o identificador vem de variável de ambiente e muda quando
+o modelo muda. `comLimiteDeSaida` (`server/services/openaiClient.ts`) tenta o
+parâmetro novo, e só se a API recusar **aquele parâmetro** repete com o antigo,
+guardando a resposta por modelo. 400 que não fala do parâmetro sobe intacto —
+retentativa cega esconderia o erro real.
+
 **Modelo de IA por finalidade.** `OPENAI_MODEL_VISAO` vale para leitura de
 imagem — foto de prontuário e OCR de PDF — e `OPENAI_MODEL_COPILOTO` para o
 copiloto; ausentes, caem em `OPENAI_MODEL`. A separação existe porque um número
