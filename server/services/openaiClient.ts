@@ -23,6 +23,67 @@ export function getOpenAIClient(): OpenAI | null {
 }
 
 /**
+ * Qual parâmetro de limite de saída este modelo aceita.
+ *
+ * A OpenAI trocou `max_tokens` por `max_completion_tokens` nos modelos novos, e
+ * quem manda o antigo leva 400: "Unsupported parameter: 'max_tokens' is not
+ * supported with this model." Em produção isso derrubava TODA chamada de IA —
+ * passagem, copiloto, evolução, resumo de exames — depois de o arquivo já ter
+ * subido e o texto já ter sido extraído.
+ *
+ * Não dá para decidir por lista de nomes: o identificador vem de variável de
+ * ambiente e muda quando o Luan troca de modelo. Então o código **descobre**:
+ * tenta o parâmetro novo, e se a API recusar justamente esse parâmetro, repete
+ * com o antigo e guarda a resposta para aquele modelo. Um round-trip a mais
+ * uma vez por modelo, por processo.
+ */
+type LimiteSaida = "max_completion_tokens" | "max_tokens";
+const limitePorModelo = new Map<string, LimiteSaida>();
+
+function recusouOParametro(err: unknown, parametro: LimiteSaida): boolean {
+  const status = (err as { status?: number })?.status;
+  const mensagem = (err as { message?: string })?.message ?? "";
+  return status === 400 && mensagem.includes(parametro);
+}
+
+/**
+ * Executa a chamada injetando o parâmetro de limite correto, aprendendo qual é
+ * na primeira recusa. `criar` recebe o corpo já montado.
+ */
+async function comLimiteDeSaida<T>(
+  modelo: string,
+  maxTokens: number,
+  criar: (limite: Record<string, number>) => Promise<T>,
+): Promise<T> {
+  const conhecido = limitePorModelo.get(modelo);
+  const primeiro: LimiteSaida = conhecido ?? "max_completion_tokens";
+
+  try {
+    const r = await criar({ [primeiro]: maxTokens });
+    limitePorModelo.set(modelo, primeiro);
+    return r;
+  } catch (err) {
+    if (conhecido || !recusouOParametro(err, primeiro)) throw err;
+    // A API disse explicitamente que é este parâmetro que não serve.
+    const alternativo: LimiteSaida =
+      primeiro === "max_completion_tokens" ? "max_tokens" : "max_completion_tokens";
+    const r = await criar({ [alternativo]: maxTokens });
+    limitePorModelo.set(modelo, alternativo);
+    return r;
+  }
+}
+
+/** Só para teste: qual parâmetro ficou memorizado para o modelo. */
+export function limiteAprendido(modelo: string): string | undefined {
+  return limitePorModelo.get(modelo);
+}
+
+/** Só para teste: esquece o que foi aprendido. */
+export function esquecerLimites(): void {
+  limitePorModelo.clear();
+}
+
+/**
  * Traduz o erro da API da OpenAI em algo que o médico possa agir sobre.
  *
  * Sem isso, qualquer falha da API escapava até o errorHandler e virava
@@ -145,15 +206,15 @@ export async function safeJsonCompletion<T>(
   ];
 
   const attempt = async (): Promise<SafeResult<T> & { raw?: string }> => {
-    const response = await openai.chat.completions
-      .create({
+    const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+      openai.chat.completions.create({
         model: modelo,
         temperature,
-        max_tokens: maxTokens,
+        ...limite,
         response_format: { type: "json_object" },
         messages,
-      })
-      .catch((err: unknown) => traduzirErroOpenAI(err, modelo, Boolean(images?.length)));
+      }),
+    ).catch((err: unknown) => traduzirErroOpenAI(err, modelo, Boolean(images?.length)));
     const choice = response.choices[0];
     const raw = choice?.message?.content ?? "";
     const usage = response.usage
@@ -215,14 +276,14 @@ export async function chatCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await openai.chat.completions
-    .create({
+  const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+    openai.chat.completions.create({
       model: modelo,
       temperature,
-      max_tokens: maxTokens,
+      ...limite,
       messages: [{ role: "system", content: system }, ...messages],
-    })
-    .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
+    }),
+  ).catch((err: unknown) => traduzirErroOpenAI(err, modelo));
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
@@ -241,11 +302,11 @@ export async function textCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await openai.chat.completions
-    .create({
+  const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+    openai.chat.completions.create({
       model: modelo,
       temperature,
-      max_tokens: maxTokens,
+      ...limite,
       messages: [
         { role: "system", content: system },
         {
@@ -253,8 +314,8 @@ export async function textCompletion(
           content: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2),
         },
       ],
-    })
-    .catch((err: unknown) => traduzirErroOpenAI(err, modelo));
+    }),
+  ).catch((err: unknown) => traduzirErroOpenAI(err, modelo));
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
