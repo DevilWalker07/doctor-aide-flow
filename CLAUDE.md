@@ -176,14 +176,28 @@ apagado depois de processado. `/api/extract/preparar-upload` diz ao cliente qual
 modo usar: sem Supabase (modo local, `npm run dev:all`) o contêiner aceita
 multipart; a função serverless, não.
 
-**O limite de saída se descobre, não se adivinha.** A OpenAI trocou
-`max_tokens` por `max_completion_tokens` nos modelos novos, e quem manda o
-antigo leva 400 — derrubou TODA chamada de IA em produção. Lista de nomes de
-modelo não resolve: o identificador vem de variável de ambiente e muda quando
-o modelo muda. `comLimiteDeSaida` (`server/services/openaiClient.ts`) tenta o
-parâmetro novo, e só se a API recusar **aquele parâmetro** repete com o antigo,
-guardando a resposta por modelo. 400 que não fala do parâmetro sobe intacto —
-retentativa cega esconderia o erro real.
+**Parâmetro recusado pelo modelo se descobre, não se adivinha — e a classe
+inteira, não um por vez.** Modelos novos recusam ajustes que os antigos
+aceitavam: `max_tokens` (use `max_completion_tokens`), `temperature` (só o
+padrão). Cada 400 desses derruba TODA chamada de IA. Lista de nomes de modelo
+não resolve: o identificador vem de variável de ambiente e muda quando o modelo
+muda. `chamarModelo` (`server/services/openaiClient.ts`) lê o nome do parâmetro
+na própria mensagem da API (`Unsupported parameter|value: '<nome>'`), adapta o
+perfil daquele modelo e repete — trocando o nome do limite de saída, ou
+omitindo o ajuste. Teto de 3 adaptações por chamada; 400 sem nome de parâmetro
+sobe intacto.
+
+**`response_format` nunca entra na lista do que pode ser descartado.** Só
+ajustes entram (`temperature`, `top_p`, penalidades, os dois de limite). Sem o
+contrato de JSON a IA devolve texto livre, o schema rejeita e o app ficaria
+reparando algo que nunca ia validar — quando a IA não pode cumprir o contrato,
+a chamada falha. Descartar em silêncio o que sustenta o dado clínico é o
+oposto da regra dos schemas.
+
+**Consequência a não esquecer:** com `temperature` omitida o modelo roda no
+padrão, e duas execuções sobre os mesmos arquivos podem redigir diferente.
+Quem protege o conteúdo continua sendo o schema e os guardrails; o que se perde
+é reprodutibilidade. Modelo que aceite `temperature` devolve isso.
 
 **Modelo de IA por finalidade.** `OPENAI_MODEL_VISAO` vale para leitura de
 imagem — foto de prontuário e OCR de PDF — e `OPENAI_MODEL_COPILOTO` para o
