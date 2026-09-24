@@ -23,64 +23,117 @@ export function getOpenAIClient(): OpenAI | null {
 }
 
 /**
- * Qual parâmetro de limite de saída este modelo aceita.
+ * Perfil do que este modelo aceita, descoberto em execução.
  *
- * A OpenAI trocou `max_tokens` por `max_completion_tokens` nos modelos novos, e
- * quem manda o antigo leva 400: "Unsupported parameter: 'max_tokens' is not
- * supported with this model." Em produção isso derrubava TODA chamada de IA —
- * passagem, copiloto, evolução, resumo de exames — depois de o arquivo já ter
- * subido e o texto já ter sido extraído.
+ * Modelos novos recusam ajustes que os antigos aceitavam, cada um com uma
+ * mensagem 400 diferente:
  *
- * Não dá para decidir por lista de nomes: o identificador vem de variável de
- * ambiente e muda quando o Luan troca de modelo. Então o código **descobre**:
- * tenta o parâmetro novo, e se a API recusar justamente esse parâmetro, repete
- * com o antigo e guarda a resposta para aquele modelo. Um round-trip a mais
- * uma vez por modelo, por processo.
+ *   Unsupported parameter: 'max_tokens' is not supported with this model.
+ *   Unsupported value: 'temperature' does not support 0.1 with this model.
+ *
+ * Eu já consertei o primeiro sozinho, e o segundo apareceu na tentativa
+ * seguinte do médico. Consertar um por vez gasta uma rodada dele a cada
+ * parâmetro — e ainda faltariam `top_p`, `frequency_penalty` e o que mais a
+ * OpenAI decidir travar.
+ *
+ * Lista de nomes de modelo também não serve: o identificador vem de variável de
+ * ambiente e muda quando o modelo muda. Então o código usa o que a **própria
+ * API diz**: a mensagem nomeia o parâmetro, e o perfil do modelo é montado a
+ * partir disso, uma vez por processo.
  */
-type LimiteSaida = "max_completion_tokens" | "max_tokens";
-const limitePorModelo = new Map<string, LimiteSaida>();
+interface PerfilModelo {
+  /** Como este modelo chama o limite de saída. */
+  limite: "max_completion_tokens" | "max_tokens";
+  /** Ajustes que ele recusou e que passam a ser omitidos. */
+  omitir: Set<string>;
+}
 
-function recusouOParametro(err: unknown, parametro: LimiteSaida): boolean {
-  const status = (err as { status?: number })?.status;
-  const mensagem = (err as { message?: string })?.message ?? "";
-  return status === 400 && mensagem.includes(parametro);
+const perfis = new Map<string, PerfilModelo>();
+
+function perfilDe(modelo: string): PerfilModelo {
+  let perfil = perfis.get(modelo);
+  if (!perfil) {
+    perfil = { limite: "max_completion_tokens", omitir: new Set() };
+    perfis.set(modelo, perfil);
+  }
+  return perfil;
 }
 
 /**
- * Executa a chamada injetando o parâmetro de limite correto, aprendendo qual é
- * na primeira recusa. `criar` recebe o corpo já montado.
+ * Ajustes que podem ser descartados sem mudar o contrato da resposta.
+ *
+ * `response_format` NÃO está aqui, de propósito. Ele é o que garante que a
+ * saída venha em JSON; sem ele a IA devolve texto livre, o schema rejeita, e o
+ * app ficaria tentando reparar algo que nunca ia validar. Descartar em silêncio
+ * um parâmetro que sustenta o contrato de dado clínico é o tipo de esperteza
+ * que o guia do projeto proíbe: quando a IA não pode cumprir o contrato, a
+ * chamada falha.
  */
-async function comLimiteDeSaida<T>(
+const AJUSTES_DESCARTAVEIS = new Set([
+  "temperature",
+  "top_p",
+  "frequency_penalty",
+  "presence_penalty",
+  "max_tokens",
+  "max_completion_tokens",
+]);
+
+/** O parâmetro que a API nomeou na recusa, quando ela nomeia algum. */
+function parametroRecusado(err: unknown): string | null {
+  if ((err as { status?: number })?.status !== 400) return null;
+  const mensagem = (err as { message?: string })?.message ?? "";
+  const m = mensagem.match(/Unsupported (?:parameter|value): '([^']+)'/i);
+  return m?.[1] ?? null;
+}
+
+/** Quantas vezes uma única chamada pode se adaptar antes de desistir. */
+const MAX_ADAPTACOES = 3;
+
+/**
+ * Executa a chamada montando os ajustes conforme o perfil do modelo, e
+ * adaptando o perfil quando a API recusa um parâmetro pelo nome.
+ */
+async function chamarModelo<T>(
   modelo: string,
   maxTokens: number,
-  criar: (limite: Record<string, number>) => Promise<T>,
+  temperature: number,
+  criar: (ajustes: Record<string, unknown>) => Promise<T>,
 ): Promise<T> {
-  const conhecido = limitePorModelo.get(modelo);
-  const primeiro: LimiteSaida = conhecido ?? "max_completion_tokens";
+  for (let tentativa = 0; ; tentativa++) {
+    const perfil = perfilDe(modelo);
+    const ajustes: Record<string, unknown> = {};
+    if (!perfil.omitir.has(perfil.limite)) ajustes[perfil.limite] = maxTokens;
+    if (!perfil.omitir.has("temperature")) ajustes.temperature = temperature;
 
-  try {
-    const r = await criar({ [primeiro]: maxTokens });
-    limitePorModelo.set(modelo, primeiro);
-    return r;
-  } catch (err) {
-    if (conhecido || !recusouOParametro(err, primeiro)) throw err;
-    // A API disse explicitamente que é este parâmetro que não serve.
-    const alternativo: LimiteSaida =
-      primeiro === "max_completion_tokens" ? "max_tokens" : "max_completion_tokens";
-    const r = await criar({ [alternativo]: maxTokens });
-    limitePorModelo.set(modelo, alternativo);
-    return r;
+    try {
+      return await criar(ajustes);
+    } catch (err) {
+      const parametro = parametroRecusado(err);
+      // Sem nome de parâmetro, ou fora da lista do que é seguro descartar, o
+      // erro sobe — retentativa cega esconderia a causa real.
+      if (!parametro || !AJUSTES_DESCARTAVEIS.has(parametro)) throw err;
+      if (tentativa >= MAX_ADAPTACOES) throw err;
+
+      if (parametro === perfil.limite) {
+        // A API recusou o NOME do limite: o outro é o certo para este modelo.
+        perfil.limite =
+          parametro === "max_completion_tokens" ? "max_tokens" : "max_completion_tokens";
+      } else {
+        perfil.omitir.add(parametro);
+      }
+    }
   }
 }
 
-/** Só para teste: qual parâmetro ficou memorizado para o modelo. */
-export function limiteAprendido(modelo: string): string | undefined {
-  return limitePorModelo.get(modelo);
+/** Só para teste: o perfil aprendido para o modelo. */
+export function perfilAprendido(modelo: string): { limite: string; omitir: string[] } | undefined {
+  const p = perfis.get(modelo);
+  return p ? { limite: p.limite, omitir: [...p.omitir] } : undefined;
 }
 
 /** Só para teste: esquece o que foi aprendido. */
 export function esquecerLimites(): void {
-  limitePorModelo.clear();
+  perfis.clear();
 }
 
 /**
@@ -206,11 +259,10 @@ export async function safeJsonCompletion<T>(
   ];
 
   const attempt = async (): Promise<SafeResult<T> & { raw?: string }> => {
-    const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+    const response = await chamarModelo(modelo, maxTokens, temperature, (ajustes) =>
       openai.chat.completions.create({
         model: modelo,
-        temperature,
-        ...limite,
+        ...ajustes,
         response_format: { type: "json_object" },
         messages,
       }),
@@ -276,11 +328,10 @@ export async function chatCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+  const response = await chamarModelo(modelo, maxTokens, temperature, (ajustes) =>
     openai.chat.completions.create({
       model: modelo,
-      temperature,
-      ...limite,
+      ...ajustes,
       messages: [{ role: "system", content: system }, ...messages],
     }),
   ).catch((err: unknown) => traduzirErroOpenAI(err, modelo));
@@ -302,11 +353,10 @@ export async function textCompletion(
   const openai = getOpenAIClient();
   if (!openai) throw new AIUnavailableError();
 
-  const response = await comLimiteDeSaida(modelo, maxTokens, (limite) =>
+  const response = await chamarModelo(modelo, maxTokens, temperature, (ajustes) =>
     openai.chat.completions.create({
       model: modelo,
-      temperature,
-      ...limite,
+      ...ajustes,
       messages: [
         { role: "system", content: system },
         {
