@@ -24,7 +24,8 @@
     "test:e2e:ui": "playwright test --ui",
     "agente:analisar": "tsx scripts/agentes/analisar.ts",
     "agente:implementar": "tsx scripts/agentes/implementar.ts",
-    "agente:consultor-medico": "tsx scripts/agentes/consultor-medico.ts"
+    "agente:consultor-medico": "tsx scripts/agentes/consultor-medico.ts",
+    "verificar:producao": "tsx scripts/verificar-producao.ts"
   },
   "engines": {
     "node": "22.x",

@@ -89,13 +89,35 @@ Tudo na Vercel — projeto `medfluxo`, branch de produção `main`, domínio
 ele tinha caído sem ninguém perceber justamente porque não estava escrito aqui.
 
 - **Frontend** — build do Vite em `dist`, servido pelo CDN.
-- **API** — uma única função em `api/[...rota].ts`, que monta
+- **API** — uma única função em `api/index.ts`, que monta
   `createServerlessApp()` de `server/serverless.ts`. É a mesma aplicação de
   `server/app.ts` sem o que não cabe em função: `/api/extract` e
   `/api/passagem-plantao` (corpo de 20 MB e execução longa) respondem 503 com
   motivo até as fases seguintes. `aiRouter`, prompts, schemas e guardrails são
   os mesmos — a função é só a casca.
 - `server/index.ts` continua sendo o servidor local (`npm run dev:all`).
+
+**O roteamento da API é explícito no `vercel.json`, nunca por convenção.**
+Era `api/[...rota].ts`, catch-all por nome de arquivo, e ele casava **um**
+segmento só. Como todo endpoint real é aninhado (`/api/ai/copiloto`,
+`/api/extract/preparar-upload`, `/api/passagem-plantao/gerar`), a API inteira
+respondeu 404 em produção por semanas — só `/api/health` escapava, por ter um
+segmento. A borda devolvia `x-vercel-error: NOT_FOUND` em texto puro e a função
+nem rodava. Hoje o rewrite `"/api/(.*)" → "/api/index"` manda tudo para a
+função, e `server/serverless.ts` normaliza o caminho para `/api/...` — assim a
+aplicação não depende de o rewrite preservar o prefixo.
+
+Detalhe que também mordeu: a chave de `functions` é **glob**, e em glob
+`[...rota]` é classe de caracteres, não nome de arquivo. A chave nunca casou, e
+o `maxDuration: 60` provavelmente nunca foi aplicado. Chave de `functions` sem
+colchetes.
+
+**Teste local não vê o roteamento da Vercel.** Os 235 testes e os 26 specs rodam
+contra `server/app.ts`, onde o Express roteia tudo — por isso ficaram verdes com
+a produção morta. `npm run verificar:producao` sonda os caminhos **aninhados** no
+ar e exige que a resposta venha da nossa aplicação (JSON nosso) e não da borda
+(`x-vercel-error`). Rode depois de todo deploy; 404 nosso passa, 404 da
+plataforma reprova.
 
 **Variáveis no projeto da Vercel** (Production e Preview):
 `OPENAI_API_KEY`, `OPENAI_MODEL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
