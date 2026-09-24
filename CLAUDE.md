@@ -112,6 +112,19 @@ Detalhe que também mordeu: a chave de `functions` é **glob**, e em glob
 o `maxDuration: 60` provavelmente nunca foi aplicado. Chave de `functions` sem
 colchetes.
 
+**Dependência que o empacotador não rastreia precisa ser pedida à mão.** O
+pdf.js monta um "fake worker" com `import(workerSrc)` marcado
+`webpackIgnore: true` / `@vite-ignore` — a própria biblioteca manda o bundler
+ignorar. A função foi publicada sem `pdf.worker.mjs` e todo PDF falhava com
+`Cannot find module` em `/var/task/...`, enquanto aqui passava: no disco o
+`node_modules` está inteiro e o import resolve. `loadPdfJs`
+(`server/services/pdf.service.ts`) importa o worker com string literal e o
+registra em `globalThis.pdfjsWorker`, fechando as duas pontas — o arquivo entra
+no pacote e o caminho do import ignorado nunca roda. `includeFiles` no
+`vercel.json` é o cinto além do suspensório. O teste não afirma "extraiu
+texto": afirma que o worker **foi registrado**, que é o que separa produção de
+local.
+
 **Teste local não vê o roteamento da Vercel.** Os 235 testes e os 26 specs rodam
 contra `server/app.ts`, onde o Express roteia tudo — por isso ficaram verdes com
 a produção morta. `npm run verificar:producao` sonda os caminhos **aninhados** no
