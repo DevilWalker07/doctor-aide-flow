@@ -3,20 +3,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import helmet from "helmet";
-import {
-  authRequired,
-  env,
-  hasOpenAIKey,
-  hasSupabase,
-  modelosEmUso,
-  STATIC_DIR,
-} from "./config.js";
+import { authRequired, env, hasOpenAIKey, modelosEmUso, STATIC_DIR } from "./config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
 import { createPassagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
+import { sondarSupabase } from "./lib/supabaseAdmin.js";
 import { getJobStore, type JobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
 
@@ -64,7 +58,7 @@ export function createApp(deps: AppDeps = {}) {
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
       jobStore: jobStore.kind,
-      supabase: hasSupabase(),
+      supabase: await sondarSupabase(),
       authRequired: authRequired(),
       uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     });

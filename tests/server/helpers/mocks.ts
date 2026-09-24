@@ -135,9 +135,19 @@ const storageApi = {
   }),
 };
 
+/**
+ * Estado que `sondarSupabase` devolve nos testes.
+ *
+ * A sondagem de verdade bate no Postgres; aqui ela é um botão, para os testes
+ * do /health poderem exercitar "sem_tabela" e "chave_invalida" — que são
+ * justamente os estados que ficaram invisíveis em produção.
+ */
+export const supabaseEstado = { atual: "ok" as string };
+
 vi.mock("../../../server/lib/supabaseAdmin.js", () => ({
   getSupabaseAdmin: () => ({ auth: { getUser: getUserMock }, storage: storageApi }),
   hasSupabase: () => true,
+  sondarSupabase: async () => supabaseEstado.atual,
 }));
 
 vi.mock("../../../server/middleware/security.js", () => ({

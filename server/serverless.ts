@@ -1,21 +1,14 @@
 import { waitUntil } from "@vercel/functions";
 import express from "express";
 import helmet from "helmet";
-import {
-  authRequired,
-  configErrors,
-  configOk,
-  env,
-  hasOpenAIKey,
-  hasSupabase,
-  modelosEmUso,
-} from "./config.js";
+import { authRequired, configErrors, configOk, env, hasOpenAIKey, modelosEmUso } from "./config.js";
 import { requireAuth } from "./middleware/auth.js";
 import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
 import { createPassagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
+import { sondarSupabase } from "./lib/supabaseAdmin.js";
 import { getJobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
 import { APP_VERSION } from "./app.js";
@@ -81,7 +74,10 @@ export function createServerlessApp() {
       modelosDesconhecidos: await modelosDesconhecidos(Object.values(modelosEmUso())),
       hasOpenAIKey: hasOpenAIKey(),
       aiMock: env.AI_MOCK,
-      supabase: hasSupabase(),
+      // Estado sondado, não `hasSupabase()`: aquilo só dizia que as variáveis
+      // existem, e respondia `true` com a chave revogada e com a tabela dos
+      // jobs ausente — que foi o defeito que ficou meses invisível aqui.
+      supabase: await sondarSupabase(),
       authRequired: authRequired(),
       nativos: await checarNativos(),
       configErrors,
