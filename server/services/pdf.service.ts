@@ -48,9 +48,45 @@ function standardFontsDir(): string | undefined {
 type PdfJs = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 let pdfjsPromise: Promise<PdfJs> | null = null;
 
+/**
+ * Carrega o pdf.js JUNTO com o worker, e registra o worker em
+ * `globalThis.pdfjsWorker`.
+ *
+ * Sem isso o pdf.js monta um "fake worker" assim: se `globalThis.pdfjsWorker`
+ * não estiver definido, ele faz `import(this.workerSrc)` — e esse import, no
+ * fonte da biblioteca, vem marcado com `webpackIgnore: true` e `@vite-ignore`.
+ * Ou seja, a própria biblioteca manda o empacotador NÃO rastrear o arquivo.
+ *
+ * O resultado em produção foi `Cannot find module
+ * '/var/task/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'`: a Vercel
+ * empacotou a função sem o worker, porque ninguém pediu por ele de um jeito
+ * rastreável. Localmente nunca apareceu — lá o `node_modules` está inteiro no
+ * disco e o import dinâmico resolve.
+ *
+ * Importando o worker aqui, com string literal, o empacotador o inclui; e
+ * registrando-o em `globalThis`, o caminho do import dinâmico nunca é usado.
+ * As duas pontas fechadas.
+ */
 function loadPdfJs(): Promise<PdfJs> {
-  if (!pdfjsPromise) pdfjsPromise = import("pdfjs-dist/legacy/build/pdf.mjs");
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const [pdfjs, worker] = await Promise.all([
+        import("pdfjs-dist/legacy/build/pdf.mjs"),
+        import("pdfjs-dist/legacy/build/pdf.worker.mjs"),
+      ]);
+      (globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker;
+      return pdfjs;
+    })();
+  }
   return pdfjsPromise;
+}
+
+/** Só para teste: prova que rodamos na thread principal, sem import ignorado. */
+export function workerRegistrado(): boolean {
+  return Boolean(
+    (globalThis as { pdfjsWorker?: { WorkerMessageHandler?: unknown } }).pdfjsWorker
+      ?.WorkerMessageHandler,
+  );
 }
 
 async function openDocument(buf: Buffer) {
