@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { resetAiMock } from "./helpers/mocks.js";
+import { resetAiMock, supabaseEstado } from "./helpers/mocks.js";
 import { configErrors } from "../../server/config.js";
 import { createServerlessApp } from "../../server/serverless.js";
 
@@ -32,6 +32,47 @@ describe("função serverless da Vercel", () => {
 
   it("responde /health também, porque o contêiner serve na raiz", async () => {
     await request(app).get("/health").expect(200);
+  });
+
+  /**
+   * O campo `supabase` já foi `hasSupabase()` — só dizia se as variáveis de
+   * ambiente existiam. Com isso ele respondia `true` em produção enquanto a
+   * tabela `extraction_jobs` simplesmente não existia lá, e a passagem de
+   * plantão morria no `jobStore.create` sem nada ligando um fato ao outro.
+   *
+   * Agora é estado sondado. Estes casos existem para que ele não volte a ser
+   * um "true" que não quer dizer nada.
+   */
+  describe("o campo supabase do /health diz o estado, não o palpite", () => {
+    afterEach(() => {
+      supabaseEstado.atual = "ok";
+    });
+
+    it("tabela ausente aparece como sem_tabela, não como true", async () => {
+      supabaseEstado.atual = "sem_tabela";
+      const res = await request(app).get("/api/health").expect(200);
+      expect(res.body.supabase).toBe("sem_tabela");
+    });
+
+    it("chave revogada aparece como chave_invalida", async () => {
+      supabaseEstado.atual = "chave_invalida";
+      const res = await request(app).get("/api/health").expect(200);
+      expect(res.body.supabase).toBe("chave_invalida");
+    });
+
+    it("tudo certo aparece como ok", async () => {
+      const res = await request(app).get("/api/health").expect(200);
+      expect(res.body.supabase).toBe("ok");
+    });
+
+    it("o estado do Supabase não derruba o /health", async () => {
+      // /health que cai com o banco fora do ar não serve para diagnosticar
+      // nada — e é exatamente quando mais precisa responder.
+      supabaseEstado.atual = "inalcancavel";
+      const res = await request(app).get("/api/health").expect(200);
+      expect(res.body.supabase).toBe("inalcancavel");
+      expect(res.body.ok).toBe(true);
+    });
   });
 
   it("monta o mesmo aiRouter do contêiner", async () => {
