@@ -189,6 +189,7 @@ const gerarSincrono: RequestHandler = async (req, res) => {
       warnings.push(`${name}: ${reason}`);
       return;
     }
+    if (r.value.aviso) warnings.push(r.value.aviso);
     const text = r.value.text.trim();
     if (!text) {
       warnings.push(

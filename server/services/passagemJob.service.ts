@@ -85,7 +85,10 @@ export async function iniciarPassagem({
     try {
       const baixado = await baixarParaTemporario(caminho);
       local = baixado.filePath;
-      const { text, kind } = await extractTextFromFile(local, nome);
+      const { text, kind, aviso } = await extractTextFromFile(local, nome);
+      // Extensão que mente não impede a leitura, mas o médico precisa saber:
+      // se os arquivos do hospital saem com o nome errado, isso se repete.
+      if (aviso) warnings.push(aviso);
       if (text.trim()) {
         items.push({ fileName: nome, text: text.trim() });
       } else {

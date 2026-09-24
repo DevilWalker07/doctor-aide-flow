@@ -125,6 +125,17 @@ no pacote e o caminho do import ignorado nunca roda. `includeFiles` no
 texto": afirma que o worker **foi registrado**, que é o que separa produção de
 local.
 
+**Formato de arquivo se decide pelos bytes, nunca pela extensão.** A rota de
+extração já usava `sniffKind` (`server/lib/files.ts`); a da passagem despachava
+por `extOf(originalName)`, e um Word chamado `.pdf` ia para o leitor de PDF e
+falhava reclamando da estrutura do PDF — erro que não aponta para a causa. O
+nome do arquivo é dado de entrada e não está sob o nosso controle; o conteúdo
+está. `extractTextFromFile` (`server/services/textExtraction.service.ts`)
+fareja e despacha pelo conteúdo; a extensão só vale para `.txt`/`.md`, que não
+têm assinatura. Quando os dois discordam, o arquivo é lido pelo conteúdo **e**
+entra um aviso na lista que a tela mostra — extensão errada que se repete é
+coisa que o médico precisa saber.
+
 **Teste local não vê o roteamento da Vercel.** Os 235 testes e os 26 specs rodam
 contra `server/app.ts`, onde o Express roteia tudo — por isso ficaram verdes com
 a produção morta. `npm run verificar:producao` sonda os caminhos **aninhados** no
