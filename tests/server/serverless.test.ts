@@ -75,6 +75,44 @@ describe("função serverless da Vercel", () => {
     });
   });
 
+  /**
+   * Em produção a API inteira respondia 404: `api/[...rota].ts` só casava um
+   * segmento, e todo endpoint real é aninhado (`/api/ai/copiloto`,
+   * `/api/extract/preparar-upload`, `/api/passagem-plantao/gerar`). Só
+   * `/api/health` escapava, por ter um segmento só.
+   *
+   * Quem entrega o caminho à função é o rewrite da Vercel, que nenhum teste
+   * daqui exercita. Então a aplicação deixou de depender disso: responde
+   * recebendo com ou sem o prefixo.
+   */
+  describe("o caminho chega normalizado, com ou sem /api", () => {
+    it("responde a caminho aninhado com o prefixo", async () => {
+      const res = await request(app)
+        .post("/api/ai/copiloto")
+        .send({ messages: [{ role: "user", content: "dose de dipirona" }] });
+      expect(res.status).toBe(200);
+    });
+
+    it("responde ao mesmo caminho aninhado SEM o prefixo", async () => {
+      const res = await request(app)
+        .post("/ai/copiloto")
+        .send({ messages: [{ role: "user", content: "dose de dipirona" }] });
+      expect(res.status).toBe(200);
+    });
+
+    it("rota inexistente aninhada responde o 404 NOSSO, em JSON", async () => {
+      // O defeito de produção era um 404 de texto puro, da borda da Vercel.
+      // 404 nosso é legítimo; o da borda significa que a função nem rodou.
+      const res = await request(app).get("/api/extract/nao-existe").expect(404);
+      expect(res.body.error).toBe("not_found");
+    });
+
+    it("/health continua na raiz, sem virar /api/health", async () => {
+      const res = await request(app).get("/health").expect(200);
+      expect(res.body.service).toBe("medfluxo-motor-luan");
+    });
+  });
+
   it("monta o mesmo aiRouter do contêiner", async () => {
     const res = await request(app)
       .post("/api/ai/copiloto")

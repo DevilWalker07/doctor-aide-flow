@@ -55,6 +55,28 @@ export function createServerlessApp() {
 
   app.set("trust proxy", 1);
   app.disable("x-powered-by");
+
+  /**
+   * Normaliza o caminho para a forma que as rotas esperam: `/api/...`.
+   *
+   * Toda a API vive sob `/api` aqui, e quem decide o que a função recebe é o
+   * rewrite da Vercel — detalhe de plataforma que eu não consigo exercitar em
+   * teste nenhum daqui. Foi exatamente esse ponto cego que deixou a API inteira
+   * respondendo 404 em produção enquanto 231 testes e 26 specs passavam: eles
+   * rodam contra o contêiner, onde o Express faz o roteamento todo.
+   *
+   * Com esta normalização, a aplicação funciona recebendo `/api/ai/copiloto` ou
+   * `/ai/copiloto`. Não é remendo: é parar de depender de um comportamento que
+   * não está sob o nosso controle nem sob os nossos testes.
+   */
+  app.use((req, _res, next) => {
+    if (req.url === "/health" || req.url.startsWith("/health?")) return next();
+    if (!req.url.startsWith("/api/") && req.url !== "/api") {
+      req.url = `/api${req.url === "/" ? "" : req.url}`;
+    }
+    next();
+  });
+
   app.use(
     helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }),
   );
