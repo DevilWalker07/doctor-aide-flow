@@ -61,56 +61,6 @@ export const aiFixtures = {
     pendencias: ["RX TÓRAX CONTROLE"],
     alertas: ["ATB EM CURSO"],
   },
-  passagemBatch: {
-    pacientes: [
-      {
-        leito: "L01",
-        paciente: "PACIENTE TESTE UM",
-        dih: "10/09/2026",
-        di: 5,
-        diagnostico: "PAC / HAS, DM2",
-        quadroAtual: "ESTÁVEL — EUPNEICA EM AR AMBIENTE, AFEBRIL.",
-        atb: "CEFTRIAXONA 1G EV 12/12H — D3/7",
-        ultimoLab: "HB 10,1 / LEUCO 12.300 / CR 1,2 / PCR 48↓",
-        condutasHoje: "MANTER ATB. RX TÓRAX CONTROLE.",
-        alertasPendencias: "! RX TÓRAX PENDENTE",
-        dispositivos: "JELCO MSD",
-        anotacoesVisita: "",
-        resumoLinha: "PACIENTE TESTE UM – PAC EM TRATAMENTO, PCR EM QUEDA",
-        sugestoesClinicas: [
-          "PCR em queda com ATB em D3 sugere boa resposta — manter esquema.",
-          "RX de controle define se há complicação (derrame? consolidação nova?).",
-        ],
-      },
-      {
-        leito: "L02",
-        paciente: "PACIENTE TESTE DOIS",
-        dih: "12/09/2026",
-        di: 3,
-        diagnostico: "ITU COMPLICADA / DRC 3",
-        quadroAtual: "INSTÁVEL — HIPERCALEMIA EM CORREÇÃO.",
-        atb: "CIPROFLOXACINO 400MG EV 12/12H — D2/7",
-        ultimoLab: "CR 2,1↑ / K 5,7 !! / PCR 22",
-        condutasHoje: "GLICOINSULINA. REPETIR K EM 6H.",
-        alertasPendencias: "!! K 5,7 — REAVALIAR ELETRÓLITOS",
-        dispositivos: "SVD (D3)",
-        anotacoesVisita: "",
-        resumoLinha: "PACIENTE TESTE DOIS – ITU COMPLICADA, K 5,7 EM CORREÇÃO",
-        sugestoesClinicas: [
-          "K 5,7 com CR 2,1: ECG de base e repetir K após glicoinsulina.",
-          "Ciprofloxacino precisa de ajuste para o ClCr estimado.",
-        ],
-      },
-    ],
-    alertasCriticos: [
-      {
-        prioridade: "!! URGENTE",
-        leito: "L02",
-        paciente: "PACIENTE TESTE DOIS",
-        acao: "REPETIR POTÁSSIO EM 6H E AJUSTAR CIPROFLOXACINO PARA CLCR",
-      },
-    ],
-  },
   evolucao: `EVOLUÇÃO MÉDICA (MOCK)
 
 #LISTA DE PROBLEMAS

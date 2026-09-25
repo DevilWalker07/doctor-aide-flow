@@ -7,7 +7,6 @@ import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
-import { createPassagemPlantaoRouter } from "./routes/passagemPlantao.routes.js";
 import { sondarSupabase } from "./lib/supabaseAdmin.js";
 import { getJobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
@@ -17,10 +16,10 @@ import { APP_VERSION } from "./app.js";
  * A mesma aplicação, sem o que não cabe em função serverless.
  *
  * Só a casca muda: `aiRouter`, os prompts, os schemas Zod e os guardrails
- * clínicos são exatamente os mesmos de `createApp`. O que fica de fora são as
- * rotas que dependem de `multer` com 20 MB e de execução longa — upload de
- * documento e passagem de plantão —, e o servir de arquivo estático, que na
- * Vercel é o próprio CDN.
+ * clínicos são exatamente os mesmos de `createApp`. O que fica de fora é o
+ * upload multipart (aqui o navegador envia direto ao Storage) e o servir de
+ * arquivo estático, que na Vercel é o próprio CDN. A passagem de plantão não
+ * tem rota própria: são três chamadas curtas em `/api/ai`.
  */
 /**
  * Os dois módulos nativos carregam nesta função?
@@ -131,18 +130,6 @@ export function createServerlessApp() {
     createExtractRouter({
       jobStore,
       limiters,
-      manterVivo: (promise) => waitUntil(promise),
-    }),
-  );
-
-  // Passagem de plantão: job assíncrono, um lote por invocação. O teto de 60 s
-  // do plano hobby não comporta 15 arquivos numa requisição só, e requisição
-  // que estoura o teto deixa o médico sem nada no meio do plantão.
-  app.use(
-    "/api/passagem-plantao",
-    limiters.passagem,
-    createPassagemPlantaoRouter({
-      jobStore,
       manterVivo: (promise) => waitUntil(promise),
     }),
   );

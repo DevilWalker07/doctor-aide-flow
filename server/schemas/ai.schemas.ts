@@ -187,37 +187,6 @@ export const ParecerEspecialistaBody = z.object({
 });
 export type ParecerEspecialistaBody = z.infer<typeof ParecerEspecialistaBody>;
 
-export const PassagemBodySchema = z
-  .object({
-    setor: z
-      .string()
-      .trim()
-      .min(1)
-      .max(40)
-      .regex(/^[\p{L}\p{N} /-]+$/u, "Setor contém caracteres inválidos.")
-      .default("CMF/CMM"),
-    data: z
-      .string()
-      .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
-      .default(todayBR),
-    /**
-     * Arquivos já enviados ao Storage pelo navegador.
-     *
-     * O schema é `strict`, então o campo precisa estar declarado aqui — sem
-     * isso a requisição inteira é recusada com "Unrecognized key". Ausente no
-     * envio multipart do contêiner, que manda os arquivos no corpo.
-     */
-    storage_paths: z.array(z.string().trim().min(1).max(300)).max(30).optional(),
-    /** Cabeçalho do mapa, como no modelo do hospital. */
-    hospital: z.string().trim().max(120).optional(),
-    periodo: z.enum(["diurno", "noturno"]).optional(),
-    passagem_para: z
-      .string()
-      .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.")
-      .optional(),
-  })
-  .strict();
-export type PassagemBody = z.infer<typeof PassagemBodySchema>;
 
 const DATA_BR = z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.");
 
@@ -401,47 +370,6 @@ function normalizeQuadro(raw: string): string {
   return `${prefixo} — ${s.slice(m[0].length).trim()}`;
 }
 
-export const PatientRowSchema = z.object({
-  leito: str("LEITO NÃO IDENTIFICADO"),
-  paciente: str("NÃO REFERIDO"),
-  dih: str("NÃO REFERIDO"),
-  di: z.coerce.number().int().min(0).max(400).nullable().catch(null),
-  diagnostico: str("NÃO REFERIDO"),
-  quadroAtual: str("").transform(normalizeQuadro),
-  atb: str("NÃO REFERIDO"),
-  ultimoLab: str("Sem lab recente"),
-  condutasHoje: str(""),
-  alertasPendencias: str(""),
-  dispositivos: nullableStr,
-  anotacoesVisita: str(""),
-  /**
-   * Título da linha do leito na folha de sugestões: "DANIEL – HDA/HDB,
-   * ANEMIA EM ASCENSÃO, POSSÍVEL ALTA".
-   */
-  resumoLinha: str(""),
-  /**
-   * Raciocínio clínico por leito — a "FOLHA DE SUGESTÕES CLÍNICAS" do mapa.
-   * `.catch([])` de propósito: se o modelo não devolver, o mapa sai sem a
-   * folha, nunca com sugestão inventada no lugar de dado clínico.
-   */
-  sugestoesClinicas: strArr,
-});
-export type PatientRow = z.infer<typeof PatientRowSchema>;
-
-export const AlertaCriticoSchema = z.object({
-  prioridade: z.preprocess(normalizePrioridade, PrioridadeEnum),
-  leito: nullableStr,
-  paciente: str("NÃO REFERIDO"),
-  acao: z.string().trim().min(1),
-});
-export type AlertaCritico = z.infer<typeof AlertaCriticoSchema>;
-
-export const PassagemPlantaoBatchSchema = z.object({
-  pacientes: z.array(PatientRowSchema),
-  alertasCriticos: z.array(AlertaCriticoSchema).catch([]),
-});
-export type PassagemPlantaoBatch = z.infer<typeof PassagemPlantaoBatchSchema>;
-export type MapaPlantaoData = PassagemPlantaoBatch;
 
 export const EvolutionReviewSchema = z.object({
   campos_faltantes: strArr,

@@ -14,7 +14,7 @@ const semIA = vi.fn(async () => {
 describe("normalizador da passagem", () => {
   it("Word: cabeçalhos rotulados antes do corpo, sem IA", async () => {
     const bytes = await gerarDocxFicticio();
-    const doc = await normalizarArquivo(new File([bytes], "L03-JOAQUIM.docx"), semIA);
+    const doc = await normalizarArquivo(new File([new Uint8Array(bytes)], "L03-JOAQUIM.docx"), semIA);
     expect(doc.lidoDeImagem).toBe(false);
     expect(doc.markdown.startsWith("# CABEÇALHOS DO DOCUMENTO")).toBe(true);
     expect(doc.markdown).toContain("## Cabeçalho — primeira página");
@@ -26,7 +26,7 @@ describe("normalizador da passagem", () => {
 
   it("Word com nome .pdf é lido como Word e avisa", async () => {
     const bytes = await gerarDocxFicticio();
-    const doc = await normalizarArquivo(new File([bytes], "L03 - JOAQUIM.pdf"), semIA);
+    const doc = await normalizarArquivo(new File([new Uint8Array(bytes)], "L03 - JOAQUIM.pdf"), semIA);
     expect(doc.markdown).toContain("CABEÇALHOS DO DOCUMENTO");
     expect(doc.avisos[0]).toContain("o conteúdo é DOCX");
   });

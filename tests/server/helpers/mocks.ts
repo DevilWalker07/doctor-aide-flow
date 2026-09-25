@@ -157,6 +157,5 @@ vi.mock("../../../server/middleware/security.js", () => ({
     ai: passthrough,
     upload: passthrough,
     poll: passthrough,
-    passagem: passthrough,
   }),
 }));
