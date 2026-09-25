@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
 import mammoth from "mammoth";
-import { gerarMapaPlantaoDocx } from "../../server/services/docxGenerator.service.js";
-import type { MapaPlantaoData } from "../../server/schemas/ai.schemas.js";
+import { Packer } from "docx";
+import {
+  linhaResumoEnfermarias,
+  montarMapaDocx,
+  nomeDoArquivoMapa,
+  GRUPOS_LEITO_PADRAO,
+  type OpcoesMapa,
+} from "../../../shared/passagem/docx.js";
+import type { CabecalhoMapa, Consolidacao, MapaPlantaoData } from "../../../shared/passagem/tipos.js";
+
+/** Mesma assinatura do gerador antigo, para os testes migrados lerem igual. */
+async function gerarMapaPlantaoDocx(
+  mapa: MapaPlantaoData,
+  setor: string,
+  dataPlantao: string,
+  cabecalho?: CabecalhoMapa,
+  extra: Partial<OpcoesMapa> = {},
+): Promise<Buffer> {
+  return Packer.toBuffer(montarMapaDocx(mapa, { setor, dataPlantao, cabecalho, ...extra }));
+}
 
 /**
  * As colunas do mapa, conferidas abrindo o DOCX gerado.
@@ -184,5 +202,94 @@ describe("folha de sugestões clínicas", () => {
     const t = await texto(await gerarMapaPlantaoDocx(vazio, "CMM", "02/08/2026"));
     expect(t).not.toContain("FOLHA DE SUGESTÕES CLÍNICAS");
     expect(t).toContain("ADMISSÃO NOVA");
+  });
+});
+
+describe("seções do modelo que o mapa antigo não tinha", () => {
+  const consolidacao: Consolidacao = {
+    prioridades: [
+      { prioridade: "! HOJE", leito: "L07", paciente: "JUVENAL", texto: "Reavaliar dieta" },
+      {
+        prioridade: "!! URGENTE",
+        leito: "L04",
+        paciente: "WILSON",
+        texto: "Plaquetopenia 102 mil — repetir hoje",
+      },
+    ],
+    pendencias: {
+      admissoesPendentes: [],
+      labsAIncorporar: ["L04: plaquetas de hoje"],
+      procedimentosAgendados: ["L07: TC de abdome amanhã"],
+      altasEmProgramacao: [],
+      avisosCriticos: [],
+    },
+  };
+
+  it("linha-resumo das enfermarias sai debaixo do título, montada em código", async () => {
+    const t = await texto(await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026"));
+    expect(t).toContain("ENFERMARIA 1: L04 • ENFERMARIA 2: L07 • ISOLAMENTOS: ISO 12");
+  });
+
+  it("admissão de hoje sai como NOVO; leitos de imagem e não lidos são listados", () => {
+    const r = linhaResumoEnfermarias(
+      [
+        { ...base, leito: "L01", paciente: "A", di: 1 },
+        { ...base, leito: "L06", paciente: "B", lidoDeImagem: true },
+      ],
+      GRUPOS_LEITO_PADRAO,
+      ["L03"],
+    );
+    expect(r).toBe("ENFERMARIA 1: L01 NOVO • ENFERMARIA 2: L06 | *LIDOS DE IMAGEM: L06 | *NÃO LIDOS: L03");
+  });
+
+  it("PRIORIDADES numeradas, urgente primeiro na ordem que a consolidação deu", async () => {
+    const t = await texto(
+      await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026", { passagemPara: "03/08/2026" }, { consolidacao }),
+    );
+    expect(t).toContain("PRIORIDADES PARA O PLANTÃO 03/08/2026");
+    expect(t).toContain("1. JUVENAL (L07): Reavaliar dieta");
+    expect(t).toContain("2. WILSON (L04): Plaquetopenia 102 mil — repetir hoje");
+  });
+
+  it("sem consolidação, prioridades vêm dos alertas dos leitos e pendências gerais dizem que falhou", async () => {
+    const t = await texto(await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026"));
+    expect(t).toContain("1. WILSON (L04): Investigar plaquetopenia");
+    expect(t).toContain("Não foi possível consolidar as pendências gerais");
+    expect(t).not.toContain("LABS RECENTES A INCORPORAR");
+  });
+
+  it("PENDÊNCIAS GERAIS numeradas só com as categorias que têm item", async () => {
+    const t = await texto(
+      await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026", { passagemPara: "03/08/2026" }, { consolidacao }),
+    );
+    expect(t).toContain("PENDÊNCIAS GERAIS – PLANTÃO 03/08/2026");
+    expect(t).toContain("1. LABS RECENTES A INCORPORAR: L04: plaquetas de hoje");
+    expect(t).toContain("2. PROCEDIMENTOS AGENDADOS: L07: TC de abdome amanhã");
+    expect(t).not.toContain("ALTAS EM PROGRAMAÇÃO");
+  });
+
+  it("leito lido de imagem sai marcado para conferência", async () => {
+    const t = await texto(
+      await gerarMapaPlantaoDocx(
+        { pacientes: [{ ...base, leito: "L02", paciente: "FOTO", lidoDeImagem: true }], alertasCriticos: [] },
+        "CMM",
+        "02/08/2026",
+      ),
+    );
+    expect(t).toContain("LIDO DE IMAGEM — CONFIRA VALORES");
+  });
+
+  it("avisos de leito não lido vêm antes da tabela", async () => {
+    const t = await texto(
+      await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026", undefined, {
+        avisos: ["L03 (L03-FULANO.docx) não foi lido: tempo esgotado"],
+      }),
+    );
+    expect(t.indexOf("LEIA ANTES DE USAR")).toBeLessThan(t.indexOf("MAPA DE PASSAGEM"));
+    expect(t).toContain("L03 (L03-FULANO.docx) não foi lido");
+  });
+
+  it("nome do arquivo baixado", () => {
+    expect(nomeDoArquivoMapa("cmm", "02/08/2026")).toBe("MAPA_PASSAGEM_CMM_02-08-2026.docx");
   });
 });
