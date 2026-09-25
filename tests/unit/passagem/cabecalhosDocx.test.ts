@@ -12,17 +12,15 @@ describe("cabeçalhos do Word", () => {
     expect(cabecalhos.map((c) => c.rotulo)).toEqual(["primeira página", "demais páginas"]);
     const [primeira, demais] = cabecalhos.map((c) => c.linhas.join("\n"));
     expect(primeira).toContain("HOSPITAL FICTÍCIO NAIR");
-    expect(primeira).toContain("DATA: | 25/09/2026");
+    expect(primeira).toContain("DATA: 25/09/2026");
     expect(demais).toContain("UNIDADE DE PRONTO ATENDIMENTO FICTÍCIA");
     expect(demais).toContain("24/09/2026");
   });
 
-  it("rótulo e valor da tabela saem na mesma linha", async () => {
+  it("células da mesma linha da tabela saem juntas, separadas por |", async () => {
     const [primeira] = await lerCabecalhosDocx(await gerarDocxFicticio({ leito: "07" }));
-    expect(primeira.linhas).toContain("UNIDADE DE INTERNAÇÃO: | CLÍNICA MÉDICA | LEITO: | 07");
-    expect(primeira.linhas).toContain(
-      "DATA DA ADMISSÃO: | 20/09/2026 | Nº DE PRONTUÁRIO: | 000123",
-    );
+    expect(primeira.linhas).toContain("UNIDADE DE INTERNAÇÃO: HFN | LEITO: 07");
+    expect(primeira.linhas).toContain("DATA DA ADMISSÃO: 20/09/2026 | Nº DE PRONTUÁRIO: | 000123");
   });
 
   it("o Markdown traz cada cabeçalho rotulado", async () => {

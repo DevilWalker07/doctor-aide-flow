@@ -95,10 +95,16 @@ async function docxParaMarkdown(bytes: Uint8Array): Promise<string> {
   return exigirTexto(documentoEmMarkdown(cabecalhos, corpo.replace(/\n{3,}/g, "\n\n")));
 }
 
+/**
+ * Build `legacy` de propósito. O build padrão do pdf.js 5 usa APIs de
+ * JavaScript recém-lançadas (`Map.prototype.getOrInsertComputed`) e morre com
+ * "is not a function" em navegador que ainda não as tem — o Safari do iPhone
+ * entre eles. O legacy traz os polyfills.
+ */
 async function carregarPdfJs() {
   const [pdfjs, { default: workerUrl }] = await Promise.all([
-    import("pdfjs-dist"),
-    import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+    import("pdfjs-dist/legacy/build/pdf.mjs"),
+    import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url"),
   ]);
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   return pdfjs;

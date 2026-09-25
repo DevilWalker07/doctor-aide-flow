@@ -16,7 +16,7 @@ export const PASSAGEM_LEITO_PROMPT = `${BASE_MOTOR_LUAN_PROMPT}
 Você recebe o texto (Markdown) de UM documento de UM leito — prescrição e/ou evolução — e devolve a linha desse leito no mapa de passagem de plantão.
 ${REGRAS_GLOBAIS}
 IDENTIFICAÇÃO — SEMPRE PELO CABEÇALHO
-O bloco "# CABEÇALHOS DO DOCUMENTO" traz cada cabeçalho rotulado ("primeira página", "demais páginas"…). Rótulo e valor vêm na mesma linha, separados por " | " (ex.: "LEITO: | 05").
+O bloco "# CABEÇALHOS DO DOCUMENTO" traz cada cabeçalho rotulado ("primeira página", "demais páginas"…). Células da mesma linha vêm separadas por " | "; o valor vem junto do rótulo ("LEITO: 05") ou na célula seguinte ("Nº DE PRONTUÁRIO: | 1234").
 I1 Campo igual em todos os cabeçalhos é certo.
 I2 Cabeçalhos divergentes: vale o de DATA mais recente; empate ou sem data → o da primeira página.
 I3 Nunca misture campos de cabeçalhos que discordam: todos os campos saem do cabeçalho escolhido.
@@ -62,8 +62,8 @@ FORMATO DE SAÍDA — APENAS JSON
 }
 
 ### EXEMPLO (trecho)
-Cabeçalho — primeira página: "NOME: | ANA SOUZA | DATA: | 19/09/2026" · "DATA DA ADMISSÃO: | 10/09/2026" · "UNIDADE: | HNAS | LEITO: | 03"
-Cabeçalho — demais páginas: "NOME: | ANA SOUZA | DATA: | 18/09/2026" · "UNIDADE: | UPA | LEITO: | 03"
+Cabeçalho — primeira página: "HOSPITAL NAIR" · "NOME: ANA SOUZA | DATA: 19/09/26" · "DATA DA ADMISSÃO: 10/09/26" · "UNIDADE DE INTERNAÇÃO: HNAS | LEITO: 03"
+Cabeçalho — demais páginas: "UNIDADE DE PRONTO ATENDIMENTO" · "NOME: ANA SOUZA | DATA: 18/09/26" · "UNIDADE DE INTERNAÇÃO: UPA | LEITO: 03"
 → "identificacao": { "nome": "ANA SOUZA", "idade": null, "leito": "03", "dih": "10/09/2026", "unidade": "HNAS", "prontuario": null, "fonte": "cabeçalho da primeira página, 19/09/2026", "conflitos": ["UNIDADE: HNAS (19/09) × UPA (18/09) — usado HNAS"] }
 
 Não inclua texto fora do JSON. Não use markdown.

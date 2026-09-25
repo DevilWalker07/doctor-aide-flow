@@ -83,9 +83,14 @@ function PassagemPlantaoPage() {
   const [mapa, setMapa] = useState<(MapaPronto & { url: string }) | null>(null);
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Os workers leem o estado mais recente daqui, não da closure.
+  // A fila lê o estado daqui, não da closure nem do próximo render: depois do
+  // último leito, `gerar` precisa ver todos os resultados na mesma hora.
+  // Toda mudança de itens passa por `mudarItens`, que atualiza os dois juntos.
   const itensRef = useRef<Item[]>([]);
-  itensRef.current = itens;
+  const mudarItens = useCallback((fn: (prev: Item[]) => Item[]) => {
+    itensRef.current = fn(itensRef.current);
+    setItens(itensRef.current);
+  }, []);
 
   const dataPlantao = isoParaBR(dataISO) ?? "";
 
@@ -94,24 +99,27 @@ function PassagemPlantaoPage() {
     return () => URL.revokeObjectURL(mapa.url);
   }, [mapa]);
 
-  const atualizar = useCallback((id: string, mudanca: Partial<Item>) => {
-    setItens((prev) => prev.map((i) => (i.id === id ? { ...i, ...mudanca } : i)));
-  }, []);
+  const atualizar = useCallback(
+    (id: string, mudanca: Partial<Item>) => {
+      mudarItens((prev) => prev.map((i) => (i.id === id ? { ...i, ...mudanca } : i)));
+    },
+    [mudarItens],
+  );
 
   /** Mudou o que entra na linha (data, setor): o que já foi lido precisa ser lido de novo. */
   const invalidar = useCallback(() => {
     setMapa(null);
-    setItens((prev) =>
+    mudarItens((prev) =>
       prev.map((i) =>
         i.estado === "pronto" ? { ...i, estado: "na-fila", resultado: undefined } : i,
       ),
     );
-  }, []);
+  }, [mudarItens]);
 
   function adicionar(lista: FileList | File[]) {
     setMapa(null);
     setErroGeral(null);
-    setItens((prev) => {
+    mudarItens((prev) => {
       const nomes = new Set(prev.map((i) => i.file.name));
       const novos = Array.from(lista)
         .filter((f) => !nomes.has(f.name))
@@ -377,7 +385,7 @@ function PassagemPlantaoPage() {
               </span>
               <button
                 onClick={() => {
-                  setItens([]);
+                  mudarItens(() => []);
                   setMapa(null);
                   setErroGeral(null);
                 }}
@@ -394,7 +402,7 @@ function PassagemPlantaoPage() {
                   item={item}
                   ocupado={ocupado}
                   onRemover={() => {
-                    setItens((prev) => prev.filter((i) => i.id !== item.id));
+                    mudarItens((prev) => prev.filter((i) => i.id !== item.id));
                     setMapa(null);
                   }}
                   onTentar={() => void tentarDeNovo(item.id)}

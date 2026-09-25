@@ -43,18 +43,24 @@ function linhaCabecalho(celulas: string[]): TableRow {
   });
 }
 
-function cabecalho(o: Required<OpcoesDocxFicticio>, unidade: string, data: string): Header {
+interface Unidade {
+  nome: string;
+  sigla: string;
+}
+
+function cabecalho(o: Required<OpcoesDocxFicticio>, unidade: Unidade, data: string): Header {
   return new Header({
     children: [
-      new Paragraph({ children: [new TextRun({ text: unidade, bold: true })] }),
+      new Paragraph({ children: [new TextRun({ text: unidade.nome, bold: true })] }),
       new Table({
         rows: [
-          linhaCabecalho(["NOME:", o.nome, "DATA:", data]),
-          linhaCabecalho(["NOME DA MÃE:", "MARIA FICTÍCIA DOS SANTOS", "SEXO:", "M"]),
-          linhaCabecalho(["DATA DE NASCIMENTO:", "01/01/1950", "IDADE:", "76 ANOS"]),
-          linhaCabecalho(["DATA DA ADMISSÃO:", o.admissao, "Nº DE PRONTUÁRIO:", "000123"]),
-          linhaCabecalho(["UNIDADE DE INTERNAÇÃO:", "CLÍNICA MÉDICA", "LEITO:", o.leito]),
-          linhaCabecalho(["DIAGNÓSTICOS DE INTERNAÇÃO:", "PNEUMONIA COMUNITÁRIA", "", ""]),
+          // Como nos arquivos reais: rótulo e valor na mesma célula, e às
+          // vezes o valor na célula vizinha (o prontuário).
+          linhaCabecalho([`NOME: ${o.nome}`, `DATA: ${data}`]),
+          linhaCabecalho(["NOME DA MÃE: MARIA FICTÍCIA DOS SANTOS", "IDADE: 76 ANOS"]),
+          linhaCabecalho([`DATA DA ADMISSÃO: ${o.admissao}`, "Nº DE PRONTUÁRIO:", "000123"]),
+          linhaCabecalho([`UNIDADE DE INTERNAÇÃO: ${unidade.sigla}`, `LEITO: ${o.leito}`]),
+          linhaCabecalho(["DIAGNÓSTICOS DE INTERNAÇÃO: PNEUMONIA COMUNITÁRIA"]),
         ],
       }),
     ],
@@ -106,8 +112,12 @@ export async function gerarDocxFicticio(opcoes: OpcoesDocxFicticio = {}): Promis
       {
         properties: { titlePage: true },
         headers: {
-          first: cabecalho(o, "HOSPITAL FICTÍCIO NAIR", o.dataAtual),
-          default: cabecalho(o, "UNIDADE DE PRONTO ATENDIMENTO FICTÍCIA", o.dataAntiga),
+          first: cabecalho(o, { nome: "HOSPITAL FICTÍCIO NAIR", sigla: "HFN" }, o.dataAtual),
+          default: cabecalho(
+            o,
+            { nome: "UNIDADE DE PRONTO ATENDIMENTO FICTÍCIA", sigla: "UPA" },
+            o.dataAntiga,
+          ),
         },
         children: corpoFicticio(o).map((t) => new Paragraph({ children: [new TextRun(t)] })),
       },

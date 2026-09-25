@@ -31,10 +31,16 @@ function lerCabecalhos(md: string): Bloco[] {
       atual.campos.set("UNIDADE", linha.trim());
       continue;
     }
+    // Como nos arquivos reais: "LEITO: 01" numa célula, ou "PRONTUÁRIO:" e o
+    // valor na célula seguinte.
     const celulas = linha.split("|").map((c) => c.trim());
-    for (let i = 0; i + 1 < celulas.length; i += 2) {
-      const rotulo = celulas[i].replace(/:$/, "").toUpperCase();
-      if (rotulo && celulas[i + 1]) atual.campos.set(rotulo, celulas[i + 1]);
+    for (let i = 0; i < celulas.length; i++) {
+      const m = celulas[i].match(/^([^:]+):\s*(.*)$/);
+      if (!m) continue;
+      const rotulo = m[1].trim().toUpperCase();
+      const valor =
+        m[2].trim() || (celulas[i + 1] && !celulas[i + 1].includes(":") ? celulas[++i] : "");
+      if (valor) atual.campos.set(rotulo, valor);
     }
   }
   return blocos;
@@ -74,7 +80,7 @@ export function mockPassagemLeito(payload: unknown) {
       }
     }
   }
-  const labs = [...md.matchAll(/^#\s*LABORAT[ÓO]RIO[^\n]*\n([^\n]+)/gim)].map((m) => m[1]);
+  const labs = [...md.matchAll(/^#\s*LABORAT[ÓO]RIO[^\n]*\n+([^\n]+)/gim)].map((m) => m[1]);
   const ultimoLab = labs.length
     ? labs[labs.length - 1].replace(/\s*\|\s*/g, ", ")
     : "Sem lab recente";
@@ -88,7 +94,7 @@ export function mockPassagemLeito(payload: unknown) {
       idade: campos?.get("IDADE") ?? null,
       leito: campos?.get("LEITO") ?? null,
       dih: campos?.get("DATA DA ADMISSÃO") ?? null,
-      unidade: campos?.get("UNIDADE") ?? null,
+      unidade: campos?.get("UNIDADE DE INTERNAÇÃO") ?? campos?.get("UNIDADE") ?? null,
       prontuario: campos?.get("Nº DE PRONTUÁRIO") ?? null,
       fonte: escolhido ? `cabeçalho — ${escolhido.rotulo}` : "",
       conflitos,
