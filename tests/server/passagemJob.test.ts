@@ -1,7 +1,8 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApp, waitFor } from "./helpers/app.js";
 import { aiMock, resetAiMock, storageMock } from "./helpers/mocks.js";
+import { iniciarPassagem, processarAteOFim } from "../../server/services/passagemJob.service.js";
 
 const { app, jobStore } = makeApp();
 const auth = { Authorization: "Bearer valid-token" };
@@ -63,6 +64,75 @@ describe("passagem de plantão como job, um lote por invocação", () => {
     expect(fim.status).toBe("done");
     expect(fim.docx?.nome).toMatch(/MAPA_PASSAGEM_CMF_18-09-2026\.docx/);
     expect(fim.docx?.url).toBeTruthy();
+  });
+
+  /**
+   * Em produção o job ficou parado em "Lendo lote 2 de 4", sem erro, com o
+   * parcial salvo: `processarAteOFim` rodava TODOS os lotes numa invocação só,
+   * e a plataforma cortou aos 60 s. Corte da plataforma não tem quem marque o
+   * job como erro — a tela girava até desistir.
+   *
+   * Estes casos chamam o serviço direto: pela rota, o processamento em segundo
+   * plano já teria consumido os lotes antes de dar para medir o prazo.
+   */
+  describe("o que não cabe numa invocação", () => {
+    /** Cria o job sem disparar o processamento que a rota agenda. */
+    async function jobParaProcessar() {
+      const r = await iniciarPassagem({
+        storagePaths: subir(15),
+        setor: "CMF",
+        data: "18/09/2026",
+        userId: USER,
+        jobStore,
+      });
+      expect(r.lotes).toBeGreaterThan(1);
+      return r.jobId;
+    }
+
+    it("prazo curto para em processing com o parcial, sem virar erro", async () => {
+      const jobId = await jobParaProcessar();
+
+      // Prazo zero: processa um lote e não começa o próximo.
+      const { falta } = await processarAteOFim(jobId, jobStore, 0);
+      expect(falta).toBe(true);
+
+      const job = await jobStore.get(jobId);
+      expect(job?.status).toBe("processing");
+      // Estourar o prazo NÃO é falha: o trabalho feito continua válido.
+      expect(job?.error).toBeFalsy();
+      expect(job?.result).toBeTruthy();
+    });
+
+    it("continuar retoma de onde parou e chega ao DOCX", async () => {
+      const jobId = await jobParaProcessar();
+      await processarAteOFim(jobId, jobStore, 0);
+
+      let corpo: { status: string; docx: { nome: string } | null } | undefined;
+      for (let i = 0; i < 10; i++) {
+        const r = await request(app).post(`/api/passagem-plantao/job/${jobId}/continuar`).set(auth);
+        corpo = r.body;
+        if (corpo?.status !== "processing") break;
+      }
+      expect(corpo?.status).toBe("done");
+      expect(corpo?.docx?.nome).toMatch(/\.docx$/);
+    });
+
+    it("job parado há tempo demais vira erro, em vez de girar para sempre", async () => {
+      const jobId = await jobParaProcessar();
+      await processarAteOFim(jobId, jobStore, 0);
+
+      // Avança o relógio como se a invocação tivesse sido cortada e ninguém
+      // tivesse retomado o job.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(Date.now() + 5 * 60_000));
+      try {
+        const r = await request(app).get(`/api/passagem-plantao/job/${jobId}`).set(auth);
+        expect(r.body.status).toBe("error");
+        expect(r.body.error).toMatch(/parou.*não retomou/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("um lote falhando não derruba os outros: o DOCX sai assim mesmo", async () => {
