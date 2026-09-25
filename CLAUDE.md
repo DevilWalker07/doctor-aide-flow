@@ -91,16 +91,15 @@ ele tinha caído sem ninguém perceber justamente porque não estava escrito aqu
 - **Frontend** — build do Vite em `dist`, servido pelo CDN.
 - **API** — uma única função em `api/index.ts`, que monta
   `createServerlessApp()` de `server/serverless.ts`. É a mesma aplicação de
-  `server/app.ts` sem o que não cabe em função: `/api/extract` e
-  `/api/passagem-plantao` (corpo de 20 MB e execução longa) respondem 503 com
-  motivo até as fases seguintes. `aiRouter`, prompts, schemas e guardrails são
-  os mesmos — a função é só a casca.
+  `server/app.ts` sem o que não cabe em função (upload multipart; aqui o
+  navegador sobe direto ao Storage). `aiRouter`, prompts, schemas e guardrails
+  são os mesmos — a função é só a casca.
 - `server/index.ts` continua sendo o servidor local (`npm run dev:all`).
 
 **O roteamento da API é explícito no `vercel.json`, nunca por convenção.**
 Era `api/[...rota].ts`, catch-all por nome de arquivo, e ele casava **um**
 segmento só. Como todo endpoint real é aninhado (`/api/ai/copiloto`,
-`/api/extract/preparar-upload`, `/api/passagem-plantao/gerar`), a API inteira
+`/api/extract/preparar-upload`, `/api/ai/passagem-leito`), a API inteira
 respondeu 404 em produção por semanas — só `/api/health` escapava, por ter um
 segmento. A borda devolvia `x-vercel-error: NOT_FOUND` em texto puro e a função
 nem rodava. Hoje o rewrite `"/api/(.*)" → "/api/index"` manda tudo para a
@@ -137,13 +136,14 @@ primeiros 16 bytes e cobre os oito formatos que o app aceita. `includeFiles`
 não resolveria: seria enumerar uma árvore de dependências à mão.
 
 **Formato de arquivo se decide pelos bytes, nunca pela extensão.** A rota de
-extração já usava `sniffKind` (`server/lib/files.ts`); a da passagem despachava
-por `extOf(originalName)`, e um Word chamado `.pdf` ia para o leitor de PDF e
+extração já usava `sniffKind` (`server/lib/files.ts`); a passagem antiga
+despachava pela extensão, e um Word chamado `.pdf` ia para o leitor de PDF e
 falhava reclamando da estrutura do PDF — erro que não aponta para a causa. O
 nome do arquivo é dado de entrada e não está sob o nosso controle; o conteúdo
-está. `extractTextFromFile` (`server/services/textExtraction.service.ts`)
-fareja e despacha pelo conteúdo; a extensão só vale para `.txt`/`.md`, que não
-têm assinatura. Quando os dois discordam, o arquivo é lido pelo conteúdo **e**
+está. No servidor, `extractTextFromFile`
+(`server/services/textExtraction.service.ts`); no navegador,
+`formatoPelosBytes` (`shared/passagem/formato.ts`). A extensão só vale para
+`.txt`/`.md`, que não têm assinatura. Quando os dois discordam, o arquivo é lido pelo conteúdo **e**
 entra um aviso na lista que a tela mostra — extensão errada que se repete é
 coisa que o médico precisa saber.
 
@@ -167,19 +167,48 @@ Todo job assíncrono novo passa por ali, e leva um orçamento de tempo
 (`extractBudgetMs`) **abaixo** do `maxDuration`, porque job cortado pela
 plataforma não tem quem o marque como erro.
 
-**A passagem era a exceção, e por isso quebrou.** `processarAteOFim` rodava
-TODOS os lotes num laço, numa invocação só: quatro lotes não cabem em 60 s. Em
-produção o job ficou em "Lendo lote 2 de 4", sem erro, com o parcial salvo, e a
-tela girou até desistir. Hoje o laço trabalha com `passagemBudgetMs()` e só
-começa outro lote se houver folga para ele terminar — meio lote é trabalho
-perdido. Estourar o prazo **não é erro**: é "faltam lotes", e
-`POST /api/passagem-plantao/job/:id/continuar` retoma de onde parou, quantas
-invocações forem necessárias. O cliente conduz, uma chamada por vez.
+**A passagem de plantão roda no navegador; o servidor só chama a IA.** Ela foi
+job assíncrono com lotes, Storage, tabela de jobs, prazo por invocação e
+retomada — onze peças que só existiam em produção, e cada rodada de conserto
+revelou a seguinte (roteamento, empacotamento do pdf.js, do `file-type`, prazo
+de 60 s, validação do corpo). Nenhum defeito estava na parte clínica. Foi
+refeita do zero:
 
-**Job que parou de andar vira erro na consulta.** `processing` sem atualização
-há mais de 90 s é dado como interrompido, com o estágio onde parou. Job vivo
-atualiza o `updated_at` a cada lote, então só envelhece quem de fato parou —
-e spinner eterno deixa de ser um estado possível.
+```
+arquivo → .md (src/lib/passagem/normalizar.ts, no navegador)
+        → POST /api/ai/passagem-leito   (uma chamada curta por leito, 3 em paralelo)
+        → POST /api/ai/passagem-consolidar (prioridades e pendências gerais)
+        → DOCX montado no navegador (shared/passagem/docx.ts) e baixado
+```
+
+- **IA só onde não há texto.** Word (corpo pelo `mammoth` + cabeçalhos pelo
+  `jszip`) e PDF com texto viram Markdown por código. Foto, print e PDF
+  escaneado vão página por página, reduzidos a ~1600 px, a
+  `POST /api/ai/transcrever` (modelo de visão, transcrição literal com
+  `[ilegível]`), e o leito sai marcado "lido de imagem — confira valores".
+- **A identificação vem do cabeçalho do Word, não do nome do arquivo** — e o
+  `mammoth` ignora cabeçalho. `lerCabecalhosDocx` lê cada cabeçalho rotulado
+  (primeira página, demais). Nos arquivos reais eles **divergem**: a primeira
+  página é a atual e as demais são sobra do modelo copiado (HNAS 19/09 × UPA
+  18/09). A IA escolhe o de data mais recente e relata o conflito; o código
+  calcula o DI e confere o leito com o nome do arquivo — divergência vira `!!`
+  na célula, nunca escolha calada.
+- **Leito que falha não derruba os outros** e tem "tentar de novo" só para ele.
+  Consolidação que falha não impede o DOCX: as duas listas saem com o aviso de
+  falha. Prioridade de leito que não foi lido é descartada, e todo `!!` de leito
+  vira prioridade `!! URGENTE` — em código.
+- **O pdf.js do navegador é o build `legacy`.** O padrão do pdf.js 5 usa
+  `Map.prototype.getOrInsertComputed`, recente demais para o Chromium dos testes
+  e para o Safari do iPhone: todo PDF falhava com "is not a function".
+- **`optimizeDeps` no `vite.config.ts`** lista o que a passagem importa sob
+  demanda. Sem isso o Vite de dev descobre a dependência no primeiro uso e
+  recarrega a página — levando os arquivos que acabaram de ser escolhidos.
+- **O e2e passa pelo mesmo caminho da produção** (`e2e/passagem.spec.ts`), com
+  DOCX fictícios de cabeçalhos divergentes gerados pelo próprio teste
+  (`tests/fixtures/passagem/docxFicticio.ts`). Em `AI_MOCK=1` as fixtures da
+  passagem são funções da entrada (`server/mocks/passagemMock.ts`), para cada
+  arquivo virar o seu leito. Playwright reaproveita servidor já no ar fora do
+  CI: servidor velho com mock velho reprova teste certo — `CI=1` sobe novos.
 
 **Upload de documento não passa pelo servidor.** O navegador envia direto ao
 bucket privado `documentos-clinicos` (migration `20260917000000`), num caminho

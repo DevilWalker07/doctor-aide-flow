@@ -37,7 +37,8 @@ export function resetAiMock() {
   aiMock.json.mockImplementation(async (_s, _p, schema, opts) => {
     const key = opts?.mockKey;
     if (!key) return { ok: false, error: "sem mockKey" };
-    return { ok: true, data: schema.parse(aiFixtures[key]) };
+    const fixture: unknown = aiFixtures[key];
+    return { ok: true, data: schema.parse(typeof fixture === "function" ? fixture(_p) : fixture) };
   });
   aiMock.text.mockImplementation(async (_s, _p, opts) => {
     const fixture = opts?.mockKey ? aiFixtures[opts.mockKey] : "";
@@ -156,6 +157,5 @@ vi.mock("../../../server/middleware/security.js", () => ({
     ai: passthrough,
     upload: passthrough,
     poll: passthrough,
-    passagem: passthrough,
   }),
 }));

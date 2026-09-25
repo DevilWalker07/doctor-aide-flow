@@ -9,10 +9,14 @@ import {
   LaudoImagemBody,
   ParecerEspecialistaBody,
   MotorLuanTextBody,
+  PassagemConsolidarBody,
+  PassagemLeitoBody,
   RoundBody,
+  TranscreverBody,
   SugerirReceitaBody,
 } from "../schemas/ai.schemas.js";
 import { motorLuanService } from "../services/motorLuan.service.js";
+import { consolidarPassagem, lerLeito, transcrever } from "../services/passagemLeito.service.js";
 
 export const aiRouter = Router();
 
@@ -96,6 +100,21 @@ aiRouter.post(
 aiRouter.post(
   "/organizar-laudo-imagem",
   route(LaudoImagemBody, (b) => motorLuanService.organizarLaudoImagem(b)),
+);
+
+// Passagem de plantão: uma chamada curta por leito, conduzida pelo navegador.
+// Sem job, sem Storage, sem encadear invocação — cada uma cabe folgada nos 60 s.
+aiRouter.post(
+  "/passagem-leito",
+  route(PassagemLeitoBody, (b) => lerLeito(b)),
+);
+aiRouter.post(
+  "/transcrever",
+  route(TranscreverBody, (b) => transcrever(b)),
+);
+aiRouter.post(
+  "/passagem-consolidar",
+  route(PassagemConsolidarBody, (b) => consolidarPassagem(b)),
 );
 
 const legacy = { deprecated: true };

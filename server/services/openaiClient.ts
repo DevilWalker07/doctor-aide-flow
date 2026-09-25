@@ -244,7 +244,8 @@ export async function safeJsonCompletion<T>(
 
   if (env.AI_MOCK) {
     if (!mockKey) return { ok: false, error: "AI_MOCK ativo sem fixture para esta chamada." };
-    const parsed = schema.safeParse(aiFixtures[mockKey]);
+    const fixture: unknown = aiFixtures[mockKey];
+    const parsed = schema.safeParse(typeof fixture === "function" ? fixture(payload) : fixture);
     return parsed.success
       ? { ok: true, data: parsed.data }
       : { ok: false, error: "Fixture inválida para o schema.", issues: parsed.error.issues };

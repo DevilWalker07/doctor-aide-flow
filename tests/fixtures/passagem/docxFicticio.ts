@@ -1,0 +1,138 @@
+import {
+  Document,
+  Header,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+} from "docx";
+
+/**
+ * Um Word com a mesma estrutura dos arquivos reais da passagem — dados
+ * inventados, gerado aqui para nenhum documento de paciente entrar no
+ * repositório.
+ *
+ * O que importa reproduzir:
+ * - a identificação mora SÓ no cabeçalho, em tabela de rótulo | valor;
+ * - dois cabeçalhos que divergem: a primeira página é a atual (HNAS, data
+ *   mais recente) e as demais são sobra do modelo copiado (UPA, data antiga);
+ * - corpo com prescrição, "OBS: COM PACIENTE" e a evolução em seções `#`,
+ *   com dois laboratórios datados.
+ */
+export interface OpcoesDocxFicticio {
+  nome?: string;
+  leito?: string;
+  admissao?: string;
+  dataAtual?: string;
+  dataAntiga?: string;
+  potassio?: string;
+}
+
+function linhaCabecalho(celulas: string[]): TableRow {
+  return new TableRow({
+    children: celulas.map(
+      (c) =>
+        new TableCell({
+          width: { size: 2000, type: WidthType.DXA },
+          children: [new Paragraph({ children: [new TextRun(c)] })],
+        }),
+    ),
+  });
+}
+
+interface Unidade {
+  nome: string;
+  sigla: string;
+}
+
+function cabecalho(o: Required<OpcoesDocxFicticio>, unidade: Unidade, data: string): Header {
+  return new Header({
+    children: [
+      new Paragraph({ children: [new TextRun({ text: unidade.nome, bold: true })] }),
+      new Table({
+        rows: [
+          // Como nos arquivos reais: rótulo e valor na mesma célula, e às
+          // vezes o valor na célula vizinha (o prontuário).
+          linhaCabecalho([`NOME: ${o.nome}`, `DATA: ${data}`]),
+          linhaCabecalho(["NOME DA MÃE: MARIA FICTÍCIA DOS SANTOS", "IDADE: 76 ANOS"]),
+          linhaCabecalho([`DATA DA ADMISSÃO: ${o.admissao}`, "Nº DE PRONTUÁRIO:", "000123"]),
+          linhaCabecalho([`UNIDADE DE INTERNAÇÃO: ${unidade.sigla}`, `LEITO: ${o.leito}`]),
+          linhaCabecalho(["DIAGNÓSTICOS DE INTERNAÇÃO: PNEUMONIA COMUNITÁRIA"]),
+        ],
+      }),
+    ],
+  });
+}
+
+export function corpoFicticio(o: Required<OpcoesDocxFicticio>): string[] {
+  return [
+    "PRESCRIÇÃO MÉDICA",
+    "1. DIETA BRANDA",
+    "2. CEFTRIAXONA 1G EV 12/12H",
+    "OBS: COM PACIENTE",
+    "EVOLUÇÃO MEDICA",
+    "# LISTA DE PROBLEMAS",
+    "- PNEUMONIA COMUNITÁRIA",
+    "- HIPOCALEMIA",
+    "# ATB EM USO",
+    "- CEFTRIAXONA (D3)",
+    "# EVOLUÇÃO",
+    "PACIENTE ESTÁVEL, SEM FEBRE HÁ 48H.",
+    "# EXAME FISICO",
+    "BEG, EUPNEICO, MV+ COM CREPITOS EM BASE DIREITA.",
+    `# LABORATÓRIO (${o.dataAntiga.slice(0, 5)})`,
+    "HB 11,2 | LEUCO 14.300 | K 3,4 | CR 1,1",
+    `# LABORATÓRIO (${o.dataAtual.slice(0, 5)})`,
+    `HB 11,5 | LEUCO 9.800 | K ${o.potassio} | CR 1,0`,
+    "CONDUTA",
+    "- MANTER ATB",
+    "- REPOR POTÁSSIO",
+  ];
+}
+
+export function opcoesCompletas(o: OpcoesDocxFicticio = {}): Required<OpcoesDocxFicticio> {
+  return {
+    nome: "JOAQUIM FICTÍCIO DA SILVA",
+    leito: "03",
+    admissao: "20/09/2026",
+    dataAtual: "25/09/2026",
+    dataAntiga: "24/09/2026",
+    potassio: "3,3",
+    ...o,
+  };
+}
+
+export async function gerarDocxFicticio(opcoes: OpcoesDocxFicticio = {}): Promise<Buffer> {
+  const o = opcoesCompletas(opcoes);
+  const doc = new Document({
+    sections: [
+      {
+        properties: { titlePage: true },
+        headers: {
+          first: cabecalho(o, { nome: "HOSPITAL FICTÍCIO NAIR", sigla: "HFN" }, o.dataAtual),
+          default: cabecalho(
+            o,
+            { nome: "UNIDADE DE PRONTO ATENDIMENTO FICTÍCIA", sigla: "UPA" },
+            o.dataAntiga,
+          ),
+        },
+        children: corpoFicticio(o).map((t) => new Paragraph({ children: [new TextRun(t)] })),
+      },
+    ],
+  });
+  return Packer.toBuffer(doc);
+}
+
+/**
+ * O Markdown que o normalizador produz para o DOCX fictício, para os testes
+ * do servidor não dependerem do navegador.
+ */
+export async function markdownFicticio(opcoes: OpcoesDocxFicticio = {}): Promise<string> {
+  const { documentoEmMarkdown, lerCabecalhosDocx } =
+    await import("../../../shared/passagem/cabecalhosDocx.js");
+  const cabecalhos = await lerCabecalhosDocx(await gerarDocxFicticio(opcoes));
+  return documentoEmMarkdown(cabecalhos, corpoFicticio(opcoesCompletas(opcoes)).join("\n"));
+}

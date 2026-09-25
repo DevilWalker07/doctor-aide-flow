@@ -8,7 +8,9 @@ import { GERADOR_EVOLUCAO_PROMPT } from "../../server/prompts/geradorEvolucao.pr
 import { LAB_EXTRACTOR_PROMPT } from "../../server/prompts/labExtractor.prompt.js";
 import { MAPA_PLANTAO_PROMPT } from "../../server/prompts/mapaPlantao.prompt.js";
 import { ORQUESTRADOR_PROMPT } from "../../server/prompts/orquestrador.prompt.js";
-import { PASSAGEM_PLANTAO_BATCH_PROMPT } from "../../server/prompts/passagemPlantaoBatch.prompt.js";
+import { PASSAGEM_CONSOLIDAR_PROMPT } from "../../server/prompts/passagemConsolidar.prompt.js";
+import { PASSAGEM_LEITO_PROMPT } from "../../server/prompts/passagemLeito.prompt.js";
+import { TRANSCRICAO_PROMPT } from "../../server/prompts/transcricao.prompt.js";
 import { PEDIATRIA_PROMPT } from "../../server/prompts/pediatria.prompt.js";
 import { SUGESTOR_RECEITA_PROMPT } from "../../server/prompts/sugestorReceita.prompt.js";
 import { UTI_PROMPT } from "../../server/prompts/uti.prompt.js";
@@ -16,7 +18,9 @@ import { UTI_PROMPT } from "../../server/prompts/uti.prompt.js";
 const estimateTokens = (s: string) => Math.ceil(s.length / 3.5);
 
 const BUDGET: Array<[string, string, number]> = [
-  ["passagemPlantaoBatch", PASSAGEM_PLANTAO_BATCH_PROMPT, 3500],
+  ["passagemLeito", PASSAGEM_LEITO_PROMPT, 2400],
+  ["passagemConsolidar", PASSAGEM_CONSOLIDAR_PROMPT, 800],
+  ["transcricao", TRANSCRICAO_PROMPT, 600],
   ["documentExtraction", DOCUMENT_EXTRACTION_PROMPT, 1500],
   ["clinicaMedica", CLINICA_MEDICA_PROMPT, 1200],
   ["pediatria", PEDIATRIA_PROMPT, 1200],
@@ -38,7 +42,7 @@ describe("orçamento de tokens dos prompts", () => {
 
   it("prompts JSON pedem _raciocinio e trazem exemplo quando previsto", () => {
     for (const p of [
-      PASSAGEM_PLANTAO_BATCH_PROMPT,
+      PASSAGEM_LEITO_PROMPT,
       DOCUMENT_EXTRACTION_PROMPT,
       CLINICA_MEDICA_PROMPT,
       PEDIATRIA_PROMPT,
@@ -47,8 +51,19 @@ describe("orçamento de tokens dos prompts", () => {
     ]) {
       expect(p).toContain("_raciocinio");
     }
-    expect(PASSAGEM_PLANTAO_BATCH_PROMPT).toContain("### EXEMPLO SAÍDA");
     expect(DOCUMENT_EXTRACTION_PROMPT).toContain("### EXEMPLO SAÍDA");
-    expect(PASSAGEM_PLANTAO_BATCH_PROMPT).toContain("Potássio < 3 ou > 5,5");
+  });
+
+  it("passagem por leito: identifica pelo cabeçalho e não calcula DI", () => {
+    expect(PASSAGEM_LEITO_PROMPT).toContain("_raciocinio");
+    expect(PASSAGEM_LEITO_PROMPT).toContain("Potássio < 3 ou > 5,5");
+    expect(PASSAGEM_LEITO_PROMPT).toContain("vale o de DATA mais recente");
+    expect(PASSAGEM_LEITO_PROMPT).toContain("Nunca misture campos");
+    expect(PASSAGEM_LEITO_PROMPT).toContain("Não calcule dias de internação");
+  });
+
+  it("transcrição é literal: [ilegível] em vez de palpite", () => {
+    expect(TRANSCRICAO_PROMPT).toContain("[ilegível]");
+    expect(TRANSCRICAO_PROMPT).toContain("NUNCA complete por dedução");
   });
 });
