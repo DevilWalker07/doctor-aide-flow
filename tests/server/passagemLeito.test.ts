@@ -34,7 +34,9 @@ describe("POST /api/ai/passagem-leito", () => {
 
     expect(res.body.linha.leito).toBe("L03");
     expect(res.body.linha.paciente).toContain("JOAQUIM FICTÍCIO DA SILVA");
-    expect(res.body.avisos.join(" ")).toMatch(/UNIDADE: HOSPITAL FICTÍCIO NAIR .*× UNIDADE DE PRONTO/);
+    expect(res.body.avisos.join(" ")).toMatch(
+      /UNIDADE: HOSPITAL FICTÍCIO NAIR .*× UNIDADE DE PRONTO/,
+    );
     expect(res.body.linha.alertasPendencias).toContain("! Cabeçalhos divergentes");
     // A IA viu o documento inteiro, com os dois cabeçalhos rotulados.
     const payload = aiMock.json.mock.calls[0][1] as { documento: string };
@@ -44,7 +46,9 @@ describe("POST /api/ai/passagem-leito", () => {
 
   it("DI é calculado em código a partir da DATA DA ADMISSÃO", async () => {
     const markdown = await markdownFicticio({ admissao: "20/09/2026" });
-    const res = await lerLeito({ markdown, arquivo: "L03.docx", dataPlantao: "25/09/2026" }).expect(200);
+    const res = await lerLeito({ markdown, arquivo: "L03.docx", dataPlantao: "25/09/2026" }).expect(
+      200,
+    );
     expect(res.body.linha.dih).toBe("20/09/2026");
     expect(res.body.linha.di).toBe(6);
   });
@@ -77,7 +81,9 @@ describe("POST /api/ai/passagem-leito", () => {
 
   it("potássio crítico vira !! pelo guardrail, mesmo sem a IA marcar", async () => {
     const markdown = await markdownFicticio({ potassio: "6,8" });
-    const res = await lerLeito({ markdown, arquivo: "L03.docx", dataPlantao: "25/09/2026" }).expect(200);
+    const res = await lerLeito({ markdown, arquivo: "L03.docx", dataPlantao: "25/09/2026" }).expect(
+      200,
+    );
     expect(res.body.linha.ultimoLab).toContain("K 6,8");
     expect(res.body.linha.alertasPendencias).toMatch(/^!! LAB CRÍTICO: .*6,8/);
     expect(res.body.alertas[0].prioridade).toBe("!! URGENTE");
@@ -95,13 +101,22 @@ describe("POST /api/ai/passagem-leito", () => {
   });
 
   it("recusa documento sem texto, dizendo o motivo", async () => {
-    const res = await lerLeito({ markdown: "   ", arquivo: "x.docx", dataPlantao: "25/09/2026" }).expect(400);
+    const res = await lerLeito({
+      markdown: "   ",
+      arquivo: "x.docx",
+      dataPlantao: "25/09/2026",
+    }).expect(400);
     expect(JSON.stringify(res.body.issues)).toContain("não tem texto legível");
   });
 
   it("recusa campo desconhecido em vez de descartar calado", async () => {
     const markdown = await markdownFicticio();
-    await lerLeito({ markdown, arquivo: "x.docx", dataPlantao: "25/09/2026", storage_path: "a" }).expect(400);
+    await lerLeito({
+      markdown,
+      arquivo: "x.docx",
+      dataPlantao: "25/09/2026",
+      storage_path: "a",
+    }).expect(400);
   });
 
   it("recusa data fora de DD/MM/AAAA", async () => {
@@ -112,7 +127,9 @@ describe("POST /api/ai/passagem-leito", () => {
   it("IA inválida → a chamada falha, sem linha sintética", async () => {
     aiMock.json.mockResolvedValueOnce({ ok: false, error: "JSON inválido" });
     const markdown = await markdownFicticio();
-    const res = await lerLeito({ markdown, arquivo: "x.docx", dataPlantao: "25/09/2026" }).expect(502);
+    const res = await lerLeito({ markdown, arquivo: "x.docx", dataPlantao: "25/09/2026" }).expect(
+      502,
+    );
     expect(res.body.message).toContain("JSON inválido");
     expect(res.body.linha).toBeUndefined();
   });
@@ -122,7 +139,11 @@ describe("POST /api/ai/transcrever", () => {
   const imagem = { base64: "A".repeat(200), mime: "image/jpeg" };
 
   it("devolve Markdown e mantém [ilegível] como veio", async () => {
-    const res = await request(app).post("/api/ai/transcrever").set(auth).send({ imagem }).expect(200);
+    const res = await request(app)
+      .post("/api/ai/transcrever")
+      .set(auth)
+      .send({ imagem })
+      .expect(200);
     expect(res.body.markdown).toContain("K [ilegível]");
     expect(res.body.trechos_ilegiveis).toHaveLength(1);
     const opts = aiMock.json.mock.calls[0][3];
@@ -159,12 +180,20 @@ describe("POST /api/ai/passagem-consolidar", () => {
     const res = await request(app)
       .post("/api/ai/passagem-consolidar")
       .set(auth)
-      .send({ dataPlantao: "25/09/2026", passagemPara: "26/09/2026", leitos: [linha("L01"), linha("L02")] })
+      .send({
+        dataPlantao: "25/09/2026",
+        passagemPara: "26/09/2026",
+        leitos: [linha("L01"), linha("L02")],
+      })
       .expect(200);
     expect(res.body.prioridades.length).toBeGreaterThan(0);
-    expect(Object.keys(res.body.pendencias).sort()).toEqual(
-      ["admissoesPendentes", "altasEmProgramacao", "avisosCriticos", "labsAIncorporar", "procedimentosAgendados"],
-    );
+    expect(Object.keys(res.body.pendencias).sort()).toEqual([
+      "admissoesPendentes",
+      "altasEmProgramacao",
+      "avisosCriticos",
+      "labsAIncorporar",
+      "procedimentosAgendados",
+    ]);
   });
 
   it("descarta prioridade de leito que não foi lido e garante todo alerta !!", async () => {
@@ -183,7 +212,10 @@ describe("POST /api/ai/passagem-consolidar", () => {
       .set(auth)
       .send({
         dataPlantao: "25/09/2026",
-        leitos: [linha("L01"), linha("L02", "!! LAB CRÍTICO: K 6,8 — REAVALIAR\n— PENDÊNCIAS —\n- x")],
+        leitos: [
+          linha("L01"),
+          linha("L02", "!! LAB CRÍTICO: K 6,8 — REAVALIAR\n— PENDÊNCIAS —\n- x"),
+        ],
       })
       .expect(200);
     const leitos = res.body.prioridades.map((p: { leito: string }) => p.leito);

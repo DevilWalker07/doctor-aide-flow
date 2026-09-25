@@ -104,9 +104,18 @@ aiRouter.post(
 
 // Passagem de plantão: uma chamada curta por leito, conduzida pelo navegador.
 // Sem job, sem Storage, sem encadear invocação — cada uma cabe folgada nos 60 s.
-aiRouter.post("/passagem-leito", route(PassagemLeitoBody, (b) => lerLeito(b)));
-aiRouter.post("/transcrever", route(TranscreverBody, (b) => transcrever(b)));
-aiRouter.post("/passagem-consolidar", route(PassagemConsolidarBody, (b) => consolidarPassagem(b)));
+aiRouter.post(
+  "/passagem-leito",
+  route(PassagemLeitoBody, (b) => lerLeito(b)),
+);
+aiRouter.post(
+  "/transcrever",
+  route(TranscreverBody, (b) => transcrever(b)),
+);
+aiRouter.post(
+  "/passagem-consolidar",
+  route(PassagemConsolidarBody, (b) => consolidarPassagem(b)),
+);
 
 const legacy = { deprecated: true };
 aiRouter.post(

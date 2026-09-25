@@ -1,360 +1,252 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { toast } from "sonner";
-import { apiFetch } from "@/lib/apiClient";
-import { supabase } from "@/lib/supabase";
-import { mimeDoArquivo } from "@/lib/mimeDocumento";
-import { storage } from "@/lib/storage";
 import {
-  ChevronLeft,
-  Upload,
-  FileText,
-  X,
-  Loader2,
-  Download,
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  Download,
+  FileText,
+  Loader2,
+  RotateCcw,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
+import { storage } from "@/lib/storage";
+import { ArquivoNaoLido, normalizarArquivo, type Documento } from "@/lib/passagem/normalizar";
+import {
+  gerarMapa,
+  lerLeitoNoServidor,
+  motivoDoErro,
+  transcreverNoServidor,
+  type LeitoLido,
+  type MapaPronto,
+} from "@/lib/passagem/passagem";
+import { diaSeguinte, isoParaBR } from "../../shared/passagem/datas";
+import { lerNomeDoArquivo } from "../../shared/passagem/nomeArquivo";
 
 export const Route = createFileRoute("/passagem-plantao")({
   component: PassagemPlantaoPage,
   head: () => ({ meta: [{ title: "Passagem de Plantão IA — MEDFLUXO" }] }),
 });
 
-type FileStatus = "idle" | "ready" | "error";
+/**
+ * Passagem de plantão: cada arquivo vira um leito, na tela, um por um.
+ *
+ * Tudo acontece no navegador, menos as chamadas de IA: o arquivo vira
+ * Markdown aqui, cada leito é uma chamada curta, e o DOCX é montado aqui e
+ * baixado direto. Sem job, sem Storage, sem consultar andamento — o estado de
+ * cada leito é o que a tela mostra, e leito que falha ganha "tentar de novo"
+ * só para ele.
+ *
+ * Recarregar a página perde o que está em andamento. É aceitável para um
+ * fluxo de um ou dois minutos e evita guardar dado de paciente no navegador.
+ */
 
-interface UploadedFile {
+type Estado = "na-fila" | "lendo" | "consultando" | "pronto" | "falhou";
+
+interface Item {
   id: string;
   file: File;
-  status: FileStatus;
-  errorMsg?: string;
+  estado: Estado;
+  /** O Markdown fica guardado: tentar de novo não repete a transcrição da foto. */
+  doc?: Documento;
+  resultado?: LeitoLido;
+  motivo?: string;
 }
 
-const ALLOWED_EXTS = [".docx", ".txt", ".pdf"];
+const CONCORRENCIA = 3;
+const MAX_ARQUIVOS = 40;
+const ACEITOS = ".docx,.doc,.pdf,.txt,.md,.jpg,.jpeg,.png,.webp,.heic,.heif,image/*";
 
-function isAllowed(file: File) {
-  const ext = "." + file.name.split(".").pop()?.toLowerCase();
-  return ALLOWED_EXTS.includes(ext);
-}
-
-/**
- * Dia seguinte a uma data DD/MM/AAAA. É para quem a passagem vai — o
- * cabeçalho do modelo traz essa data, e digitá-la à mão de madrugada é
- * exatamente o tipo de erro que ninguém confere.
- * Data que não dá para ler vira `undefined`: o cabeçalho sai sem a linha,
- * nunca com uma data inventada.
- */
-function diaSeguinte(dataBr: string): string | undefined {
-  const m = dataBr.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return undefined;
-  const [, dd, mm, aaaa] = m;
-  const d = new Date(Number(aaaa), Number(mm) - 1, Number(dd));
-  if (
-    d.getFullYear() !== Number(aaaa) ||
-    d.getMonth() !== Number(mm) - 1 ||
-    d.getDate() !== Number(dd)
-  ) {
-    return undefined;
-  }
-  d.setDate(d.getDate() + 1);
-  return format(d, "dd/MM/yyyy");
-}
-
-/**
- * Levanta o erro com o motivo que o SERVIDOR deu, não com um resumo meu.
- *
- * A tela dizia só "Não foi possível preparar o envio." e jogava fora o corpo
- * da resposta — onde estava a causa: armazenamento não configurado (503),
- * falha ao autorizar com a mensagem do Supabase (500), limite de requisições
- * (429). Sem isso, o médico vê uma conclusão e nenhuma evidência, e eu fico
- * chutando de longe. Mesma regra do resto do app: dizer O QUÊ falhou.
- */
-async function falharComMotivo(res: Response, acao: string): Promise<never> {
-  const corpo = (await res.json().catch(() => ({}))) as {
-    message?: string;
-    error?: string;
-    details?: string[];
-  };
-  const detalhes = Array.isArray(corpo.details) ? ` (${corpo.details.join("; ")})` : "";
-  const motivo = corpo.message || corpo.error || `HTTP ${res.status}`;
-  throw new Error(`Falha ao ${acao}: ${motivo}${detalhes} [${res.status}]`);
-}
+const ROTULO: Record<Estado, string> = {
+  "na-fila": "Na fila",
+  lendo: "Lendo o arquivo…",
+  consultando: "Consultando a IA…",
+  pronto: "Pronto",
+  falhou: "Falhou",
+};
 
 function PassagemPlantaoPage() {
   const nav = useNavigate();
   const [setor, setSetor] = useState<"CMF" | "CMM" | "CMF/CMM">("CMF/CMM");
-  // Vão para o cabeçalho do mapa, como no modelo do hospital. Ficam guardados
-  // porque não mudam de um plantão para o outro.
+  // Vão para o cabeçalho do mapa, como no modelo do hospital. O hospital fica
+  // guardado porque não muda de um plantão para o outro.
   const [hospital, setHospital] = useState(() => storage.getHospitalPadrao() ?? "");
   const [periodo, setPeriodo] = useState<"diurno" | "noturno">("diurno");
-  const [data, setData] = useState(format(new Date(), "dd/MM/yyyy"));
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [progresso, setProgresso] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [downloadName, setDownloadName] = useState<string>("");
-  const [warnings, setWarnings] = useState<string[]>([]);
-  const [stats, setStats] = useState<{ pacientes: number; alertas: number } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Seletor nativo: sem digitar data de madrugada, sem formato errado.
+  const [dataISO, setDataISO] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [itens, setItens] = useState<Item[]>([]);
+  const [arrastando, setArrastando] = useState(false);
+  const [trabalhando, setTrabalhando] = useState<null | "leitos" | "mapa">(null);
+  const [mapa, setMapa] = useState<(MapaPronto & { url: string }) | null>(null);
+  const [erroGeral, setErroGeral] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Os workers leem o estado mais recente daqui, não da closure.
+  const itensRef = useRef<Item[]>([]);
+  itensRef.current = itens;
+
+  const dataPlantao = isoParaBR(dataISO) ?? "";
 
   useEffect(() => {
-    if (!downloadUrl) return;
-    return () => URL.revokeObjectURL(downloadUrl);
-  }, [downloadUrl]);
+    if (!mapa) return;
+    return () => URL.revokeObjectURL(mapa.url);
+  }, [mapa]);
 
-  const addFiles = useCallback((incoming: FileList | File[]) => {
-    const arr = Array.from(incoming);
-    const newEntries: UploadedFile[] = arr.map((f) => ({
-      id: crypto.randomUUID(),
-      file: f,
-      status: isAllowed(f) ? "ready" : "error",
-      errorMsg: !isAllowed(f) ? `Formato não suportado (use DOCX, TXT ou PDF)` : undefined,
-    }));
-    setFiles((prev) => {
-      const existing = new Set(prev.map((x) => x.file.name));
-      const unique = newEntries.filter((e) => !existing.has(e.file.name));
-      if (unique.length < newEntries.length) {
-        toast.warning("Alguns arquivos duplicados foram ignorados.");
-      }
-      return [...prev, ...unique];
-    });
+  const atualizar = useCallback((id: string, mudanca: Partial<Item>) => {
+    setItens((prev) => prev.map((i) => (i.id === id ? { ...i, ...mudanca } : i)));
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      addFiles(e.dataTransfer.files);
-    },
-    [addFiles],
-  );
+  /** Mudou o que entra na linha (data, setor): o que já foi lido precisa ser lido de novo. */
+  const invalidar = useCallback(() => {
+    setMapa(null);
+    setItens((prev) =>
+      prev.map((i) =>
+        i.estado === "pronto" ? { ...i, estado: "na-fila", resultado: undefined } : i,
+      ),
+    );
+  }, []);
 
-  const handleRemove = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-    setDownloadUrl(null);
-    setStats(null);
-  };
+  function adicionar(lista: FileList | File[]) {
+    setMapa(null);
+    setErroGeral(null);
+    setItens((prev) => {
+      const nomes = new Set(prev.map((i) => i.file.name));
+      const novos = Array.from(lista)
+        .filter((f) => !nomes.has(f.name))
+        .map((f): Item => ({ id: crypto.randomUUID(), file: f, estado: "na-fila" }));
+      const todos = [...prev, ...novos];
+      if (todos.length > MAX_ARQUIVOS) {
+        setErroGeral(`No máximo ${MAX_ARQUIVOS} arquivos por passagem.`);
+        return todos.slice(0, MAX_ARQUIVOS);
+      }
+      return todos;
+    });
+  }
 
-  const handleClearAll = () => {
-    setFiles([]);
-    setDownloadUrl(null);
-    setStats(null);
-    setWarnings([]);
-  };
+  async function lerUm(id: string) {
+    const item = itensRef.current.find((i) => i.id === id);
+    if (!item) return;
+    try {
+      let doc = item.doc;
+      if (!doc) {
+        atualizar(id, { estado: "lendo", motivo: undefined });
+        doc = await normalizarArquivo(item.file, transcreverNoServidor);
+        atualizar(id, { doc });
+      }
+      atualizar(id, { estado: "consultando", motivo: undefined });
+      const resultado = await lerLeitoNoServidor(doc, item.file.name, dataPlantao, setor);
+      atualizar(id, {
+        estado: "pronto",
+        resultado: { ...resultado, avisos: [...doc.avisos, ...resultado.avisos] },
+      });
+    } catch (err) {
+      const motivo = err instanceof ArquivoNaoLido ? err.message : motivoDoErro(err);
+      atualizar(id, { estado: "falhou", motivo });
+    }
+  }
 
-  const readyFiles = files.filter((f) => f.status === "ready");
+  async function lerPendentes(ids: string[]) {
+    const fila = [...ids];
+    const trabalhador = async () => {
+      for (let id = fila.shift(); id; id = fila.shift()) await lerUm(id);
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCORRENCIA, fila.length) }, trabalhador));
+  }
 
-  const handleGenerate = async () => {
-    if (readyFiles.length === 0) {
-      toast.error("Adicione pelo menos um arquivo.");
+  async function gerar() {
+    if (!dataPlantao) {
+      setErroGeral("Escolha a data do plantão.");
       return;
     }
-
-    setIsGenerating(true);
-    setDownloadUrl(null);
-    setStats(null);
-    setWarnings([]);
-    setProgresso("Enviando arquivos…");
-
+    setErroGeral(null);
+    setMapa(null);
+    const pendentes = itensRef.current.filter((i) => i.estado !== "pronto").map((i) => i.id);
+    if (pendentes.length) {
+      setTrabalhando("leitos");
+      await lerPendentes(pendentes);
+    }
+    const atuais = itensRef.current;
+    const lidos = atuais.filter((i) => i.estado === "pronto" && i.resultado);
+    if (lidos.length === 0) {
+      setTrabalhando(null);
+      setErroGeral("Nenhum leito foi lido. Veja o motivo em cada arquivo e tente de novo.");
+      return;
+    }
+    setTrabalhando("mapa");
     try {
-      // Os arquivos vão direto ao Storage. Quinze arquivos não cabem no corpo
-      // de uma função serverless, e mandá-los pelo servidor os faria trafegar
-      // duas vezes.
-      //
-      // Uma autorização por arquivo, e nada mais. Existia antes uma chamada
-      // extra só para descobrir o modo, com `file_name: "passagem"`: ela
-      // emitia um token de envio que ninguém usava e dobrava o número de
-      // requisições contra o limitador. O modo vem na resposta da primeira.
-      const caminhos: string[] = [];
-      let bucket: string | undefined;
-
-      for (let i = 0; i < readyFiles.length; i++) {
-        setProgresso(`Enviando arquivo ${i + 1} de ${readyFiles.length}…`);
-        const f = readyFiles[i];
-
-        const destino = await apiFetch("/api/extract/preparar-upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ file_name: f.file.name }),
-        });
-        if (!destino.ok) await falharComMotivo(destino, "preparar o envio");
-
-        const plano = (await destino.json()) as {
-          modo: "storage" | "multipart";
-          bucket?: string;
-          storage_path?: string;
-          token?: string;
-        };
-
-        // Sem Supabase (contêiner local) o arquivo vai pelo próprio servidor.
-        if (plano.modo === "multipart") {
-          await gerarPorMultipart();
-          return;
-        }
-        if (!plano.storage_path || !plano.token || !(bucket ??= plano.bucket)) {
-          throw new Error(
-            "O servidor autorizou o envio sem dizer para onde. Tente novamente; se repetir, me avise.",
-          );
-        }
-
-        // Envia com a autorização emitida pelo servidor. Sem login não há
-        // sessão do Supabase aqui, e o RLS barraria o envio direto.
-        const { error } = await supabase.storage
-          .from(bucket)
-          .uploadToSignedUrl(plano.storage_path, plano.token, f.file, {
-            // Mime pela extensão: `File.type` vem vazio para .docx em boa
-            // parte dos navegadores, e mime fora da lista do bucket é envio
-            // recusado depois de ter subido.
-            contentType: mimeDoArquivo(f.file),
-          });
-        if (error) throw new Error(`Falha ao enviar ${f.file.name}: ${error.message}`);
-        caminhos.push(plano.storage_path);
-      }
-
-      setProgresso("Lendo os arquivos…");
-      const inicio = await apiFetch("/api/passagem-plantao/gerar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storage_paths: caminhos,
-          setor,
-          data,
+      const pronto = await gerarMapa({
+        lidos: lidos.map((i) => ({
+          arquivo: i.file.name,
+          linha: i.resultado!.linha,
+          alertas: i.resultado!.alertas,
+        })),
+        falhas: atuais
+          .filter((i) => i.estado === "falhou")
+          .map((i) => ({ arquivo: i.file.name, motivo: i.motivo ?? "motivo desconhecido" })),
+        setor,
+        dataPlantao,
+        cabecalho: {
           hospital: hospital.trim() || undefined,
           periodo,
-          passagem_para: diaSeguinte(data),
-        }),
+          passagemPara: diaSeguinte(dataPlantao) ?? undefined,
+        },
       });
-      if (!inicio.ok) await falharComMotivo(inicio, "iniciar a leitura dos arquivos");
-      const { job_id } = (await inicio.json()) as { job_id: string };
-
-      // O cliente CONDUZ, não só observa.
-      //
-      // Uma invocação não comporta todos os lotes — o prazo acaba antes e o job
-      // fica em `processing` com o parcial salvo. Sem alguém para retomar, ele
-      // parava para sempre: foi o "Lendo lote 2 de 4" que ficou girando em
-      // produção. Cada passo chama `/continuar`, que processa o que couber e
-      // devolve o estado; uma chamada por vez, esperando a resposta, para não
-      // haver duas invocações no mesmo lote.
-      const limite = Date.now() + 10 * 60_000;
-      for (;;) {
-        if (Date.now() > limite)
-          throw new Error("A passagem demorou demais. Tente com menos arquivos.");
-        await new Promise((r) => setTimeout(r, 2500));
-        const res = await apiFetch(`/api/passagem-plantao/job/${job_id}/continuar`, {
-          method: "POST",
-        });
-        if (!res.ok) await falharComMotivo(res, "acompanhar o processamento");
-        const job = (await res.json()) as {
-          status: string;
-          stage: string;
-          error: string | null;
-          warnings: string[];
-          contagem: { pacientes: number; alertas: number } | null;
-          docx: { nome: string; url: string } | null;
-        };
-
-        setProgresso(job.stage);
-        if (job.status === "error") throw new Error(job.error ?? "Falha ao montar a passagem.");
-        if (job.status === "done" && job.docx) {
-          setWarnings(job.warnings ?? []);
-          setStats({
-            pacientes: job.contagem?.pacientes ?? 0,
-            alertas: job.contagem?.alertas ?? 0,
-          });
-          setDownloadUrl(job.docx.url);
-          setDownloadName(job.docx.nome);
-          toast.success(
-            `Mapa pronto — ${job.contagem?.pacientes ?? 0} leitos, ${job.contagem?.alertas ?? 0} alertas.`,
-          );
-          return;
-        }
-      }
+      setMapa({ ...pronto, url: URL.createObjectURL(pronto.blob) });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao gerar o mapa.");
+      setErroGeral(`Falha ao montar o DOCX: ${motivoDoErro(err)}`);
     } finally {
-      setIsGenerating(false);
-      setProgresso(null);
+      setTrabalhando(null);
     }
-  };
+  }
 
-  /** Modo local (`npm run dev:all` sem Supabase): o DOCX volta na resposta. */
-  const gerarPorMultipart = async () => {
-    const formData = new FormData();
-    formData.append("setor", setor);
-    formData.append("data", data);
-    if (hospital.trim()) formData.append("hospital", hospital.trim());
-    formData.append("periodo", periodo);
-    const proxima = diaSeguinte(data);
-    if (proxima) formData.append("passagem_para", proxima);
-    readyFiles.forEach((f) => formData.append("files", f.file));
+  async function tentarDeNovo(id: string) {
+    setMapa(null);
+    await lerUm(id);
+  }
 
-    const res = await apiFetch("/api/passagem-plantao/gerar", { method: "POST", body: formData });
-    if (!res.ok) await falharComMotivo(res, "gerar o mapa");
-
-    const pacientes = Number(res.headers.get("X-Pacientes-Count") || 0);
-    const alertas = Number(res.headers.get("X-Alertas-Count") || 0);
-    const avisos = res.headers.get("X-File-Warnings");
-    if (avisos) {
-      let texto = avisos;
-      try {
-        texto = decodeURIComponent(avisos);
-      } catch {
-        /* já legível */
-      }
-      setWarnings(
-        texto
-          .split(";")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      );
-    }
-    setStats({ pacientes, alertas });
-    setDownloadUrl(URL.createObjectURL(await res.blob()));
-    setDownloadName(`MAPA_PASSAGEM_${setor.replace("/", "-")}_${data.replace(/\//g, "_")}.docx`);
-    toast.success(`Mapa pronto — ${pacientes} leitos, ${alertas} alertas.`);
-  };
+  const prontos = itens.filter((i) => i.estado === "pronto").length;
+  const falhos = itens.filter((i) => i.estado === "falhou").length;
+  const ocupado = trabalhando !== null;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Header */}
-      <header className="bg-card border-border sticky top-0 z-30 border-b">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => nav({ to: "/dashboard" })}
-              aria-label="Voltar ao plantão"
-              className="touch-target border-border text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="t-title text-foreground">Passagem de plantão</h1>
-              <p className="t-label text-muted-foreground font-normal">
-                Gerar mapa consolidado a partir dos DOCX dos leitos
-              </p>
-            </div>
+    <div className="bg-background min-h-screen">
+      <header className="bg-card border-border sticky top-0 z-10 border-b">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
+          <button
+            onClick={() => nav({ to: "/" })}
+            aria-label="Voltar"
+            className="text-muted-foreground hover:bg-secondary focus-visible:ring-ring inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="t-title text-foreground">Passagem de plantão</h1>
+            <p className="t-label text-muted-foreground font-normal">
+              Um arquivo por leito — Word, PDF ou foto
+            </p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6 sm:px-6">
-        {/* Config row */}
-        <div className="bg-card border-border rounded-3xl border p-5">
-          <h2 className="t-title text-foreground mb-4">Configuração do plantão</h2>
+        <section className="bg-card border-border rounded-3xl border p-5">
+          <h2 className="t-title text-foreground mb-4">Plantão</h2>
           <div className="flex flex-wrap gap-6">
-            {/* Setor */}
             <div className="flex flex-col gap-1.5">
-              <label className="t-label text-muted-foreground">Setor</label>
+              <span className="t-label text-muted-foreground">Setor</span>
               <div className="flex gap-2">
                 {(["CMF", "CMM", "CMF/CMM"] as const).map((s) => (
                   <button
                     key={s}
-                    onClick={() => setSetor(s)}
+                    onClick={() => {
+                      if (s !== setor) invalidar();
+                      setSetor(s);
+                    }}
                     aria-pressed={setor === s}
-                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                    disabled={ocupado}
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-11 items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50 ${
                       setor === s
                         ? "bg-navy text-navy-foreground border-navy"
                         : "bg-card text-muted-foreground border-border hover:bg-secondary"
@@ -366,33 +258,38 @@ function PassagemPlantaoPage() {
               </div>
             </div>
 
-            {/* Data */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="passagem-data" className="t-label text-muted-foreground">
                 Data do plantão
               </label>
               <input
                 id="passagem-data"
-                type="text"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                placeholder="DD/MM/AAAA"
+                type="date"
+                value={dataISO}
+                disabled={ocupado}
+                onChange={(e) => {
+                  if (e.target.value !== dataISO) invalidar();
+                  setDataISO(e.target.value);
+                }}
                 data-testid="handoff-data"
-                className="bg-card border-border text-foreground focus:ring-ring min-h-[2.75rem] w-40 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
+                className="bg-card border-border text-foreground focus:ring-ring min-h-11 w-44 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
               />
             </div>
 
-            {/* Período */}
             <div className="flex flex-col gap-1.5">
-              <label className="t-label text-muted-foreground">Período</label>
+              <span className="t-label text-muted-foreground">Período</span>
               <div className="flex gap-2">
                 {(["diurno", "noturno"] as const).map((p) => (
                   <button
                     key={p}
-                    onClick={() => setPeriodo(p)}
+                    onClick={() => {
+                      setPeriodo(p);
+                      setMapa(null);
+                    }}
                     aria-pressed={periodo === p}
+                    disabled={ocupado}
                     data-testid={`handoff-periodo-${p}`}
-                    className={`t-label focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                    className={`t-label focus-visible:ring-ring inline-flex min-h-11 items-center rounded-xl border px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50 ${
                       periodo === p
                         ? "bg-navy text-navy-foreground border-navy"
                         : "bg-card text-muted-foreground border-border hover:bg-secondary"
@@ -404,7 +301,6 @@ function PassagemPlantaoPage() {
               </div>
             </div>
 
-            {/* Hospital */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="passagem-hospital" className="t-label text-muted-foreground">
                 Hospital
@@ -413,200 +309,262 @@ function PassagemPlantaoPage() {
                 id="passagem-hospital"
                 type="text"
                 value={hospital}
-                onChange={(e) => setHospital(e.target.value)}
+                onChange={(e) => {
+                  setHospital(e.target.value);
+                  setMapa(null);
+                }}
                 onBlur={() => storage.setHospitalPadrao(hospital)}
                 placeholder="Nome do hospital"
                 data-testid="handoff-hospital"
-                className="bg-card border-border text-foreground focus:ring-ring min-h-[2.75rem] w-64 rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
+                className="bg-card border-border text-foreground focus:ring-ring min-h-11 w-64 max-w-full rounded-xl border px-3 text-base focus:ring-2 focus:outline-none"
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Drop zone */}
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="Adicionar arquivos dos leitos"
           onDragOver={(e) => {
             e.preventDefault();
-            setIsDragging(true);
+            setArrastando(true);
           }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
-            isDragging
+          onDragLeave={() => setArrastando(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setArrastando(false);
+            if (!ocupado) adicionar(e.dataTransfer.files);
+          }}
+          onClick={() => !ocupado && inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if ((e.key === "Enter" || e.key === " ") && !ocupado) inputRef.current?.click();
+          }}
+          className={`focus-visible:ring-ring flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+            arrastando
               ? "border-navy bg-navy/5"
               : "border-border hover:border-navy/40 hover:bg-secondary/30"
           }`}
         >
-          <Upload className={`h-8 w-8 ${isDragging ? "text-navy" : "text-muted-foreground"}`} />
-          <p className="text-sm font-bold text-foreground">
-            {isDragging
-              ? "Solte os arquivos aqui"
-              : "Arraste os DOCX dos leitos ou clique para selecionar"}
+          <Upload className={`h-8 w-8 ${arrastando ? "text-navy" : "text-muted-foreground"}`} />
+          <p className="t-body text-foreground font-bold">
+            {arrastando ? "Solte os arquivos aqui" : "Adicionar os arquivos dos leitos"}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Suporte a DOCX, TXT e PDF — até 30 arquivos — 20MB cada
+          <p className="t-label text-muted-foreground text-center font-normal">
+            Word (.docx), PDF, foto ou print — um arquivo por leito
           </p>
           <input
-            ref={fileInputRef}
+            ref={inputRef}
             type="file"
             multiple
-            accept=".docx,.txt,.pdf"
+            accept={ACEITOS}
             className="hidden"
             data-testid="handoff-files"
-            onChange={(e) => e.target.files && addFiles(e.target.files)}
+            onChange={(e) => {
+              if (e.target.files) adicionar(e.target.files);
+              e.target.value = "";
+            }}
           />
         </div>
 
-        {/* File list */}
-        {files.length > 0 && (
-          <div className="bg-card border-border overflow-hidden rounded-3xl border">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
-              <span className="t-label text-muted-foreground">
-                {readyFiles.length} arquivo{readyFiles.length !== 1 ? "s" : ""} prontos
-                {files.length - readyFiles.length > 0 && (
-                  <span className="text-destructive ml-2">
-                    · {files.length - readyFiles.length} com erro
-                  </span>
-                )}
+        {itens.length > 0 && (
+          <section className="bg-card border-border overflow-hidden rounded-3xl border">
+            <div className="border-border bg-secondary/30 flex items-center justify-between border-b px-5 py-2">
+              <span className="t-label text-muted-foreground" data-testid="handoff-contagem">
+                {itens.length} arquivo{itens.length !== 1 ? "s" : ""} · {prontos} pronto
+                {prontos !== 1 ? "s" : ""}
+                {falhos > 0 && <span className="text-destructive"> · {falhos} com falha</span>}
               </span>
               <button
-                onClick={handleClearAll}
-                className="t-label text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                onClick={() => {
+                  setItens([]);
+                  setMapa(null);
+                  setErroGeral(null);
+                }}
+                disabled={ocupado}
+                className="t-label text-muted-foreground hover:text-destructive focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               >
-                <Trash2 className="h-3 w-3" /> Limpar tudo
+                <Trash2 className="h-4 w-4" aria-hidden="true" /> Limpar tudo
               </button>
             </div>
-            <ul className="divide-y divide-border max-h-72 overflow-y-auto">
-              {files.map((f) => (
-                <li key={f.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText
-                    className={`h-4 w-4 flex-shrink-0 ${f.status === "error" ? "text-destructive" : "text-navy"}`}
-                  />
-                  <span className="flex-1 text-xs font-medium truncate">{f.file.name}</span>
-                  <span className="t-label text-muted-foreground font-normal">
-                    {(f.file.size / 1024).toFixed(0)} KB
-                  </span>
-                  {f.status === "error" && (
-                    <span className="t-label text-destructive font-normal">{f.errorMsg}</span>
-                  )}
-                  {f.status === "ready" && (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                  )}
-                  <button
-                    onClick={() => handleRemove(f.id)}
-                    className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </li>
+            <ul className="divide-border divide-y">
+              {itens.map((item) => (
+                <LinhaItem
+                  key={item.id}
+                  item={item}
+                  ocupado={ocupado}
+                  onRemover={() => {
+                    setItens((prev) => prev.filter((i) => i.id !== item.id));
+                    setMapa(null);
+                  }}
+                  onTentar={() => void tentarDeNovo(item.id)}
+                />
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
-        {/* Warnings */}
-        {warnings.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
-            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="t-body text-foreground mb-1">Arquivos com problema (ignorados):</p>
-              <ul className="space-y-0.5">
-                {warnings.map((w, i) => (
-                  <li key={i} className="text-xs text-amber-700">
-                    {w}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* Generate / Download */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || readyFiles.length === 0}
-            data-testid="handoff-generate"
-            className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        {erroGeral && (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/10 t-body text-foreground flex gap-3 rounded-2xl border p-4"
           >
-            {isGenerating ? (
+            <AlertTriangle
+              className="text-destructive mt-0.5 h-5 w-5 shrink-0"
+              aria-hidden="true"
+            />
+            {erroGeral}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={() => void gerar()}
+            disabled={ocupado || itens.length === 0}
+            data-testid="handoff-generate"
+            className="bg-navy text-navy-foreground focus-visible:ring-ring inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {ocupado ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                {/* Em que passo está, não uma barra que não sabe de nada. Com 15
-                    arquivos são três lotes, e saber disso é a diferença entre
-                    esperar e achar que travou. */}
-                {progresso ?? `Processando ${readyFiles.length} leitos…`}
+                {trabalhando === "leitos"
+                  ? `Lendo leitos… ${prontos} de ${itens.length}`
+                  : "Montando o mapa…"}
               </>
             ) : (
               <>
                 <FileText className="h-5 w-5" aria-hidden="true" />
-                Gerar mapa ({readyFiles.length} leito
-                {readyFiles.length !== 1 ? "s" : ""})
+                {mapa ? "Gerar o mapa de novo" : "Gerar mapa"}
               </>
             )}
           </button>
 
-          {downloadUrl && (
+          {mapa && (
             <a
-              href={downloadUrl}
-              download={downloadName}
+              href={mapa.url}
+              download={mapa.nome}
               data-testid="handoff-download"
-              className="focus-visible:ring-ring inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
+              className="bg-success text-success-foreground focus-visible:ring-ring inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl text-base font-bold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
             >
               <Download className="h-5 w-5" aria-hidden="true" />
-              Baixar DOCX
-              {stats && (
-                <span className="t-label ml-1 font-normal text-emerald-50">
-                  ({stats.pacientes} pac · {stats.alertas} alertas)
-                </span>
-              )}
+              Baixar DOCX ({mapa.pacientes} leito{mapa.pacientes !== 1 ? "s" : ""})
             </a>
           )}
         </div>
 
-        {/* How to use */}
-        {files.length === 0 && (
-          <div className="bg-card border-border rounded-3xl border p-5">
-            <h3 className="t-title text-foreground mb-3">Como usar</h3>
-            <ol className="space-y-2">
-              {[
-                "Selecione o setor (CMF, CMM ou ambos) e a data do plantão",
-                "Arraste ou selecione os arquivos DOCX de cada leito (evoluções/prescrições do dia)",
-                'Clique em "Gerar Mapa de Passagem"',
-                "Aguarde o processamento — a IA extrai e consolida todos os leitos",
-                "Baixe o DOCX gerado com o mapa completo + tabela de alertas críticos",
-              ].map((step, i) => (
-                <li key={i} className="t-body text-muted-foreground flex gap-3">
-                  <span className="bg-navy text-navy-foreground t-label mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                    {i + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
-            <div className="mt-4 pt-4 border-t border-navy/10">
-              <p className="t-eyebrow text-muted-foreground mb-2">
-                Protocolos aplicados automaticamente
+        {mapa && mapa.avisos.length > 0 && (
+          <div
+            data-testid="handoff-avisos"
+            className="border-warning/50 bg-warning/10 flex gap-3 rounded-2xl border p-4"
+          >
+            <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="t-body text-foreground mb-1 font-bold">
+                O mapa saiu com avisos (estão também no topo do DOCX):
               </p>
-              <ul className="grid grid-cols-2 gap-1">
-                {[
-                  "Cockcroft-Gault (Cr nova)",
-                  "Suspensão metformina no internamento",
-                  "Proteção antiparkinsonianos",
-                  "Alerta alfa-bloqueador em idosos",
-                  "Correção hiponatremia (máx 10 mEq/24h)",
-                  "Alerta candidiase sem antifúngico",
-                ].map((p, i) => (
-                  <li key={i} className="t-body text-muted-foreground flex gap-1.5">
-                    <span className="text-navy">•</span> {p}
+              <ul className="space-y-1">
+                {mapa.avisos.map((a, i) => (
+                  <li key={i} className="t-body text-foreground">
+                    {a}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
         )}
+
+        {itens.length === 0 && (
+          <section className="bg-card border-border rounded-3xl border p-5">
+            <h3 className="t-title text-foreground mb-3">Como funciona</h3>
+            <ol className="space-y-2">
+              {[
+                "Escolha o setor e a data do plantão.",
+                "Adicione um arquivo por leito: Word, PDF, foto ou print da evolução.",
+                "Cada leito é lido separadamente — o nome, o leito e a internação vêm do cabeçalho do documento.",
+                "Leito que falhar mostra o motivo e pode ser tentado de novo sozinho.",
+                "Baixe o DOCX no formato do mapa do hospital.",
+              ].map((passo, i) => (
+                <li key={i} className="t-body text-muted-foreground flex gap-3">
+                  <span className="bg-navy text-navy-foreground t-label mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                    {i + 1}
+                  </span>
+                  {passo}
+                </li>
+              ))}
+            </ol>
+            <p className="t-body text-muted-foreground mt-4">
+              Word e PDF com texto são lidos no próprio aparelho. Foto e PDF escaneado passam pela
+              IA página por página, e o leito sai marcado no mapa para você conferir os valores.
+            </p>
+          </section>
+        )}
       </main>
     </div>
+  );
+}
+
+function LinhaItem({
+  item,
+  ocupado,
+  onRemover,
+  onTentar,
+}: {
+  item: Item;
+  ocupado: boolean;
+  onRemover: () => void;
+  onTentar: () => void;
+}) {
+  const leito = item.resultado?.linha.leito ?? lerNomeDoArquivo(item.file.name).leito;
+  const andando = item.estado === "lendo" || item.estado === "consultando";
+  const avisos = item.resultado?.avisos ?? [];
+  return (
+    <li className="px-5 py-3" data-testid="handoff-item" data-estado={item.estado}>
+      <div className="flex items-center gap-3">
+        {andando ? (
+          <Loader2 className="text-navy h-5 w-5 shrink-0 animate-spin" aria-hidden="true" />
+        ) : item.estado === "pronto" ? (
+          <CheckCircle2 className="text-success h-5 w-5 shrink-0" aria-hidden="true" />
+        ) : item.estado === "falhou" ? (
+          <AlertTriangle className="text-destructive h-5 w-5 shrink-0" aria-hidden="true" />
+        ) : (
+          <FileText className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden="true" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="t-body text-foreground truncate">
+            {leito && <span className="font-bold">{leito} · </span>}
+            {item.resultado?.linha.paciente ?? item.file.name}
+          </p>
+          <p
+            className={`t-label font-normal ${item.estado === "falhou" ? "text-destructive" : "text-muted-foreground"}`}
+          >
+            {item.estado === "falhou" ? `Falhou: ${item.motivo}` : ROTULO[item.estado]}
+            {item.resultado?.linha.lidoDeImagem && " · lido de imagem — confira valores"}
+          </p>
+          {avisos.map((a, i) => (
+            <p key={i} className="t-label text-foreground font-normal">
+              ⚠ {a}
+            </p>
+          ))}
+        </div>
+        {item.estado === "falhou" && (
+          <button
+            onClick={onTentar}
+            disabled={ocupado}
+            data-testid="handoff-retry"
+            className="t-label text-navy hover:bg-secondary focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> Tentar de novo
+          </button>
+        )}
+        <button
+          onClick={onRemover}
+          disabled={ocupado}
+          aria-label={`Remover ${item.file.name}`}
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </li>
   );
 }

@@ -111,7 +111,8 @@ export async function lerCabecalhosDocx(dados: ArrayBuffer | Uint8Array): Promis
   for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
     const id = m[0].match(/\bId="([^"]+)"/)?.[1];
     const alvo = m[0].match(/\bTarget="([^"]+)"/)?.[1];
-    if (id && alvo && /header\d*\.xml$/.test(alvo)) alvoPorId.set(id, alvo.replace(/^\/?word\//, ""));
+    if (id && alvo && /header\d*\.xml$/.test(alvo))
+      alvoPorId.set(id, alvo.replace(/^\/?word\//, ""));
   }
 
   const secoes = [...documento.matchAll(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g)].map((m) => m[0]);
@@ -120,7 +121,8 @@ export async function lerCabecalhosDocx(dados: ArrayBuffer | Uint8Array): Promis
   const vistos = new Map<string, CabecalhoDocx>();
 
   for (const [i, secao] of secoes.entries()) {
-    const primeiraDiferente = /<w:titlePg(?:\s[^>]*)?\/>/.test(secao) && !/<w:titlePg\s+w:val="(?:0|false)"/.test(secao);
+    const primeiraDiferente =
+      /<w:titlePg(?:\s[^>]*)?\/>/.test(secao) && !/<w:titlePg\s+w:val="(?:0|false)"/.test(secao);
     const refs = [...secao.matchAll(/<w:headerReference\b[^>]*>/g)].map((m) => ({
       tipo: m[0].match(/w:type="(\w+)"/)?.[1] ?? "default",
       id: m[0].match(/r:id="([^"]+)"/)?.[1] ?? "",

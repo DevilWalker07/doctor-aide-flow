@@ -8,7 +8,11 @@ import {
   GRUPOS_LEITO_PADRAO,
   type OpcoesMapa,
 } from "../../../shared/passagem/docx.js";
-import type { CabecalhoMapa, Consolidacao, MapaPlantaoData } from "../../../shared/passagem/tipos.js";
+import type {
+  CabecalhoMapa,
+  Consolidacao,
+  MapaPlantaoData,
+} from "../../../shared/passagem/tipos.js";
 
 /** Mesma assinatura do gerador antigo, para os testes migrados lerem igual. */
 async function gerarMapaPlantaoDocx(
@@ -239,12 +243,20 @@ describe("seções do modelo que o mapa antigo não tinha", () => {
       GRUPOS_LEITO_PADRAO,
       ["L03"],
     );
-    expect(r).toBe("ENFERMARIA 1: L01 NOVO • ENFERMARIA 2: L06 | *LIDOS DE IMAGEM: L06 | *NÃO LIDOS: L03");
+    expect(r).toBe(
+      "ENFERMARIA 1: L01 NOVO • ENFERMARIA 2: L06 | *LIDOS DE IMAGEM: L06 | *NÃO LIDOS: L03",
+    );
   });
 
   it("PRIORIDADES numeradas, urgente primeiro na ordem que a consolidação deu", async () => {
     const t = await texto(
-      await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026", { passagemPara: "03/08/2026" }, { consolidacao }),
+      await gerarMapaPlantaoDocx(
+        dados,
+        "CMM",
+        "02/08/2026",
+        { passagemPara: "03/08/2026" },
+        { consolidacao },
+      ),
     );
     expect(t).toContain("PRIORIDADES PARA O PLANTÃO 03/08/2026");
     expect(t).toContain("1. JUVENAL (L07): Reavaliar dieta");
@@ -260,7 +272,13 @@ describe("seções do modelo que o mapa antigo não tinha", () => {
 
   it("PENDÊNCIAS GERAIS numeradas só com as categorias que têm item", async () => {
     const t = await texto(
-      await gerarMapaPlantaoDocx(dados, "CMM", "02/08/2026", { passagemPara: "03/08/2026" }, { consolidacao }),
+      await gerarMapaPlantaoDocx(
+        dados,
+        "CMM",
+        "02/08/2026",
+        { passagemPara: "03/08/2026" },
+        { consolidacao },
+      ),
     );
     expect(t).toContain("PENDÊNCIAS GERAIS – PLANTÃO 03/08/2026");
     expect(t).toContain("1. LABS RECENTES A INCORPORAR: L04: plaquetas de hoje");
@@ -271,7 +289,10 @@ describe("seções do modelo que o mapa antigo não tinha", () => {
   it("leito lido de imagem sai marcado para conferência", async () => {
     const t = await texto(
       await gerarMapaPlantaoDocx(
-        { pacientes: [{ ...base, leito: "L02", paciente: "FOTO", lidoDeImagem: true }], alertasCriticos: [] },
+        {
+          pacientes: [{ ...base, leito: "L02", paciente: "FOTO", lidoDeImagem: true }],
+          alertasCriticos: [],
+        },
         "CMM",
         "02/08/2026",
       ),

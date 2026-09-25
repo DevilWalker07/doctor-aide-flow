@@ -82,7 +82,9 @@ function celula(
         new Paragraph({
           alignment: alinhar,
           spacing: i < linhas.length - 1 ? { after: 40 } : {},
-          children: [new TextRun({ text: linha, bold: negrito, size: tamanho, color: cor, font: FONTE })],
+          children: [
+            new TextRun({ text: linha, bold: negrito, size: tamanho, color: cor, font: FONTE }),
+          ],
         }),
     ),
   });
@@ -99,7 +101,12 @@ function celulaDeCabecalho(texto: string, largura: number): TableCell {
   });
 }
 
-function faixaDeLargura(texto: string, fundo: string, tamanho: number, corTexto = BRANCO): TableRow {
+function faixaDeLargura(
+  texto: string,
+  fundo: string,
+  tamanho: number,
+  corTexto = BRANCO,
+): TableRow {
   return new TableRow({
     children: [
       new TableCell({
@@ -108,7 +115,9 @@ function faixaDeLargura(texto: string, fundo: string, tamanho: number, corTexto 
         borders: { top: BORDA, bottom: BORDA, left: BORDA, right: BORDA },
         children: [
           new Paragraph({
-            children: [new TextRun({ text: texto, bold: true, size: tamanho, color: corTexto, font: FONTE })],
+            children: [
+              new TextRun({ text: texto, bold: true, size: tamanho, color: corTexto, font: FONTE }),
+            ],
           }),
         ],
       }),
@@ -205,7 +214,12 @@ const ORDEM_PRIORIDADE: Record<Prioridade, number> = {
 export function prioridadesDosAlertas(alertas: AlertaCritico[]): PrioridadePlantao[] {
   return [...alertas]
     .sort((a, b) => ORDEM_PRIORIDADE[a.prioridade] - ORDEM_PRIORIDADE[b.prioridade])
-    .map((a) => ({ prioridade: a.prioridade, leito: a.leito ?? "", paciente: a.paciente, texto: a.acao }));
+    .map((a) => ({
+      prioridade: a.prioridade,
+      leito: a.leito ?? "",
+      paciente: a.paciente,
+      texto: a.acao,
+    }));
 }
 
 function titulo(texto: string, cor = AZUL, antes = 240): Paragraph {
@@ -221,7 +235,13 @@ function itemNumerado(n: number, texto: string, destaque = false): Paragraph {
     indent: { left: 240, hanging: 240 },
     children: [
       new TextRun({ text: `${n}. `, bold: true, size: 15, font: FONTE }),
-      new TextRun({ text: texto, size: 15, bold: destaque, color: destaque ? "9B0000" : "000000", font: FONTE }),
+      new TextRun({
+        text: texto,
+        size: 15,
+        bold: destaque,
+        color: destaque ? "9B0000" : "000000",
+        font: FONTE,
+      }),
     ],
   });
 }
@@ -334,7 +354,9 @@ export function montarMapaDocx(mapa: MapaPlantaoData, opts: OpcoesMapa): Documen
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: linhaPlantao, bold: true, size: 17, color: BRANCO, font: FONTE })],
+            children: [
+              new TextRun({ text: linhaPlantao, bold: true, size: 17, color: BRANCO, font: FONTE }),
+            ],
           }),
           ...(resumo
             ? [
@@ -404,7 +426,8 @@ export function montarMapaDocx(mapa: MapaPlantaoData, opts: OpcoesMapa): Documen
   let grupoAtual: string | null = null;
   const linhas = mapa.pacientes.flatMap((p, i) => {
     const g = grupoDoLeito(p.leito, grupos);
-    const tarja = g && g.titulo !== grupoAtual ? [faixaDeLargura(g.titulo, "D9E2F3", 15, AZUL)] : [];
+    const tarja =
+      g && g.titulo !== grupoAtual ? [faixaDeLargura(g.titulo, "D9E2F3", 15, AZUL)] : [];
     if (g) grupoAtual = g.titulo;
     return [...tarja, linhaDoPaciente(p, i)];
   });
@@ -455,7 +478,10 @@ export function montarMapaDocx(mapa: MapaPlantaoData, opts: OpcoesMapa): Documen
         ]
       : categoriasComItens.length
         ? categoriasComItens.map((c, i) =>
-            itemNumerado(i + 1, `${TITULO_CATEGORIA[c]}: ${consolidacao.pendencias[c].join(" | ")}`),
+            itemNumerado(
+              i + 1,
+              `${TITULO_CATEGORIA[c]}: ${consolidacao.pendencias[c].join(" | ")}`,
+            ),
           )
         : [paragrafoSimples("Nenhuma pendência geral registrada.", "555555", true)]),
   ];
@@ -505,6 +531,9 @@ export function montarMapaDocx(mapa: MapaPlantaoData, opts: OpcoesMapa): Documen
 
 /** Nome do arquivo baixado: `MAPA_PASSAGEM_CMM_25-09-2026.docx`. */
 export function nomeDoArquivoMapa(setor: string, dataPlantao: string): string {
-  const s = setor.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const s = setor
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   return `MAPA_PASSAGEM_${s}_${dataPlantao.replace(/\//g, "-")}.docx`;
 }

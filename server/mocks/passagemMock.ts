@@ -67,13 +67,17 @@ export function mockPassagemLeito(payload: unknown) {
       for (const [campo, valor] of outro.campos) {
         const usado = escolhido.campos.get(campo);
         if (usado && usado !== valor && campo !== "DATA") {
-          conflitos.push(`${campo}: ${usado} (${escolhido.rotulo}) × ${valor} (${outro.rotulo}) — usado ${usado}`);
+          conflitos.push(
+            `${campo}: ${usado} (${escolhido.rotulo}) × ${valor} (${outro.rotulo}) — usado ${usado}`,
+          );
         }
       }
     }
   }
   const labs = [...md.matchAll(/^#\s*LABORAT[ÓO]RIO[^\n]*\n([^\n]+)/gim)].map((m) => m[1]);
-  const ultimoLab = labs.length ? labs[labs.length - 1].replace(/\s*\|\s*/g, ", ") : "Sem lab recente";
+  const ultimoLab = labs.length
+    ? labs[labs.length - 1].replace(/\s*\|\s*/g, ", ")
+    : "Sem lab recente";
   const campos = escolhido?.campos;
   const nome = campos?.get("NOME") ?? null;
 

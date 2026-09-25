@@ -121,9 +121,8 @@ export async function gerarDocxFicticio(opcoes: OpcoesDocxFicticio = {}): Promis
  * do servidor não dependerem do navegador.
  */
 export async function markdownFicticio(opcoes: OpcoesDocxFicticio = {}): Promise<string> {
-  const { documentoEmMarkdown, lerCabecalhosDocx } = await import(
-    "../../../shared/passagem/cabecalhosDocx.js"
-  );
+  const { documentoEmMarkdown, lerCabecalhosDocx } =
+    await import("../../../shared/passagem/cabecalhosDocx.js");
   const cabecalhos = await lerCabecalhosDocx(await gerarDocxFicticio(opcoes));
   return documentoEmMarkdown(cabecalhos, corpoFicticio(opcoesCompletas(opcoes)).join("\n"));
 }

@@ -35,7 +35,11 @@ import { safeJsonCompletion, type SafeResult } from "./openaiClient.js";
 
 function falhar(result: Extract<SafeResult<unknown>, { ok: false }>, oQue: string): never {
   const campos = result.issues?.length ? ` (${result.issues.length} campos inválidos)` : "";
-  throw new HttpError(502, "ia_invalida", `A IA não devolveu ${oQue} válido: ${result.error}${campos}`);
+  throw new HttpError(
+    502,
+    "ia_invalida",
+    `A IA não devolveu ${oQue} válido: ${result.error}${campos}`,
+  );
 }
 
 /** `01` → `L01`, `LEITO 5` → `L05`, `ISOLAMENTO 12` → `ISO 12`. Outro formato fica como veio. */
@@ -128,7 +132,12 @@ export async function lerLeito(body: PassagemLeitoBody): Promise<LeitoLido> {
   if (criticos.length && !ia.alertasPendencias.toUpperCase().includes("LAB CRÍTICO")) {
     const resumo = criticos.map((f) => f.message).join("; ");
     alertasDoLeito.unshift(`!! LAB CRÍTICO: ${resumo} — REAVALIAR`);
-    alertas.unshift({ prioridade: "!! URGENTE", leito, paciente, acao: `LAB CRÍTICO: ${resumo} — REAVALIAR` });
+    alertas.unshift({
+      prioridade: "!! URGENTE",
+      leito,
+      paciente,
+      acao: `LAB CRÍTICO: ${resumo} — REAVALIAR`,
+    });
   }
 
   const linha: LinhaMapa = {
@@ -153,7 +162,9 @@ export async function lerLeito(body: PassagemLeitoBody): Promise<LeitoLido> {
 
 /** Uma página de imagem → Markdown literal. Usa o modelo de visão. */
 export async function transcrever(body: TranscreverBody): Promise<Transcricao> {
-  const onde = body.pagina ? `Página ${body.pagina}${body.paginas ? ` de ${body.paginas}` : ""}.` : "";
+  const onde = body.pagina
+    ? `Página ${body.pagina}${body.paginas ? ` de ${body.paginas}` : ""}.`
+    : "";
   const result = await safeJsonCompletion(
     TRANSCRICAO_PROMPT,
     `${onde} Transcreva a imagem.`.trim(),

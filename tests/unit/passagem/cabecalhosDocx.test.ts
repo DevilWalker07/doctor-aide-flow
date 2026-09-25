@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cabecalhosEmMarkdown, lerCabecalhosDocx, textoDoXmlWord } from "../../../shared/passagem/cabecalhosDocx.js";
+import {
+  cabecalhosEmMarkdown,
+  lerCabecalhosDocx,
+  textoDoXmlWord,
+} from "../../../shared/passagem/cabecalhosDocx.js";
 import { gerarDocxFicticio } from "../../fixtures/passagem/docxFicticio.js";
 
 describe("cabeçalhos do Word", () => {
@@ -16,7 +20,9 @@ describe("cabeçalhos do Word", () => {
   it("rótulo e valor da tabela saem na mesma linha", async () => {
     const [primeira] = await lerCabecalhosDocx(await gerarDocxFicticio({ leito: "07" }));
     expect(primeira.linhas).toContain("UNIDADE DE INTERNAÇÃO: | CLÍNICA MÉDICA | LEITO: | 07");
-    expect(primeira.linhas).toContain("DATA DA ADMISSÃO: | 20/09/2026 | Nº DE PRONTUÁRIO: | 000123");
+    expect(primeira.linhas).toContain(
+      "DATA DA ADMISSÃO: | 20/09/2026 | Nº DE PRONTUÁRIO: | 000123",
+    );
   });
 
   it("o Markdown traz cada cabeçalho rotulado", async () => {
