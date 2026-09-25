@@ -158,3 +158,10 @@ export function cabecalhosEmMarkdown(cabecalhos: CabecalhoDocx[]): string {
   const blocos = cabecalhos.map((c) => `## Cabeçalho — ${c.rotulo}\n${c.linhas.join("\n")}`);
   return `# CABEÇALHOS DO DOCUMENTO\n\n${blocos.join("\n\n")}`;
 }
+
+/** O documento como a passagem lê: cabeçalhos rotulados antes, corpo depois. */
+export function documentoEmMarkdown(cabecalhos: CabecalhoDocx[], corpo: string): string {
+  const cab = cabecalhosEmMarkdown(cabecalhos);
+  const texto = corpo.trim();
+  return cab ? `${cab}\n\n# CORPO DO DOCUMENTO\n\n${texto}` : texto;
+}

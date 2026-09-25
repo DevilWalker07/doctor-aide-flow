@@ -115,3 +115,15 @@ export async function gerarDocxFicticio(opcoes: OpcoesDocxFicticio = {}): Promis
   });
   return Packer.toBuffer(doc);
 }
+
+/**
+ * O Markdown que o normalizador produz para o DOCX fictício, para os testes
+ * do servidor não dependerem do navegador.
+ */
+export async function markdownFicticio(opcoes: OpcoesDocxFicticio = {}): Promise<string> {
+  const { documentoEmMarkdown, lerCabecalhosDocx } = await import(
+    "../../../shared/passagem/cabecalhosDocx.js"
+  );
+  const cabecalhos = await lerCabecalhosDocx(await gerarDocxFicticio(opcoes));
+  return documentoEmMarkdown(cabecalhos, corpoFicticio(opcoesCompletas(opcoes)).join("\n"));
+}

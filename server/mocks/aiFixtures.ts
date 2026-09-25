@@ -1,3 +1,5 @@
+import { mockConsolidacao, mockPassagemLeito, mockTranscricao } from "./passagemMock.js";
+
 const paciente1 = {
   leito: "L01",
   nome: "PACIENTE TESTE UM",
@@ -31,6 +33,10 @@ const paciente2 = {
 };
 
 export const aiFixtures = {
+  /** Estas três dependem da entrada — ver `passagemMock.ts`. */
+  passagemLeito: mockPassagemLeito,
+  transcricao: mockTranscricao,
+  passagemConsolidar: mockConsolidacao,
   clinicaMedica: { patients: [paciente1, paciente2], globalAlerts: ["MODO MOCK (AI_MOCK=1)"] },
   orquestrador: {
     agent: "clinica-medica",

@@ -219,6 +219,68 @@ export const PassagemBodySchema = z
   .strict();
 export type PassagemBody = z.infer<typeof PassagemBodySchema>;
 
+const DATA_BR = z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.");
+
+/**
+ * Um documento de um leito, já em Markdown. O navegador converte Word e PDF
+ * digital por código e só manda imagem ao transcritor — aqui chega sempre
+ * texto.
+ *
+ * `strict`: campo que o cliente manda e o schema não conhece é erro, não
+ * descarte calado.
+ */
+export const PassagemLeitoBody = z
+  .object({
+    markdown: z
+      .string()
+      .trim()
+      .min(20, "O documento não tem texto legível.")
+      .max(60_000, "Documento longo demais para um leito."),
+    /** Nome do arquivo — conferência do leito, nunca a fonte quando há cabeçalho. */
+    arquivo: z.string().trim().min(1).max(200),
+    dataPlantao: DATA_BR,
+    setor: z.string().trim().max(40).optional(),
+    /** O texto veio do transcritor de imagem: o DOCX marca o leito para conferência. */
+    lidoDeImagem: z.boolean().default(false),
+  })
+  .strict();
+export type PassagemLeitoBody = z.infer<typeof PassagemLeitoBody>;
+
+/** Uma página de foto, print ou PDF escaneado, já reduzida no navegador. */
+export const TranscreverBody = z
+  .object({
+    imagem: z.object({
+      base64: z.string().min(100).max(1_900_000, "Imagem grande demais — reduza antes de enviar."),
+      mime: z.enum(["image/jpeg", "image/png", "image/webp"]),
+    }),
+    pagina: z.number().int().min(1).max(60).optional(),
+    paginas: z.number().int().min(1).max(60).optional(),
+  })
+  .strict();
+export type TranscreverBody = z.infer<typeof TranscreverBody>;
+
+/** O que a consolidação precisa de cada leito: a linha pronta, sem o texto da evolução. */
+const LinhaParaConsolidar = z.object({
+  leito: z.string().trim().min(1).max(40),
+  paciente: z.string().max(200),
+  di: z.number().int().nullable(),
+  diagnostico: z.string().max(2000),
+  quadroAtual: z.string().max(2000),
+  atb: z.string().max(2000),
+  ultimoLab: z.string().max(2000),
+  condutasHoje: z.string().max(4000),
+  alertasPendencias: z.string().max(4000),
+});
+
+export const PassagemConsolidarBody = z
+  .object({
+    dataPlantao: DATA_BR,
+    passagemPara: DATA_BR.optional(),
+    leitos: z.array(LinhaParaConsolidar).min(1).max(40),
+  })
+  .strict();
+export type PassagemConsolidarBody = z.infer<typeof PassagemConsolidarBody>;
+
 // ─── AI outputs ──────────────────────────────────────────────────────────────
 
 export const ClinicalPatientSchema = z
@@ -452,3 +514,85 @@ export const SugestaoReceitaSchema = z.object({
   observacoes: strArr,
 });
 export type SugestaoReceita = z.infer<typeof SugestaoReceitaSchema>;
+
+// ─── Passagem por leito ──────────────────────────────────────────────────────
+
+/**
+ * De onde a IA tirou a identificação e o que estava em conflito entre os
+ * cabeçalhos. Ausente, cai para tudo null: o serviço usa o nome do arquivo e
+ * avisa.
+ */
+export const IdentificacaoSchema = z.object({
+  nome: nullableStr,
+  idade: nullableStr,
+  leito: nullableStr,
+  dih: nullableStr,
+  unidade: nullableStr,
+  prontuario: nullableStr,
+  fonte: str(""),
+  conflitos: strArr,
+});
+export type Identificacao = z.infer<typeof IdentificacaoSchema>;
+
+const IDENTIFICACAO_VAZIA: Identificacao = {
+  nome: null,
+  idade: null,
+  leito: null,
+  dih: null,
+  unidade: null,
+  prontuario: null,
+  fonte: "",
+  conflitos: [],
+};
+
+export const PassagemLeitoSchema = z.object({
+  identificacao: IdentificacaoSchema.catch(IDENTIFICACAO_VAZIA),
+  diagnostico: str("NÃO REFERIDO"),
+  quadroAtual: str("").transform(normalizeQuadro),
+  atb: str("NÃO REFERIDO"),
+  ultimoLab: str("Sem lab recente"),
+  condutasHoje: str(""),
+  alertasPendencias: str(""),
+  dispositivos: nullableStr,
+  anotacoesVisita: str(""),
+  resumoLinha: str(""),
+  sugestoesClinicas: strArr,
+  alertasCriticos: z
+    .array(
+      z.object({
+        prioridade: z.preprocess(normalizePrioridade, PrioridadeEnum),
+        acao: z.string().trim().min(1),
+      }),
+    )
+    .catch([]),
+});
+export type PassagemLeito = z.infer<typeof PassagemLeitoSchema>;
+
+/**
+ * Transcrição literal. `markdown` é obrigatório (página em branco vem como
+ * ""), e `[ilegível]` passa como está — o schema não "conserta" nada.
+ */
+export const TranscricaoSchema = z.object({
+  markdown: z.string(),
+  trechos_ilegiveis: strArr,
+});
+export type Transcricao = z.infer<typeof TranscricaoSchema>;
+
+export const ConsolidacaoSchema = z.object({
+  prioridades: z.array(
+    z.object({
+      prioridade: z.preprocess(normalizePrioridade, PrioridadeEnum),
+      leito: str(""),
+      paciente: str(""),
+      texto: z.string().trim().min(1),
+    }),
+  ),
+  pendencias: z.object({
+    admissoesPendentes: strArr,
+    labsAIncorporar: strArr,
+    procedimentosAgendados: strArr,
+    altasEmProgramacao: strArr,
+    avisosCriticos: strArr,
+  }),
+});
+export type ConsolidacaoIA = z.infer<typeof ConsolidacaoSchema>;
