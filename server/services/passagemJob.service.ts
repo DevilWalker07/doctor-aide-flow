@@ -202,10 +202,36 @@ export async function processarProximoLote(
   return { falta: false };
 }
 
-/** Encadeia os lotes até acabar. Cada passo é uma invocação curta. */
-export async function processarAteOFim(jobId: string, jobStore: JobStore): Promise<void> {
+/** Quanto tempo um lote costuma levar. Serve para decidir se ainda cabe outro. */
+const CUSTO_ESTIMADO_DO_LOTE_MS = 20_000;
+
+/**
+ * Processa lotes enquanto couber no prazo.
+ *
+ * Antes isto era um laço sem prazo: todos os lotes numa invocação só, mantida
+ * viva pelo `waitUntil`. Quatro lotes não cabem nos 60 s da plataforma, e o
+ * corte não tem quem marque o job como erro — o médico ficava com a tela
+ * girando até desistir, com o parcial salvo e ninguém para retomá-lo. Foi
+ * exatamente o que aconteceu em produção: "Lendo lote 2 de 4", sem erro, parado.
+ *
+ * Estourar o prazo aqui NÃO é falha: o estado do job guarda `proximo` e os
+ * parciais, então a invocação seguinte (`/continuar`) pega de onde parou.
+ *
+ * O laço só começa um lote se ainda houver folga para ele terminar. Meio lote
+ * processado é trabalho perdido: a invocação morre antes de gravar.
+ *
+ * Devolve `true` quando ainda faltam lotes.
+ */
+export async function processarAteOFim(
+  jobId: string,
+  jobStore: JobStore,
+  prazoMs = Number.POSITIVE_INFINITY,
+): Promise<{ falta: boolean }> {
+  const fim = Date.now() + prazoMs;
+
   for (;;) {
     const { falta } = await processarProximoLote(jobId, jobStore);
-    if (!falta) return;
+    if (!falta) return { falta: false };
+    if (Date.now() + CUSTO_ESTIMADO_DO_LOTE_MS > fim) return { falta: true };
   }
 }

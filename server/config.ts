@@ -126,6 +126,16 @@ export const modelosEmUso = () => ({
 
 export const extractBudgetMs = () => env.EXTRACT_BUDGET_MS ?? (env.VERCEL ? 55_000 : 240_000);
 
+/**
+ * Prazo de UMA invocação da passagem de plantão.
+ *
+ * Mais curto que o do extract de propósito: aqui estourar o prazo não é erro, é
+ * "faltam lotes", e a invocação seguinte retoma de onde parou. O valor deixa
+ * folga para o laço decidir se ainda cabe outro lote (~20 s cada) e para a
+ * resposta sair antes de a plataforma cortar aos 60 s.
+ */
+export const passagemBudgetMs = () => (env.VERCEL ? 40_000 : 240_000);
+
 export const allowedOrigins = () =>
   env.ALLOWED_ORIGINS.split(",")
     .map((s) => s.trim())

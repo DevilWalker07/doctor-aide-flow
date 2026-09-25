@@ -230,15 +230,23 @@ function PassagemPlantaoPage() {
       if (!inicio.ok) await falharComMotivo(inicio, "iniciar a leitura dos arquivos");
       const { job_id } = (await inicio.json()) as { job_id: string };
 
-      // Acompanhamento real: o médico vê em que lote está, não uma barra que
-      // não sabe de nada.
+      // O cliente CONDUZ, não só observa.
+      //
+      // Uma invocação não comporta todos os lotes — o prazo acaba antes e o job
+      // fica em `processing` com o parcial salvo. Sem alguém para retomar, ele
+      // parava para sempre: foi o "Lendo lote 2 de 4" que ficou girando em
+      // produção. Cada passo chama `/continuar`, que processa o que couber e
+      // devolve o estado; uma chamada por vez, esperando a resposta, para não
+      // haver duas invocações no mesmo lote.
       const limite = Date.now() + 10 * 60_000;
       for (;;) {
         if (Date.now() > limite)
           throw new Error("A passagem demorou demais. Tente com menos arquivos.");
         await new Promise((r) => setTimeout(r, 2500));
-        const res = await apiFetch(`/api/passagem-plantao/job/${job_id}`);
-        if (!res.ok) throw new Error("Perdi o acompanhamento do processamento.");
+        const res = await apiFetch(`/api/passagem-plantao/job/${job_id}/continuar`, {
+          method: "POST",
+        });
+        if (!res.ok) await falharComMotivo(res, "acompanhar o processamento");
         const job = (await res.json()) as {
           status: string;
           stage: string;

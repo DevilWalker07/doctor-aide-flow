@@ -167,6 +167,20 @@ Todo job assíncrono novo passa por ali, e leva um orçamento de tempo
 (`extractBudgetMs`) **abaixo** do `maxDuration`, porque job cortado pela
 plataforma não tem quem o marque como erro.
 
+**A passagem era a exceção, e por isso quebrou.** `processarAteOFim` rodava
+TODOS os lotes num laço, numa invocação só: quatro lotes não cabem em 60 s. Em
+produção o job ficou em "Lendo lote 2 de 4", sem erro, com o parcial salvo, e a
+tela girou até desistir. Hoje o laço trabalha com `passagemBudgetMs()` e só
+começa outro lote se houver folga para ele terminar — meio lote é trabalho
+perdido. Estourar o prazo **não é erro**: é "faltam lotes", e
+`POST /api/passagem-plantao/job/:id/continuar` retoma de onde parou, quantas
+invocações forem necessárias. O cliente conduz, uma chamada por vez.
+
+**Job que parou de andar vira erro na consulta.** `processing` sem atualização
+há mais de 90 s é dado como interrompido, com o estágio onde parou. Job vivo
+atualiza o `updated_at` a cada lote, então só envelhece quem de fato parou —
+e spinner eterno deixa de ser um estado possível.
+
 **Upload de documento não passa pelo servidor.** O navegador envia direto ao
 bucket privado `documentos-clinicos` (migration `20260917000000`), num caminho
 prefixado por `auth.uid()`; a rota recebe só `storage_path`. O backend usa a

@@ -1,3 +1,4 @@
+import { passagemBudgetMs } from "../config.js";
 import os from "node:os";
 import path from "node:path";
 import { Router, type RequestHandler } from "express";
@@ -36,6 +37,19 @@ const upload = multer({
     else cb(new Error(`Arquivo não suportado: ${file.originalname}. Use DOCX, PDF ou TXT.`));
   },
 });
+
+/**
+ * Tempo sem atualização a partir do qual um job em `processing` é dado como
+ * interrompido. Acima do prazo de uma invocação com folga: job vivo atualiza o
+ * `updated_at` a cada lote, então só fica velho quem de fato parou.
+ */
+const LIMITE_SEM_ATUALIZAR_MS = 90_000;
+
+function paradoHaMuito(updatedAt: string | undefined): boolean {
+  if (!updatedAt) return false;
+  const t = Date.parse(updatedAt);
+  return Number.isFinite(t) && Date.now() - t > LIMITE_SEM_ATUALIZAR_MS;
+}
 
 export function createPassagemPlantaoRouter({
   jobStore,
@@ -78,7 +92,7 @@ export function createPassagemPlantaoRouter({
     });
 
     agendar(
-      processarAteOFim(inicio.jobId, jobStore).catch(async (err: unknown) => {
+      processarAteOFim(inicio.jobId, jobStore, passagemBudgetMs()).catch(async (err: unknown) => {
         console.error(`[passagem] job ${inicio.jobId} falhou:`, err);
         await jobStore.update(inicio.jobId, {
           status: "error",
@@ -102,8 +116,23 @@ export function createPassagemPlantaoRouter({
     if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
       throw new HttpError(400, "invalid_job_id", "job_id inválido.");
     }
-    const job = await jobStore.get(jobId, req.userId);
+    let job = await jobStore.get(jobId, req.userId);
     if (!job) throw new HttpError(404, "job_not_found", "Job não encontrado. Pode ter expirado.");
+
+    // Job que parou de andar não pode virar spinner eterno. A invocação cortada
+    // pela plataforma não tem quem a marque como erro — antes disso a tela
+    // girava até desistir com uma mensagem que não dizia nada.
+    if (job.status === "processing" && paradoHaMuito(job.updated_at)) {
+      const onde = job.stage ? ` (${job.stage})` : "";
+      await jobStore.update(jobId, {
+        status: "error",
+        stage: "Processamento interrompido",
+        error:
+          `O processamento parou${onde} e não retomou. ` +
+          `Gere de novo; se repetir, tente com menos arquivos de uma vez.`,
+      });
+      job = (await jobStore.get(jobId, req.userId)) ?? job;
+    }
 
     const estado = ehEstadoPassagem(job.result) ? job.result : null;
     res.set("Cache-Control", "no-store");
@@ -141,7 +170,37 @@ export function createPassagemPlantaoRouter({
     router.post("/gerar", iniciar);
   }
 
+  /**
+   * Retoma um job que ainda tem lotes.
+   *
+   * Uma invocação não comporta todos os lotes: o prazo acaba antes e o job fica
+   * em `processing` com o parcial salvo. Esta rota é o que transforma "um laço
+   * que não cabe" em "quantas invocações forem necessárias" — o cliente chama
+   * até o job sair de `processing`.
+   */
+  const continuar: RequestHandler = async (req, res) => {
+    const jobId = String(req.params.jobId ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(jobId)) {
+      throw new HttpError(400, "invalid_job_id", "job_id inválido.");
+    }
+    const job = await jobStore.get(jobId, req.userId);
+    if (!job) throw new HttpError(404, "job_not_found", "Job não encontrado. Pode ter expirado.");
+
+    if (job.status === "processing") {
+      await processarAteOFim(jobId, jobStore, passagemBudgetMs()).catch(async (err: unknown) => {
+        console.error(`[passagem] job ${jobId} falhou ao retomar:`, err);
+        await jobStore.update(jobId, {
+          status: "error",
+          stage: "Erro na passagem",
+          error: err instanceof Error ? err.message : "Falha inesperada.",
+        });
+      });
+    }
+    await consultar(req, res, () => {});
+  };
+
   router.get("/job/:jobId", consultar);
+  router.post("/job/:jobId/continuar", continuar);
 
   router.get("/health", (_req, res) => {
     res.json({ ok: true, endpoint: "passagem-plantao", maxFiles: MAX_FILES });
