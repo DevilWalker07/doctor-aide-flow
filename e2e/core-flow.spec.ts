@@ -46,53 +46,14 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     await page.getByTestId("evolution-save").click();
     await expect(page).toHaveURL(/\/paciente\//);
 
-    // 6. Passagem de plantão IA (DOCX)
+    // 6. Passagem de plantão — o fluxo completo está em passagem.spec.ts.
     await page.goto("/passagem-plantao");
-    await page
-      .getByTestId("handoff-files")
-      .setInputFiles([fixture("evolucao.txt"), fixture("test.docx")]);
+    await page.getByTestId("handoff-files").setInputFiles([fixture("test.docx")]);
     await page.getByTestId("handoff-generate").click();
     const download = page.waitForEvent("download", { timeout: 60_000 });
     await page.getByTestId("handoff-download").click();
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/\.docx$/);
-    const stream = await file.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const c of stream) chunks.push(Buffer.from(c));
-    expect(Buffer.concat(chunks).subarray(0, 2).toString("latin1")).toBe("PK");
-  });
-
-  /**
-   * Este teste existe por causa de um erro real em produção.
-   *
-   * A tela mostrava só "Não foi possível preparar o envio." e descartava o
-   * corpo da resposta — onde estava a causa. Eu fiquei sem diagnóstico e o
-   * médico, sem saber o que fazer. A regra vale aqui como no resto do app:
-   * quando algo falha, dizer O QUÊ falhou.
-   */
-  test("quando o envio falha, a tela mostra o motivo do servidor, não um resumo", async ({
-    page,
-  }) => {
-    await page.route("**/api/extract/preparar-upload", (route) =>
-      route.fulfill({
-        status: 503,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: "storage_indisponivel",
-          message: "Armazenamento de arquivos não configurado nesta implantação.",
-        }),
-      }),
-    );
-
-    await page.goto("/passagem-plantao");
-    await page.getByTestId("handoff-files").setInputFiles([fixture("evolucao.txt")]);
-    await page.getByTestId("handoff-generate").click();
-
-    // O motivo do servidor e o código, para dar para agir sem abrir o inspetor.
-    await expect(page.getByText(/Armazenamento de arquivos não configurado/i)).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByText(/503/)).toBeVisible();
   });
 
   test("sem trava de login, o dashboard abre direto — sem redirecionar", async ({ page }) => {

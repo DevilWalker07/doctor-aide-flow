@@ -51,6 +51,5 @@ export function buildRateLimiters() {
     ai: limiter(60),
     upload: limiter(20),
     poll: limiter(240),
-    passagem: limiter(6),
   };
 }

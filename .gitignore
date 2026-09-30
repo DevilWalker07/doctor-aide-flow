@@ -17,6 +17,7 @@ test-results
 # Documentos clínicos nunca entram no repositório
 /*.docx
 /*.pdf
+private-data/
 .output
 .vinxi
 .tanstack/**

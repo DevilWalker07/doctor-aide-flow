@@ -52,6 +52,7 @@
     "helmet": "^8.3.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.575.0",
     "mammoth": "^1.12.0",
     "multer": "^2.1.1",

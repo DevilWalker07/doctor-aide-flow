@@ -78,7 +78,7 @@ describe("função serverless da Vercel", () => {
   /**
    * Em produção a API inteira respondia 404: `api/[...rota].ts` só casava um
    * segmento, e todo endpoint real é aninhado (`/api/ai/copiloto`,
-   * `/api/extract/preparar-upload`, `/api/passagem-plantao/gerar`). Só
+   * `/api/extract/preparar-upload`, `/api/ai/passagem-leito`). Só
    * `/api/health` escapava, por ter um segmento só.
    *
    * Quem entrega o caminho à função é o rewrite da Vercel, que nenhum teste
@@ -131,19 +131,14 @@ describe("função serverless da Vercel", () => {
     expect(res.body.error).toBe("missing_storage_path");
   });
 
-  it("monta a passagem de plantão — era a última rota em 503", async () => {
-    // Sem arquivo nenhum o erro é de entrada, não de rota indisponível: prova
-    // que o handler é o de verdade e não o aviso de "ainda não implantado".
-    const res = await request(app).post("/api/passagem-plantao/gerar").send({}).expect(400);
-    expect(res.body.error).toBe("missing_files");
+  it("monta a passagem por leito — aninhada em /api/ai, como toda rota real", async () => {
+    // Sem documento o erro é de entrada: prova que o handler é o de verdade.
+    const res = await request(app).post("/api/ai/passagem-leito").send({}).expect(400);
+    expect(res.body.error).toBe("validation");
   });
 
-  it("a passagem recusa mais que o teto de arquivos", async () => {
-    const res = await request(app)
-      .post("/api/passagem-plantao/gerar")
-      .send({ storage_paths: Array.from({ length: 31 }, (_, i) => `user-1/${i}.docx`) })
-      .expect(400);
-    expect(res.body.error).toBe("too_many_files");
+  it("o fluxo antigo da passagem não existe mais", async () => {
+    await request(app).post("/api/passagem-plantao/gerar").send({}).expect(404);
   });
 
   it("sem configuração completa responde 503 com o motivo, em vez de morrer", async () => {
