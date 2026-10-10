@@ -73,6 +73,13 @@ describe("função serverless da Vercel", () => {
       expect(res.body.supabase).toBe("inalcancavel");
       expect(res.body.ok).toBe(true);
     });
+
+    it("diz para onde aponta e por que falhou", async () => {
+      supabaseEstado.atual = "inalcancavel";
+      const res = await request(app).get("/api/health").expect(200);
+      expect(res.body.supabaseHost).toBe("exemplo.supabase.co");
+      expect(res.body.supabaseMotivo).toBe("motivo de teste");
+    });
   });
 
   /**

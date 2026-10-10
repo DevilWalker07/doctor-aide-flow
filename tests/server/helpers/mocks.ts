@@ -149,6 +149,11 @@ vi.mock("../../../server/lib/supabaseAdmin.js", () => ({
   getSupabaseAdmin: () => ({ auth: { getUser: getUserMock }, storage: storageApi }),
   hasSupabase: () => true,
   sondarSupabase: async () => supabaseEstado.atual,
+  diagnosticarSupabase: async () => ({
+    estado: supabaseEstado.atual,
+    host: "exemplo.supabase.co",
+    motivo: supabaseEstado.atual === "ok" ? null : "motivo de teste",
+  }),
 }));
 
 vi.mock("../../../server/middleware/security.js", () => ({
