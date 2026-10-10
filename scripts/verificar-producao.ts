@@ -30,7 +30,7 @@ interface Sonda {
 const SONDAS: Sonda[] = [
   { caminho: "/api/health", metodo: "GET", porque: "saúde do servidor" },
   { caminho: "/api/ai/copiloto", metodo: "POST", porque: "copiloto clínico" },
-  { caminho: "/api/extract/preparar-upload", metodo: "POST", porque: "envio de documento" },
+  { caminho: "/api/ai/extrair-documento", metodo: "POST", porque: "envio de documento" },
   { caminho: "/api/ai/passagem-leito", metodo: "POST", porque: "passagem de plantão (um leito)" },
 ];
 

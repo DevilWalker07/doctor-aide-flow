@@ -147,6 +147,28 @@ async function processTextContent(
   return normalizeToLegacySchema({ ...data, engine, fileName, markdown: clipped, extraAlerts });
 }
 
+/**
+ * Documento já em Markdown, vindo do navegador → dados clínicos. Uma chamada,
+ * sem Storage nem job: é o caminho da tela de envio desde que o Supabase parou
+ * de responder à função (o fluxo antigo dependia dos dois).
+ */
+export async function extrairDeMarkdown(
+  markdown: string,
+  fileName: string,
+  lidoDeImagem: boolean,
+): Promise<ClinicalExtractionResult> {
+  const alertas = lidoDeImagem
+    ? ["LIDO DE IMAGEM: confira os valores com o documento original antes de salvar."]
+    : [];
+  return processTextContent(
+    markdown,
+    fileName,
+    lidoDeImagem ? "openai-vision-md" : "openai-direct",
+    async () => {},
+    alertas,
+  );
+}
+
 async function processText(filePath: string, fileName: string, setStage: Stage) {
   await setStage("Lendo texto...");
   return processTextContent(await readTextFile(filePath), fileName, "openai-direct", setStage);

@@ -10,7 +10,7 @@ import {
   Camera,
   FileText,
 } from "lucide-react";
-import { startClinicalExtractionJob } from "@/lib/documentExtractor";
+import { extrairDocumento } from "@/lib/documentExtractor";
 import { toast } from "sonner";
 import { storage } from "@/lib/storage";
 
@@ -31,9 +31,9 @@ function UploadIAPage() {
   const nav = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  // O envio virou a parte lenta e visível: o arquivo vai direto ao Storage.
   // Sem dizer em que etapa está, quem espera de pé acha que o app travou.
-  const [etapa, setEtapa] = useState<"enviando" | "lendo" | null>(null);
+  const [etapa, setEtapa] = useState<"lendo" | "consultando" | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Uma só validação para o seletor e para o arrastar-e-soltar. Antes o drop
@@ -54,21 +54,18 @@ function UploadIAPage() {
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
+    setErro(null);
     try {
-      const jobId = await startClinicalExtractionJob(file, setEtapa);
-
-      // Additional metadata for the flow
+      const resultado = await extrairDocumento(file, setEtapa);
       storage.setTipo(tipo);
       storage.setJobArquivo(file.name);
-      if (patient_id) {
-        storage.setUploadPatientId(patient_id);
-      }
-
-      toast.success("Arquivo enviado! Iniciando leitura com IA...");
-      nav({ to: "/processando/$jobId", params: { jobId } });
+      storage.setExtracaoResultado(JSON.stringify(resultado));
+      toast.success("Documento lido. Confira os dados antes de salvar.");
+      nav({ to: "/revisar-extracao", search: { patient_id } });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido.";
-      toast.error(message);
+      // O motivo fica na tela, não só num toast que some: é ele que diz o que
+      // fazer (formato, arquivo sem texto, IA fora do ar).
+      setErro(err instanceof Error ? err.message : "Erro desconhecido.");
       setIsUploading(false);
       setEtapa(null);
     }
@@ -124,7 +121,9 @@ function UploadIAPage() {
             className="hidden"
             data-testid="upload-input"
             accept={
-              engine === "vision" ? "image/*" : ".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              engine === "vision"
+                ? "image/*"
+                : ".pdf,.docx,.doc,.txt,.md,.jpg,.jpeg,.png,.webp,.heic,.heif"
             }
             capture={engine === "vision" ? "environment" : undefined}
           />
@@ -183,7 +182,7 @@ function UploadIAPage() {
                 {isUploading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{" "}
-                    {etapa === "lendo" ? "Lendo com IA…" : "Enviando arquivo…"}
+                    {etapa === "consultando" ? "Consultando a IA…" : "Lendo o arquivo…"}
                   </>
                 ) : (
                   <>
@@ -191,6 +190,15 @@ function UploadIAPage() {
                   </>
                 )}
               </button>
+              {erro && (
+                <p
+                  role="alert"
+                  data-testid="upload-erro"
+                  className="t-body border-destructive/40 bg-destructive/10 text-foreground rounded-2xl border p-3"
+                >
+                  {erro}
+                </p>
+              )}
             </div>
           )}
         </div>

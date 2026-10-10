@@ -1,8 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
-import { makeApp, waitFor } from "./helpers/app.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Dono de arquivo e de job só existe com login obrigatório: em modo opcional
+// o token nem é conferido (ver server/middleware/auth.ts).
+vi.mock("../../server/config.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../server/config.js")>();
+  return { ...orig, authRequired: () => true };
+});
+
+const { makeApp, waitFor } = await import("./helpers/app.js");
 import { resetAiMock, storageMock } from "./helpers/mocks.js";
 
 const { app, jobStore } = makeApp();

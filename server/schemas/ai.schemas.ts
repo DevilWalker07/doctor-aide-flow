@@ -187,7 +187,6 @@ export const ParecerEspecialistaBody = z.object({
 });
 export type ParecerEspecialistaBody = z.infer<typeof ParecerEspecialistaBody>;
 
-
 const DATA_BR = z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato DD/MM/AAAA.");
 
 /**
@@ -214,6 +213,20 @@ export const PassagemLeitoBody = z
   })
   .strict();
 export type PassagemLeitoBody = z.infer<typeof PassagemLeitoBody>;
+
+/** Documento de um paciente, já em Markdown (o navegador converte; ver src/lib/passagem/normalizar.ts). */
+export const ExtrairDocumentoBody = z
+  .object({
+    markdown: z
+      .string()
+      .trim()
+      .min(20, "O documento não tem texto legível.")
+      .max(60_000, "Documento longo demais."),
+    arquivo: z.string().trim().min(1).max(200),
+    lidoDeImagem: z.boolean().default(false),
+  })
+  .strict();
+export type ExtrairDocumentoBody = z.infer<typeof ExtrairDocumentoBody>;
 
 /** Uma página de foto, print ou PDF escaneado, já reduzida no navegador. */
 export const TranscreverBody = z
@@ -369,7 +382,6 @@ function normalizeQuadro(raw: string): string {
     .replace("CRITICO", "CRÍTICO");
   return `${prefixo} — ${s.slice(m[0].length).trim()}`;
 }
-
 
 export const EvolutionReviewSchema = z.object({
   campos_faltantes: strArr,
