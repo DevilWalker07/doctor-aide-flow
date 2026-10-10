@@ -7,7 +7,7 @@ import { apiNotFound, errorHandler } from "./middleware/errorHandler.js";
 import { buildCors, buildRateLimiters } from "./middleware/security.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { createExtractRouter } from "./routes/extract.routes.js";
-import { sondarSupabase } from "./lib/supabaseAdmin.js";
+import { diagnosticarSupabase } from "./lib/supabaseAdmin.js";
 import { getJobStore } from "./services/jobStore.js";
 import { modelosDesconhecidos } from "./services/openaiClient.js";
 import { APP_VERSION } from "./app.js";
@@ -45,6 +45,15 @@ function checarNativos() {
     ]).then(([sharp, canvas]) => ({ sharp, canvas }));
   }
   return nativosPromise;
+}
+
+/**
+ * `supabase` continua sendo o estado (a tela lê esse campo); `supabaseHost` e
+ * `supabaseMotivo` dizem para onde a função aponta e por que falhou.
+ */
+async function saudeSupabase() {
+  const d = await diagnosticarSupabase();
+  return { supabase: d.estado, supabaseHost: d.host, supabaseMotivo: d.motivo };
 }
 
 export function createServerlessApp() {
@@ -98,7 +107,7 @@ export function createServerlessApp() {
       // Estado sondado, não `hasSupabase()`: aquilo só dizia que as variáveis
       // existem, e respondia `true` com a chave revogada e com a tabela dos
       // jobs ausente — que foi o defeito que ficou meses invisível aqui.
-      supabase: await sondarSupabase(),
+      ...(await saudeSupabase()),
       authRequired: authRequired(),
       nativos: await checarNativos(),
       configErrors,
