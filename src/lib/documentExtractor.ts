@@ -251,3 +251,35 @@ export function clearExtractionSession() {
     // ignore
   }
 }
+
+/**
+ * Lê o documento e devolve os dados clínicos, numa ida e volta.
+ *
+ * O arquivo vira Markdown aqui no navegador, pelo mesmo normalizador da
+ * passagem de plantão (Word e PDF por código; foto e escaneado pelo
+ * transcritor), e só o texto vai ao servidor. Não passa por Storage nem por
+ * job: os dois dependiam do Supabase, que parou de responder à função.
+ */
+export async function extrairDocumento(
+  file: File,
+  onEtapa?: (etapa: "lendo" | "consultando") => void,
+): Promise<ClinicalExtractionResult> {
+  const [{ normalizarArquivo }, { transcreverNoServidor, motivoDoErro }, { apiJson }] =
+    await Promise.all([
+      import("./passagem/normalizar"),
+      import("./passagem/passagem"),
+      import("./apiClient"),
+    ]);
+  onEtapa?.("lendo");
+  const doc = await normalizarArquivo(file, transcreverNoServidor);
+  onEtapa?.("consultando");
+  try {
+    return await apiJson<ClinicalExtractionResult>("/api/ai/extrair-documento", {
+      markdown: doc.markdown,
+      arquivo: file.name,
+      lidoDeImagem: doc.lidoDeImagem,
+    });
+  } catch (err) {
+    throw new Error(`Falha ao ler o documento: ${motivoDoErro(err)}`);
+  }
+}

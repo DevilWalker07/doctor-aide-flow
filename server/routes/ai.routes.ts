@@ -5,6 +5,7 @@ import {
   EncaminhamentoBody,
   EvolucaoBody,
   EvolutionReviewBody,
+  ExtrairDocumentoBody,
   LaboratorioBody,
   LaudoImagemBody,
   ParecerEspecialistaBody,
@@ -15,6 +16,7 @@ import {
   TranscreverBody,
   SugerirReceitaBody,
 } from "../schemas/ai.schemas.js";
+import { extrairDeMarkdown } from "../services/documentExtractor.service.js";
 import { motorLuanService } from "../services/motorLuan.service.js";
 import { consolidarPassagem, lerLeito, transcrever } from "../services/passagemLeito.service.js";
 
@@ -115,6 +117,14 @@ aiRouter.post(
 aiRouter.post(
   "/passagem-consolidar",
   route(PassagemConsolidarBody, (b) => consolidarPassagem(b)),
+);
+
+// Envio de documento de paciente: o navegador manda o Markdown e recebe os
+// dados na mesma resposta. Sem Storage e sem job — os dois dependiam do
+// Supabase, que parou de responder à função.
+aiRouter.post(
+  "/extrair-documento",
+  route(ExtrairDocumentoBody, (b) => extrairDeMarkdown(b.markdown, b.arquivo, b.lidoDeImagem)),
 );
 
 const legacy = { deprecated: true };

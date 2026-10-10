@@ -25,10 +25,9 @@ test.describe("fluxo principal: plantão → paciente → upload IA → evoluç�
     await page.getByTestId("patient-card-arquivo").click();
     await expect(page).toHaveURL(/\/upload-ia/);
 
-    // 3. Upload → processando → revisar
+    // 3. Upload → revisar (o documento é lido numa ida e volta, sem job)
     await page.getByTestId("upload-input").setInputFiles(fixture("evolucao.txt"));
     await page.getByTestId("upload-submit").click();
-    // /processando/:jobId faz o polling e, com AI_MOCK, chega em segundos à revisão
     await expect(page).toHaveURL(/\/revisar-extracao/, { timeout: 60_000 });
     await expect(page.getByRole("textbox").first()).toHaveValue(/PACIENTE TESTE E2E/i);
 

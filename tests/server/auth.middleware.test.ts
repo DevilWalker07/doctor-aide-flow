@@ -71,4 +71,27 @@ describe("requireAuth", () => {
     expect(res.status).toBe(200);
     expect(res.body.userId).toBeNull();
   });
+
+  /**
+   * O defeito de produção: o Supabase parou de responder à função, e toda
+   * chamada de IA de quem tinha sessão salva pendurava até os 60 s da
+   * plataforma — passagem de plantão inclusive.
+   */
+  it("opcional: com token, não consulta o Supabase — responde na hora", async () => {
+    process.env.TEST_AUTH_REQUIRED = "0";
+    getUserMock.mockImplementationOnce(() => new Promise(() => {}));
+    const res = await request(app()).get("/api/whoami").set("Authorization", "Bearer valid-token");
+    expect(res.status).toBe(200);
+    expect(getUserMock).not.toHaveBeenCalled();
+  });
+
+  it("obrigatório: Supabase mudo vira 503 com motivo em 3 s, não 60 s pendurado", async () => {
+    process.env.TEST_AUTH_REQUIRED = "1";
+    getUserMock.mockImplementationOnce(() => new Promise(() => {}));
+    const inicio = Date.now();
+    const res = await request(app()).get("/api/whoami").set("Authorization", "Bearer outro");
+    expect(res.status).toBe(503);
+    expect(res.body.message).toContain("não respondeu");
+    expect(Date.now() - inicio).toBeLessThan(5_000);
+  });
 });

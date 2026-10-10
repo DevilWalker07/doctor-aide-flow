@@ -210,7 +210,22 @@ arquivo → .md (src/lib/passagem/normalizar.ts, no navegador)
   arquivo virar o seu leito. Playwright reaproveita servidor já no ar fora do
   CI: servidor velho com mock velho reprova teste certo — `CI=1` sobe novos.
 
-**Upload de documento não passa pelo servidor.** O navegador envia direto ao
+**O plantão não depende do Supabase no servidor.** Em 10/2026 o projeto
+estava no ar, o endereço certo, e nenhuma chamada da função voltava — o
+`/health` mostra `supabaseHost` e `supabaseMotivo` justamente para isso.
+Como o navegador guardava sessão, `requireAuth` conferia o token no Supabase
+em TODA chamada de IA e pendurava 60 s: passagem, evolução, copiloto. Hoje,
+com login opcional, o token nem é conferido; com login obrigatório, `getUser`
+tem prazo de 3 s e vira 503 com motivo. O envio de documento virou uma ida e
+volta (`POST /api/ai/extrair-documento`, Markdown feito no navegador pelo
+normalizador da passagem), sem Storage nem job. O cliente Supabase do
+navegador tem prazo de 6 s (`src/lib/supabase.ts`): chamada pendurada vira
+erro e a reserva local entra. `E2E_SUPABASE_MUDO=1 npm run test:e2e` roda o
+plantão inteiro contra um Supabase que aceita conexão e nunca responde
+(`e2e/supabase-mudo.spec.ts`) — e falha com o `auth.ts` antigo.
+
+**Upload de documento não passa pelo servidor.** (Fluxo antigo, `/api/extract/*`,
+sem uso pela tela desde 10/2026.) O navegador envia direto ao
 bucket privado `documentos-clinicos` (migration `20260917000000`), num caminho
 prefixado por `auth.uid()`; a rota recebe só `storage_path`. O backend usa a
 service role, que **ignora RLS** — por isso `validarCaminho`
