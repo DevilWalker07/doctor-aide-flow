@@ -117,3 +117,28 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
 }
 
 export { readError as apiReadError };
+
+/**
+ * Falha que vale tentar de novo sozinha: rede caiu, servidor ocupado (429),
+ * IA fora do ar ou resposta inválida (5xx). Erro de entrada (4xx) não muda
+ * repetindo — sobe direto, com o motivo.
+ */
+export function ehTransitorio(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  return err.status === 0 || err.status === 429 || err.status >= 500;
+}
+
+/**
+ * Uma nova tentativa automática para falha transitória. No plantão, um 429
+ * ou um JSON inválido da IA no leito 7 de 13 não deveria custar um clique a
+ * mais: a maioria passa na segunda.
+ */
+export async function comNovaTentativa<T>(fn: () => Promise<T>, esperaMs = 1_500): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (!ehTransitorio(err)) throw err;
+    await new Promise((r) => setTimeout(r, esperaMs));
+    return fn();
+  }
+}

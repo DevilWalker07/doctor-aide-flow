@@ -1,5 +1,5 @@
 import { Packer } from "docx";
-import { ApiError, apiJson } from "@/lib/apiClient";
+import { ApiError, apiJson, comNovaTentativa } from "@/lib/apiClient";
 import { montarMapaDocx, nomeDoArquivoMapa } from "../../../shared/passagem/docx";
 import { juntarLeitos, type ResultadoLeito } from "../../../shared/passagem/juntar";
 import { lerNomeDoArquivo } from "../../../shared/passagem/nomeArquivo";
@@ -40,7 +40,7 @@ export function motivoDoErro(err: unknown): string {
 }
 
 export const transcreverNoServidor: Transcritor = (imagem, pagina, paginas) =>
-  apiJson("/api/ai/transcrever", { imagem, pagina, paginas });
+  comNovaTentativa(() => apiJson("/api/ai/transcrever", { imagem, pagina, paginas }));
 
 export function lerLeitoNoServidor(
   doc: Documento,
@@ -48,13 +48,15 @@ export function lerLeitoNoServidor(
   dataPlantao: string,
   setor: string,
 ): Promise<LeitoLido> {
-  return apiJson("/api/ai/passagem-leito", {
-    markdown: doc.markdown,
-    arquivo,
-    dataPlantao,
-    setor,
-    lidoDeImagem: doc.lidoDeImagem,
-  });
+  return comNovaTentativa(() =>
+    apiJson<LeitoLido>("/api/ai/passagem-leito", {
+      markdown: doc.markdown,
+      arquivo,
+      dataPlantao,
+      setor,
+      lidoDeImagem: doc.lidoDeImagem,
+    }),
+  );
 }
 
 export function consolidarNoServidor(
@@ -62,22 +64,24 @@ export function consolidarNoServidor(
   dataPlantao: string,
   passagemPara?: string,
 ): Promise<Consolidacao> {
-  return apiJson("/api/ai/passagem-consolidar", {
-    dataPlantao,
-    ...(passagemPara ? { passagemPara } : {}),
-    // Só a linha pronta — o texto das evoluções não sai de novo.
-    leitos: linhas.map((l) => ({
-      leito: l.leito,
-      paciente: l.paciente,
-      di: l.di,
-      diagnostico: l.diagnostico,
-      quadroAtual: l.quadroAtual,
-      atb: l.atb,
-      ultimoLab: l.ultimoLab,
-      condutasHoje: l.condutasHoje,
-      alertasPendencias: l.alertasPendencias,
-    })),
-  });
+  return comNovaTentativa(() =>
+    apiJson<Consolidacao>("/api/ai/passagem-consolidar", {
+      dataPlantao,
+      ...(passagemPara ? { passagemPara } : {}),
+      // Só a linha pronta — o texto das evoluções não sai de novo.
+      leitos: linhas.map((l) => ({
+        leito: l.leito,
+        paciente: l.paciente,
+        di: l.di,
+        diagnostico: l.diagnostico,
+        quadroAtual: l.quadroAtual,
+        atb: l.atb,
+        ultimoLab: l.ultimoLab,
+        condutasHoje: l.condutasHoje,
+        alertasPendencias: l.alertasPendencias,
+      })),
+    }),
+  );
 }
 
 export interface Falha {

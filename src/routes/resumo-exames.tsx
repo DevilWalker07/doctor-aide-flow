@@ -13,7 +13,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { organizarLaboratorio, organizarLaudoImagem } from "@/lib/ai/aiService";
 import {
@@ -42,6 +42,14 @@ function ResumoExamesPage() {
   // o caminho só-texto deixava isso de fora.
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const inputArquivo = useRef<HTMLInputElement>(null);
+  // `organizar` disparado pelo Ctrl+V roda fora do render que viu o print:
+  // lê daqui, não da closure.
+  const anexosRef = useRef<Anexo[]>([]);
+  anexosRef.current = anexos;
+  const textoRef = useRef("");
+  textoRef.current = texto;
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadingRef = useRef(false);
 
   const trocarModo = (novo: Modo) => {
     if (novo === modo) return;
@@ -59,10 +67,41 @@ function ResumoExamesPage() {
       toast.error("Só imagem ou PDF.");
       return;
     }
-    setAnexos((atual) => [...atual, ...novos].slice(0, 6));
+    const todos = [...anexosRef.current, ...novos].slice(0, 6);
+    anexosRef.current = todos;
+    setAnexos(todos);
   };
 
+  /**
+   * Print Screen → Ctrl+V em qualquer lugar da tela: o print entra e a
+   * organização começa sozinha. Espera um instante antes de disparar, para
+   * dois ou três prints colados em seguida irem juntos numa leitura só.
+   */
+  useEffect(() => {
+    if (modo !== "laboratorio") return;
+    const aoColar = (e: ClipboardEvent) => {
+      const arquivos = arquivosDe(e.clipboardData?.items ?? null);
+      if (arquivos.length === 0) return; // texto: deixa colar normalmente
+      e.preventDefault();
+      setResultado(null);
+      adicionar(arquivos);
+      toast.success(arquivos.length > 1 ? `${arquivos.length} prints colados.` : "Print colado.");
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+      autoTimer.current = setTimeout(() => {
+        if (!loadingRef.current) void organizar();
+      }, 800);
+    };
+    document.addEventListener("paste", aoColar);
+    return () => {
+      document.removeEventListener("paste", aoColar);
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo]);
+
   const organizar = async () => {
+    const texto = textoRef.current;
+    const anexos = anexosRef.current;
     const temTexto = texto.trim().length >= 10;
     if (modo === "laboratorio" && !temTexto && anexos.length === 0) {
       toast.error("Cole o texto dos exames, anexe uma foto ou envie o PDF.");
@@ -74,6 +113,7 @@ function ResumoExamesPage() {
     }
 
     setLoading(true);
+    loadingRef.current = true;
     try {
       if (modo === "laboratorio") {
         setLaudo(null);
@@ -98,6 +138,7 @@ function ResumoExamesPage() {
       toast.error(err instanceof Error ? err.message : "Falha ao organizar.");
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -214,17 +255,6 @@ function ResumoExamesPage() {
                 : "Cole o laudo do radiologista, com achados e conclusão."
             }
             data-testid="resumo-input"
-            onPaste={(e) => {
-              // Ctrl+V de um print vira anexo em vez de colar nada. É assim
-              // que chega o resultado copiado da tela do laboratório.
-              if (modo !== "laboratorio") return;
-              const arquivos = arquivosDe(e.clipboardData?.items ?? null);
-              if (arquivos.length) {
-                e.preventDefault();
-                adicionar(arquivos);
-                toast.success("Print anexado.");
-              }
-            }}
             onDragOver={(e) => modo === "laboratorio" && e.preventDefault()}
             onDrop={(e) => {
               if (modo !== "laboratorio") return;
@@ -261,7 +291,7 @@ function ResumoExamesPage() {
                   <Paperclip className="h-4 w-4" aria-hidden="true" /> Anexar foto ou PDF
                 </button>
                 <span className="t-label text-muted-foreground self-center font-normal">
-                  ou cole um print aqui (Ctrl+V), ou arraste o arquivo
+                  ou tecle Print Screen e Ctrl+V em qualquer lugar da tela — organiza sozinho
                 </span>
               </div>
 
@@ -278,10 +308,7 @@ function ResumoExamesPage() {
                           aria-hidden="true"
                         />
                       ) : (
-                        <ImageIcon
-                          className="text-muted-foreground h-4 w-4 shrink-0"
-                          aria-hidden="true"
-                        />
+                        <Miniatura arquivo={a.arquivo} />
                       )}
                       <span className="t-label text-foreground min-w-0 flex-1 truncate font-normal">
                         {a.nome}
@@ -456,5 +483,24 @@ function ResumoExamesPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+/** Miniatura do print colado — para conferir que colou a tela certa. */
+function Miniatura({ arquivo }: { arquivo: File }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(arquivo);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [arquivo]);
+  if (!url)
+    return <ImageIcon className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />;
+  return (
+    <img
+      src={url}
+      alt=""
+      className="border-border h-12 w-20 shrink-0 rounded-lg border object-cover object-top"
+    />
   );
 }

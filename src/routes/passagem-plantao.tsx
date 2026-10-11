@@ -56,7 +56,11 @@ interface Item {
   motivo?: string;
 }
 
-const CONCORRENCIA = 3;
+/**
+ * Leitos lidos ao mesmo tempo. Cada leito é uma chamada curta e independente;
+ * com 5 em paralelo, 13 leitos levam ~3 rodadas em vez de 5.
+ */
+const CONCORRENCIA = 5;
 const MAX_ARQUIVOS = 40;
 const ACEITOS = ".docx,.doc,.pdf,.txt,.md,.jpg,.jpeg,.png,.webp,.heic,.heif,image/*";
 
@@ -93,6 +97,8 @@ function PassagemPlantaoPage() {
   }, []);
 
   const dataPlantao = isoParaBR(dataISO) ?? "";
+  const chaveRef = useRef("");
+  chaveRef.current = `${dataPlantao}|${setor}`;
 
   useEffect(() => {
     if (!mapa) return;
@@ -119,6 +125,7 @@ function PassagemPlantaoPage() {
   function adicionar(lista: FileList | File[]) {
     setMapa(null);
     setErroGeral(null);
+    const antes = new Set(itensRef.current.map((i) => i.id));
     mudarItens((prev) => {
       const nomes = new Set(prev.map((i) => i.file.name));
       const novos = Array.from(lista)
@@ -131,11 +138,46 @@ function PassagemPlantaoPage() {
       }
       return todos;
     });
+    // A leitura começa já, enquanto o médico confere o resto da tela — ao
+    // clicar em "Gerar mapa", boa parte dos leitos está pronta.
+    if (dataPlantao) {
+      const novos = itensRef.current.filter((i) => !antes.has(i.id)).map((i) => i.id);
+      void lerPendentes(novos);
+    }
   }
 
-  async function lerUm(id: string) {
+  // Leitura em andamento por leito: `gerar` espera estas em vez de começar
+  // de novo um leito que já está sendo lido.
+  const emAndamento = useRef(new Map<string, Promise<void>>());
+  const vagas = useRef(CONCORRENCIA);
+  const esperando = useRef<(() => void)[]>([]);
+
+  async function comVaga<T>(fn: () => Promise<T>): Promise<T> {
+    if (vagas.current === 0) await new Promise<void>((r) => esperando.current.push(r));
+    else vagas.current--;
+    try {
+      return await fn();
+    } finally {
+      const proximo = esperando.current.shift();
+      if (proximo) proximo();
+      else vagas.current++;
+    }
+  }
+
+  function lerUm(id: string): Promise<void> {
+    const ja = emAndamento.current.get(id);
+    if (ja) return ja;
+    const p = comVaga(() => lerUmAgora(id)).finally(() => emAndamento.current.delete(id));
+    emAndamento.current.set(id, p);
+    return p;
+  }
+
+  async function lerUmAgora(id: string) {
     const item = itensRef.current.find((i) => i.id === id);
-    if (!item) return;
+    if (!item || item.estado === "pronto") return;
+    // A data e o setor entram na linha (DI, coluna CONDUTAS). Se mudarem
+    // durante a leitura, o resultado é descartado e o leito volta à fila.
+    const chave = chaveRef.current;
     try {
       let doc = item.doc;
       if (!doc) {
@@ -145,6 +187,10 @@ function PassagemPlantaoPage() {
       }
       atualizar(id, { estado: "consultando", motivo: undefined });
       const resultado = await lerLeitoNoServidor(doc, item.file.name, dataPlantao, setor);
+      if (chaveRef.current !== chave) {
+        atualizar(id, { estado: "na-fila", resultado: undefined });
+        return;
+      }
       atualizar(id, {
         estado: "pronto",
         resultado: { ...resultado, avisos: [...doc.avisos, ...resultado.avisos] },
@@ -156,11 +202,7 @@ function PassagemPlantaoPage() {
   }
 
   async function lerPendentes(ids: string[]) {
-    const fila = [...ids];
-    const trabalhador = async () => {
-      for (let id = fila.shift(); id; id = fila.shift()) await lerUm(id);
-    };
-    await Promise.all(Array.from({ length: Math.min(CONCORRENCIA, fila.length) }, trabalhador));
+    await Promise.all(ids.map((id) => lerUm(id)));
   }
 
   async function gerar() {
