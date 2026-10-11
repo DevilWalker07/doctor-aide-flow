@@ -125,6 +125,25 @@ test.describe("passagem de plantão", () => {
     expect(t).toContain("DIH: 20/09/2026 | DI 6d");
   });
 
+  test("a leitura começa assim que os arquivos entram, antes de Gerar mapa", async ({ page }) => {
+    await page
+      .getByTestId("handoff-files")
+      .setInputFiles([
+        await docx("L03-JOAQUIM.docx", { leito: "03" }),
+        await docx("L05-ROBERTO.docx", { leito: "05" }),
+      ]);
+    for (const item of await itens(page).all()) {
+      await expect(item).toHaveAttribute("data-estado", "pronto", { timeout: 20_000 });
+    }
+    // Gerar só junta e monta o DOCX — nenhum leito é lido de novo.
+    let leituras = 0;
+    page.on("request", (r) => {
+      if (r.url().includes("/api/ai/passagem-leito")) leituras++;
+    });
+    await gerarEBaixar(page);
+    expect(leituras).toBe(0);
+  });
+
   test("cabeçalhos divergentes: vale o mais recente, e o conflito aparece", async ({ page }) => {
     await page.getByTestId("handoff-files").setInputFiles([await docx("L03-JOAQUIM.docx")]);
     const t = await gerarEBaixar(page);

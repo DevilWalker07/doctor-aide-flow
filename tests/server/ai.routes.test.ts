@@ -321,6 +321,25 @@ describe("laboratório para o prontuário", () => {
     expect(opts?.modelo).toBeTruthy();
   });
 
+  it("potássio crítico vira alerta pelos limiares, mesmo sem a IA acusar", async () => {
+    const { aiMock } = await import("./helpers/mocks.js");
+    aiMock.json.mockImplementationOnce(async (_s, _p, schema) => ({
+      ok: true,
+      data: schema.parse({
+        tipo_exame: "LABORATÓRIO",
+        valores: { K: "6,8" },
+        texto_formatado: "LAB ATUAL (10/10/2026): HB 11,0 / K 6,8 / CR 1,0",
+        alertas: [],
+      }),
+    }));
+    const res = await request(app)
+      .post("/api/ai/organizar-laboratorio")
+      .set(auth)
+      .send({ inputText: "K 6,8 Hb 11 Cr 1,0" })
+      .expect(200);
+    expect(res.body.alertas.join(" ")).toMatch(/\[CRÍTICO\].*6,8/);
+  });
+
   it("400 quando não vem texto, nem imagem, nem PDF", async () => {
     const res = await request(app).post("/api/ai/organizar-laboratorio").set(auth).send({});
     expect(res.status).toBe(400);

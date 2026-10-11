@@ -9,7 +9,7 @@ import {
 } from "./localFallbacks";
 import { mockImportedPatients } from "./mocks";
 
-import { apiJson } from "../apiClient";
+import { apiJson, comNovaTentativa } from "../apiClient";
 
 const postBackend = <T>(path: string, body: unknown) => apiJson<T>(path, body);
 
@@ -119,7 +119,9 @@ export async function organizarLaboratorio(entrada: {
   patientContext?: unknown;
 }): Promise<LabExtractionResult> {
   try {
-    return await postBackend<LabExtractionResult>("/api/ai/organizar-laboratorio", entrada);
+    return await comNovaTentativa(() =>
+      postBackend<LabExtractionResult>("/api/ai/organizar-laboratorio", entrada),
+    );
   } catch (error) {
     if (entrada.inputText?.trim()) {
       console.warn("Organização de laboratório indisponível, usando fallback local.", error);

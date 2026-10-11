@@ -38,6 +38,7 @@ import {
 } from "../schemas/ai.schemas.js";
 import {
   findingsToAlerts,
+  flagLabOutliers,
   mergeAlerts,
   parseLabString,
   parseVitalsFromText,
@@ -155,7 +156,7 @@ export const motorLuanService = {
       throw new AIResponseError("Não foi possível ler nada do que você enviou.");
     }
 
-    return unwrap(
+    const lab = unwrap(
       await safeJsonCompletion(
         LAB_EXTRACTOR_PROMPT,
         { inputText: texto, patientContext: body.patientContext ?? null },
@@ -169,6 +170,11 @@ export const motorLuanService = {
         },
       ),
     );
+    // O modelo não decide se um potássio é crítico: os limiares de
+    // shared/medical/labThresholds.ts conferem a linha que vai para o
+    // prontuário, e o que eles acusarem entra nos alertas.
+    const criticos = findingsToAlerts(flagLabOutliers(lab.texto_formatado), true);
+    return { ...lab, alertas: mergeAlerts(criticos, lab.alertas) };
   },
 
   async extrairClinicaMedica(body: MotorLuanTextBody) {
