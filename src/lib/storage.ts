@@ -1,4 +1,9 @@
 export const storage = {
+  // RCP pediátrica em andamento: sobrevive a recarregar a página ou o celular travar
+  getRcpSessao: () => localStorage.getItem("da_rcp_sessao"),
+  setRcpSessao: (json: string) => localStorage.setItem("da_rcp_sessao", json),
+  clearRcpSessao: () => localStorage.removeItem("da_rcp_sessao"),
+
   // Shift ativo
   getShiftId: () => localStorage.getItem("da_shift_id"),
   setShiftId: (id: string) => localStorage.setItem("da_shift_id", id),

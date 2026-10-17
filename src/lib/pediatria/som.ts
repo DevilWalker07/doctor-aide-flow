@@ -78,6 +78,13 @@ export class Sons {
     [0, 0.22, 0.44].forEach((d) => this.tom(880, t + d, 0.16, "square", 0.4));
   }
 
+  /** Troca de compressor: dois tons descendentes, diferentes de todos os outros. */
+  troca() {
+    const t = this.agora;
+    this.tom(784, t, 0.22, "triangle", 0.45);
+    this.tom(523, t + 0.26, 0.32, "triangle", 0.45);
+  }
+
   /** Lembrete suave (adrenalina liberada). */
   lembrete() {
     const t = this.agora;
