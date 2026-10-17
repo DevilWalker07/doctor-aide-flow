@@ -88,6 +88,15 @@
   --sidebar-foreground: oklch(0.97 0.005 250);
   --sidebar-primary: oklch(0.55 0.22 264);
   --sidebar-primary-foreground: oklch(0.99 0 0);
+  /* Ilustrações da emergência pediátrica */
+  --ped-pele: oklch(0.85 0.07 55);
+  --ped-pele-sombra: oklch(0.76 0.08 50);
+  --ped-cabelo: oklch(0.36 0.06 50);
+  --ped-roupa: oklch(0.7 0.12 230);
+  --ped-roupa-escura: oklch(0.58 0.13 240);
+  --ped-vidro: oklch(0.97 0.012 240);
+  --ped-metal: oklch(0.78 0.012 250);
+  --ped-tinta: oklch(0.25 0.04 260);
   --sidebar-accent: oklch(0.27 0.05 260);
   --sidebar-accent-foreground: oklch(0.97 0.005 250);
   --sidebar-border: oklch(0.27 0.05 260);
@@ -138,6 +147,14 @@
   --sidebar-foreground: oklch(0.96 0.008 250);
   --sidebar-primary: oklch(0.68 0.17 262);
   --sidebar-primary-foreground: oklch(0.17 0.04 260);
+  --ped-pele: oklch(0.74 0.07 55);
+  --ped-pele-sombra: oklch(0.64 0.08 50);
+  --ped-cabelo: oklch(0.3 0.05 50);
+  --ped-roupa: oklch(0.62 0.12 230);
+  --ped-roupa-escura: oklch(0.5 0.12 240);
+  --ped-vidro: oklch(0.3 0.03 250);
+  --ped-metal: oklch(0.62 0.015 250);
+  --ped-tinta: oklch(0.92 0.01 250);
   --sidebar-accent: oklch(0.29 0.04 260);
   --sidebar-accent-foreground: oklch(0.96 0.008 250);
   --sidebar-border: oklch(0.34 0.035 260);
@@ -314,5 +331,140 @@
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+}
+
+/* ── Emergência pediátrica ──
+   Animações só onde respondem a uma pergunta clínica: a seringa enche até o
+   volume, o coração bate na FC média, o desfibrilador carrega. Com
+   "reduzir movimento" o estado final aparece direto. */
+@keyframes ped-batida {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.14);
+  }
+  30% {
+    transform: scale(0.98);
+  }
+}
+@keyframes ped-respira {
+  0%,
+  100% {
+    transform: scaleY(0.92);
+  }
+  45% {
+    transform: scaleY(1.06);
+  }
+}
+@keyframes ped-alerta {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+@keyframes ped-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ped-traco {
+  from {
+    stroke-dashoffset: 260;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ped-gaveta {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes ped-fluxo {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+@keyframes ped-anel {
+  from {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+.ped-batida {
+  animation: ped-batida var(--ped-ciclo, 0.6s) ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.ped-respira {
+  animation: ped-respira var(--ped-ciclo, 2s) ease-in-out infinite;
+  transform-origin: bottom center;
+  transform-box: fill-box;
+}
+.ped-alerta {
+  animation: ped-alerta 0.2s ease-in-out 1;
+}
+.ped-anel {
+  animation: ped-anel 1.6s ease-out infinite;
+}
+.ped-aparece {
+  animation: ped-aparece 0.35s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  transform-origin: 50% 100%;
+  transform-box: fill-box;
+}
+.ped-traco {
+  stroke-dasharray: 40 220;
+  animation: ped-traco 1.8s linear infinite;
+}
+.ped-gaveta {
+  animation: ped-gaveta 0.25s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+.ped-fluxo {
+  animation: ped-fluxo var(--ped-ciclo, 1s) linear infinite;
+}
+.ped-suave {
+  transition:
+    width 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    x 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    height 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    y 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ped-batida,
+  .ped-respira,
+  .ped-alerta,
+  .ped-aparece,
+  .ped-gaveta,
+  .ped-traco,
+  .ped-fluxo,
+  .ped-anel {
+    animation: none !important;
+  }
+  .ped-suave {
+    transition: none !important;
   }
 }

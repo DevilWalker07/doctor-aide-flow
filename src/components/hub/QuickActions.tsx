@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUpRight,
+  Baby,
   ClipboardList,
   FlaskConical,
   MessageSquareText,
@@ -17,6 +18,15 @@ import { FileStack } from "lucide-react";
  * usada sem atalho na primeira tela.
  */
 const ACOES = [
+  {
+    to: "/emergencia-pediatrica" as const,
+    label: "Emergência pediátrica",
+    descricao: "Doses pelo peso, infusões e RCP guiada",
+    icon: Baby,
+    tom: "text-rose-700 dark:text-rose-300",
+    fundo: "bg-rose-500/10",
+    testid: "hub-emergencia-pediatrica",
+  },
   {
     to: "/documentos" as const,
     label: "Documentos",

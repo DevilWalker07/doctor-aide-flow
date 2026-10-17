@@ -21,9 +21,10 @@ test.describe("hub de ambientes", () => {
     await expect(page.getByTestId("shift-ambiente")).toContainText(/Enfermaria Clínica/i);
   });
 
-  test("mostra as cinco ações rápidas", async ({ page }) => {
+  test("mostra as seis ações rápidas", async ({ page }) => {
     await page.goto("/");
     for (const id of [
+      "hub-emergencia-pediatrica",
       "hub-documentos",
       "hub-copiloto",
       "hub-resumo-exames",
