@@ -242,3 +242,23 @@ describe("PCR", () => {
     expect(formatarMl(1.1 / 3)).toBe("0,37");
   });
 });
+
+describe("kits do modo RCP", () => {
+  it("magnésio: 50 mg/kg, teto de 2 g (4 mL a 50%)", async () => {
+    const { MAGNESIO } = await import("../../shared/pediatria/kits.js");
+    expect(calcularBolus(MAGNESIO, 11).volumeMl).toBeCloseTo(1.1, 6);
+    const r = calcularBolus(MAGNESIO, 50);
+    expect(r.volumeMl).toBe(4);
+    expect(r.dose).toBe(2000);
+    expect(r.atingiuTeto).toBe(true);
+  });
+
+  it("todos os itens dos kits apontam para drogas existentes", async () => {
+    const k = await import("../../shared/pediatria/kits.js");
+    for (const kit of [k.KIT_INTUBACAO, k.KIT_SEDOANALGESIA, k.KIT_CARDIOVERSAO, k.KIT_OUTRAS]) {
+      expect(kit.length).toBeGreaterThan(0);
+      for (const it of kit) expect(it.droga.dosePorKg).toBeGreaterThan(0);
+    }
+    expect(k.KIT_INTUBACAO.map((i) => i.droga.id)).toContain("rocuronio");
+  });
+});

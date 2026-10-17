@@ -65,4 +65,31 @@ test.describe("emergência pediátrica", () => {
     await page.getByTestId("ped-chocar").click();
     await expect(page.getByTestId("ped-pcr-registro")).toContainText("Choque 1: 22 J");
   });
+
+  test("RCP começa sem peso e o peso entra depois", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await expect(page.getByTestId("ped-modo-pcr")).toBeVisible();
+    await expect(page.getByTestId("ped-pcr-peso")).toContainText("Peso?");
+    await page.getByTestId("ped-pcr-peso").click();
+    const gaveta = page.getByRole("dialog", { name: "Peso e idade" });
+    await gaveta.getByTestId("ped-peso").fill("11");
+    await gaveta.getByTestId("ped-calcular").click();
+    await expect(page.getByTestId("ped-pcr-peso")).toContainText("11 kg");
+    await expect(page.getByTestId("ped-dar-adrenalina")).toContainText("1,1 mL");
+  });
+
+  test("intubação passa para compressões contínuas e registra", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-anos").fill("1");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByTestId("ped-acao-intubacao").click();
+    await page.getByTestId("ped-intubado").click();
+    await expect(page.getByTestId("ped-pcr-registro")).toContainText("tubo 3,5 com cuff");
+    await expect(
+      page.getByRole("button", { name: "Via aérea avançada", pressed: true }),
+    ).toBeVisible();
+  });
 });
