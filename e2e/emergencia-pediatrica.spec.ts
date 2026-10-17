@@ -92,4 +92,39 @@ test.describe("emergência pediátrica", () => {
       page.getByRole("button", { name: "Via aérea avançada", pressed: true }),
     ).toBeVisible();
   });
+
+  test("RCP sobrevive a recarregar a página", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.evaluate(() => localStorage.removeItem("da_rcp_sessao"));
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByTestId("ped-dar-adrenalina").click();
+
+    await page.reload();
+    await expect(page.getByTestId("ped-rcp-salva")).toContainText("RCP em andamento");
+    await page.getByTestId("ped-retomar-rcp").click();
+    const registro = page.getByTestId("ped-pcr-registro");
+    await expect(registro).toContainText("Adrenalina 1");
+    await expect(registro).toContainText("RCP retomada");
+    await expect(page.getByTestId("ped-pcr-peso")).toContainText("11 kg");
+  });
+
+  test("encerrar gera o registro em PDF com a equipe", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.evaluate(() => localStorage.removeItem("da_rcp_sessao"));
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByTestId("ped-acao-equipe").click();
+    await page.getByTestId("ped-equipe-lider").fill("Dra. Teste");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Encerrar RCP" }).click();
+    await page.getByTestId("ped-pcr-sair").click();
+    await expect(page.getByTestId("ped-pcr-fim")).toContainText("Encerrada sem RCE");
+
+    const download = page.waitForEvent("download");
+    await page.getByTestId("ped-pcr-pdf").click();
+    expect((await download).suggestedFilename()).toMatch(/^rcp-pediatrica_.*\.pdf$/);
+  });
 });

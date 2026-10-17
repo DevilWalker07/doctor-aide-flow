@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Pencil } from "lucide-react";
+import { ChevronLeft, HeartPulse, Pencil } from "lucide-react";
 import { useRef, useState } from "react";
 import { descreverIdade, formatarNumero } from "../../shared/pediatria/calculos";
 import { BotaoRcp } from "@/components/pediatria/BotaoRcp";
@@ -8,7 +8,15 @@ import { FichaDrogas } from "@/components/pediatria/FichaDrogas";
 import { Identificacao, type Paciente } from "@/components/pediatria/Identificacao";
 import { Infusoes } from "@/components/pediatria/Infusoes";
 import { ModoPcr } from "@/components/pediatria/ModoPcr";
+import { desfecho } from "@/lib/pediatria/relatorioRcp";
+import {
+  apagarSessao,
+  carregarSessao,
+  novaSessao,
+  type SessaoRcp,
+} from "@/lib/pediatria/sessaoRcp";
 import { Sons } from "@/lib/pediatria/som";
+import { formatarTempo } from "../../shared/pediatria/pcr";
 
 export const Route = createFileRoute("/emergencia-pediatrica")({
   component: EmergenciaPediatricaPage,
@@ -32,14 +40,36 @@ function EmergenciaPediatricaPage() {
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [editando, setEditando] = useState(true);
   const [aba, setAba] = useState<Aba>("drogas");
-  const [pcr, setPcr] = useState(false);
+  const [pcr, setPcr] = useState<{ sessao: SessaoRcp; retomada: boolean } | null>(null);
+  // RCP que ficou salva no aparelho (página recarregada, celular travou)
+  const [salva, setSalva] = useState<SessaoRcp | null>(() => carregarSessao(Date.now()));
   const sons = useRef<Sons | null>(null);
 
-  const iniciarRcp = () => {
+  const ligarSom = () => {
     // O áudio só pode nascer dentro do toque (iOS).
     if (!sons.current) sons.current = new Sons();
     sons.current.iniciar();
-    setPcr(true);
+  };
+
+  const iniciarRcp = () => {
+    ligarSom();
+    setSalva(null);
+    setPcr({ sessao: novaSessao(Date.now(), paciente), retomada: false });
+  };
+
+  const retomarRcp = (s: SessaoRcp) => {
+    ligarSom();
+    if (s.paciente) {
+      setPaciente(s.paciente);
+      setEditando(false);
+    }
+    setSalva(null);
+    setPcr({ sessao: s, retomada: s.fase !== "fim" });
+  };
+
+  const descartarSalva = () => {
+    apagarSessao();
+    setSalva(null);
   };
 
   const mostrandoFicha = paciente && !editando;
@@ -104,6 +134,60 @@ function EmergenciaPediatricaPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+        {salva && !pcr && (
+          <section
+            role="alert"
+            data-testid="ped-rcp-salva"
+            className={`mx-auto mb-6 grid max-w-md gap-3 rounded-[2rem] border-2 p-4 ${
+              salva.fase === "fim"
+                ? "border-border bg-card"
+                : "border-destructive bg-destructive/10"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <HeartPulse
+                className={`mt-0.5 h-6 w-6 shrink-0 ${salva.fase === "fim" ? "text-muted-foreground" : "text-destructive"}`}
+                aria-hidden="true"
+              />
+              <div>
+                <p className="t-title text-foreground">
+                  {salva.fase === "fim" ? "Último registro de RCP" : "RCP em andamento"}
+                </p>
+                <p className="t-body text-muted-foreground">
+                  Início às{" "}
+                  {new Date(salva.inicio).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  {salva.fase === "fim"
+                    ? ` · ${desfecho(salva)}`
+                    : ` · ${formatarTempo(Date.now() - salva.inicio)} decorridos · ${salva.eventos.length} eventos`}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <button
+                type="button"
+                onClick={() => retomarRcp(salva)}
+                data-testid="ped-retomar-rcp"
+                className={`focus-visible:ring-ring h-14 rounded-2xl text-lg font-bold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
+                  salva.fase === "fim"
+                    ? "bg-foreground text-background"
+                    : "bg-destructive text-destructive-foreground"
+                }`}
+              >
+                {salva.fase === "fim" ? "Abrir registro" : "Retomar RCP"}
+              </button>
+              <button
+                type="button"
+                onClick={descartarSalva}
+                className="touch-target border-border bg-card text-foreground focus-visible:ring-ring rounded-2xl border px-4 font-semibold focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Descartar
+              </button>
+            </div>
+          </section>
+        )}
         {!mostrandoFicha ? (
           <div className="grid gap-8">
             {!paciente && <BotaoRcp variante="disco" onClick={iniciarRcp} />}
@@ -140,13 +224,18 @@ function EmergenciaPediatricaPage() {
 
       {pcr && sons.current && (
         <ModoPcr
-          paciente={paciente}
+          key={pcr.sessao.inicio}
+          sessaoInicial={pcr.sessao}
+          retomada={pcr.retomada}
           onPaciente={(p) => {
             setPaciente(p);
             setEditando(false);
           }}
           sons={sons.current}
-          onSair={() => setPcr(false)}
+          onSair={() => {
+            setPcr(null);
+            setSalva(carregarSessao(Date.now()));
+          }}
         />
       )}
     </div>
