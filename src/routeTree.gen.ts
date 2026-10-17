@@ -23,6 +23,7 @@ import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IniciarPlantaoRouteImport } from './routes/iniciar-plantao'
 import { Route as EncaminhamentoRouteImport } from './routes/encaminhamento'
+import { Route as EmergenciaPediatricaRouteImport } from './routes/emergencia-pediatrica'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CopilotoRouteImport } from './routes/copiloto'
@@ -108,6 +109,11 @@ const EncaminhamentoRoute = EncaminhamentoRouteImport.update({
   path: '/encaminhamento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmergenciaPediatricaRoute = EmergenciaPediatricaRouteImport.update({
+  id: '/emergencia-pediatrica',
+  path: '/emergencia-pediatrica',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocumentosRoute = DocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
   '/documentos': typeof DocumentosRoute
+  '/emergencia-pediatrica': typeof EmergenciaPediatricaRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
   '/documentos': typeof DocumentosRoute
+  '/emergencia-pediatrica': typeof EmergenciaPediatricaRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/copiloto': typeof CopilotoRoute
   '/dashboard': typeof DashboardRoute
   '/documentos': typeof DocumentosRoute
+  '/emergencia-pediatrica': typeof EmergenciaPediatricaRoute
   '/encaminhamento': typeof EncaminhamentoRoute
   '/iniciar-plantao': typeof IniciarPlantaoRoute
   '/login': typeof LoginRoute
@@ -281,6 +290,7 @@ export interface FileRouteTypes {
     | '/copiloto'
     | '/dashboard'
     | '/documentos'
+    | '/emergencia-pediatrica'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/copiloto'
     | '/dashboard'
     | '/documentos'
+    | '/emergencia-pediatrica'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/copiloto'
     | '/dashboard'
     | '/documentos'
+    | '/emergencia-pediatrica'
     | '/encaminhamento'
     | '/iniciar-plantao'
     | '/login'
@@ -372,6 +384,7 @@ export interface RootRouteChildren {
   CopilotoRoute: typeof CopilotoRoute
   DashboardRoute: typeof DashboardRoute
   DocumentosRoute: typeof DocumentosRoute
+  EmergenciaPediatricaRoute: typeof EmergenciaPediatricaRoute
   EncaminhamentoRoute: typeof EncaminhamentoRoute
   IniciarPlantaoRoute: typeof IniciarPlantaoRoute
   LoginRoute: typeof LoginRoute
@@ -491,6 +504,13 @@ declare module '@tanstack/react-router' {
       path: '/encaminhamento'
       fullPath: '/encaminhamento'
       preLoaderRoute: typeof EncaminhamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/emergencia-pediatrica': {
+      id: '/emergencia-pediatrica'
+      path: '/emergencia-pediatrica'
+      fullPath: '/emergencia-pediatrica'
+      preLoaderRoute: typeof EmergenciaPediatricaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documentos': {
@@ -615,6 +635,7 @@ const rootRouteChildren: RootRouteChildren = {
   CopilotoRoute: CopilotoRoute,
   DashboardRoute: DashboardRoute,
   DocumentosRoute: DocumentosRoute,
+  EmergenciaPediatricaRoute: EmergenciaPediatricaRoute,
   EncaminhamentoRoute: EncaminhamentoRoute,
   IniciarPlantaoRoute: IniciarPlantaoRoute,
   LoginRoute: LoginRoute,
