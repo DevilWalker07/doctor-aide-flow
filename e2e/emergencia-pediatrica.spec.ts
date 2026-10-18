@@ -192,4 +192,48 @@ test.describe("emergência pediátrica", () => {
     await expect(tox).toContainText("Naloxona");
     await expect(tox).toContainText("1,1 mg");
   });
+
+  test("voltar do celular fecha a gaveta e não sai da RCP", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByTestId("ped-acao-intubacao").click();
+    await expect(page.getByRole("dialog", { name: "Intubação" })).toBeVisible();
+
+    await page.goBack();
+    await expect(page.getByRole("dialog", { name: "Intubação" })).toHaveCount(0);
+    await expect(page.getByTestId("ped-modo-pcr")).toBeVisible();
+
+    await page.goBack();
+    await expect(page.getByTestId("ped-modo-pcr")).toBeVisible();
+    await expect(page.getByTestId("ped-pcr-sair")).toBeVisible();
+    await expect(page).toHaveURL(/emergencia-pediatrica/);
+  });
+
+  test("atalho ?rcp=1 abre direto na RCP", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica?rcp=1");
+    await expect(page.getByTestId("ped-modo-pcr")).toBeVisible();
+    await expect(page).not.toHaveURL(/rcp=1/);
+  });
+
+  test("busca única: droga com dose, conduta e seção", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+
+    await page.getByTestId("ped-abrir-busca").click();
+    await page.getByTestId("busca-campo").fill("esmeron");
+    await expect(page.getByTestId("busca-resultados")).toContainText("Rocurônio");
+    await expect(page.getByTestId("busca-resultados")).toContainText("1,1");
+
+    await page.getByTestId("busca-campo").fill("pericardiocentese");
+    await page.getByTestId("busca-causa-tamponamento").click();
+    await expect(page.getByTestId("ped-proc-pericardiocentese")).toBeVisible();
+    await page.getByRole("button", { name: "Voltar à busca" }).click();
+
+    await page.getByTestId("busca-campo").fill("tubo");
+    await page.getByTestId("busca-secao-iot").click();
+    await expect(page.getByTestId("ped-iot")).toBeVisible();
+  });
 });
