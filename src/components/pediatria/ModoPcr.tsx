@@ -46,7 +46,6 @@ import {
 import {
   ADRENALINA_MAX_MS,
   ADRENALINA_MIN_MS,
-  CAUSAS_REVERSIVEIS,
   CICLO_MS,
   COMPRESSOES_POR_MINUTO,
   VENTILACAO_VA_MS,
@@ -56,7 +55,7 @@ import {
   type Relacao,
   type Ritmo,
 } from "../../../shared/pediatria/pcr";
-import { viaAerea } from "../../../shared/pediatria/viaAerea";
+import { viaAereaPaciente } from "../../../shared/pediatria/viaAerea";
 import { baixarRelatorioPdf, desfecho, duracao, textoRegistro } from "@/lib/pediatria/relatorioRcp";
 import {
   PAPEIS,
@@ -71,7 +70,9 @@ import { Metronomo, Sons, type Batida } from "@/lib/pediatria/som";
 import { DoseRapida } from "./DoseRapida";
 import { Gaveta } from "./Gaveta";
 import { Identificacao, type Paciente } from "./Identificacao";
-import { Desfibrilador, Laringoscopio, Tubo } from "./Ilustracoes";
+import { Desfibrilador } from "./Ilustracoes";
+import { CausasReversiveis } from "./CausasReversiveis";
+import { CartaoIot } from "./Intubacao";
 
 type Painel =
   | null
@@ -238,7 +239,7 @@ export function ModoPcr({
   const amioBolus = peso ? calcularBolus(droga("amiodarona"), peso) : null;
   const proximoChoque = peso ? energiaDesfibrilacaoN(choques + 1, peso) : null;
   const cvEnergia = peso ? energiaChoque(CARGAS_CARDIOVERSAO.at(cvPasso) ?? 0.5, peso) : null;
-  const va = paciente?.idade ? viaAerea(paciente.idade) : null;
+  const va = viaAereaPaciente(paciente?.idade ?? null, peso);
   const compressor = compressorDaVez(s);
   const mostrarTroca = s.ciclo > 0 && fase === "rcp" && noCiclo < AVISO_TROCA_MS;
 
@@ -523,9 +524,36 @@ export function ModoPcr({
             />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="t-label opacity-80">
-              {encerrada ? "Encerrada" : retomada ? "RCP retomada" : "RCP"}
-            </p>
+            {encerrada || desdeAdrenalina === null ? (
+              <p className="t-label opacity-80">
+                {encerrada ? "Encerrada" : retomada ? "RCP retomada" : "RCP"}
+              </p>
+            ) : (
+              <p
+                data-testid="ped-pcr-adr-topo"
+                aria-label={
+                  adr === "aguardando"
+                    ? `Próxima adrenalina em ${formatarTempo(ADRENALINA_MIN_MS - desdeAdrenalina)}`
+                    : adr === "pode"
+                      ? "Adrenalina liberada"
+                      : "Adrenalina atrasada"
+                }
+                className={`t-label flex items-center gap-1 whitespace-nowrap tabular-nums ${
+                  adr === "atrasada"
+                    ? "text-destructive"
+                    : adr === "pode"
+                      ? "text-warning"
+                      : "opacity-80"
+                }`}
+              >
+                <Syringe className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {adr === "aguardando"
+                  ? formatarTempo(ADRENALINA_MIN_MS - desdeAdrenalina)
+                  : adr === "pode"
+                    ? "agora"
+                    : "atrasada"}
+              </p>
+            )}
             <p
               className="text-3xl leading-none font-black tabular-nums"
               data-testid="ped-pcr-total"
@@ -959,8 +987,8 @@ export function ModoPcr({
                 titulo="Causas reversíveis — Hs e Ts"
                 linha={
                   causas.size
-                    ? `${causas.size} verificada(s)`
-                    : "Hipóxia, hipovolemia, pneumotórax…"
+                    ? `${causas.size} hipótese(s) · ver condutas`
+                    : "Marque hipóteses e veja a conduta"
                 }
                 onClick={() => setPainel("causas")}
               />
@@ -1115,37 +1143,7 @@ export function ModoPcr({
         onFechar={fechar}
       >
         {semPeso}
-        {va ? (
-          <div className="bg-card border-border grid grid-cols-2 gap-3 rounded-3xl border p-4">
-            <div className="grid justify-items-center gap-1 text-center">
-              <Tubo diametro={va.tuboComCuff} className="h-20 w-32" />
-              <p className="text-foreground text-3xl font-black tabular-nums">
-                {formatarNumero(va.tuboComCuff, 1)}
-              </p>
-              <p className="t-label text-muted-foreground">
-                mm com cuff · sem cuff {formatarNumero(va.tuboSemCuff, 1)}
-              </p>
-            </div>
-            <div className="grid justify-items-center gap-1 text-center">
-              <Laringoscopio curva={va.lamina.tipo !== "Reta"} className="h-20 w-28" />
-              <p className="text-foreground text-3xl font-black tabular-nums">{va.lamina.numero}</p>
-              <p className="t-label text-muted-foreground">Lâmina {va.lamina.tipo.toLowerCase()}</p>
-            </div>
-            <p className="t-body text-foreground col-span-2 text-center">
-              Fixar em{" "}
-              <strong className="tabular-nums">{formatarNumero(va.profundidadeCm, 1)} cm</strong> no
-              lábio · tenha 0,5 mm acima e abaixo
-            </p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setPainel("peso")}
-            className="border-border bg-card t-body text-muted-foreground rounded-2xl border border-dashed p-4 text-left"
-          >
-            Informe a idade para ver o tubo e a lâmina.
-          </button>
-        )}
+        {va && <CartaoIot va={va} />}
         <button
           type="button"
           data-testid="ped-intubado"
@@ -1212,40 +1210,32 @@ export function ModoPcr({
       </Gaveta>
 
       <Gaveta
-        titulo="Causas reversíveis"
-        subtitulo="Marque o que já foi avaliado."
+        titulo="Causas reversíveis — 6 Hs e 5 Ts"
+        subtitulo="Marque as hipóteses e abra a conduta de cada uma."
         aberta={painel === "causas"}
         onFechar={fechar}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          {(["H", "T"] as const).map((k) => (
-            <ul key={k} className="bg-card border-border grid gap-1 rounded-3xl border p-3">
-              <li className="t-eyebrow text-muted-foreground px-2 pb-1">
-                {k === "H" ? "Hs" : "Ts"}
-              </li>
-              {CAUSAS_REVERSIVEIS[k].map((c) => (
-                <li key={c}>
-                  <label className="t-body text-foreground hover:bg-accent flex min-h-12 items-center gap-3 rounded-2xl px-2">
-                    <input
-                      type="checkbox"
-                      checked={causas.has(c)}
-                      onChange={(e) => {
-                        const novo = new Set(causas);
-                        if (e.target.checked) {
-                          novo.add(c);
-                          registrar(`Causa avaliada: ${c}`);
-                        } else novo.delete(c);
-                        setCausas(novo);
-                      }}
-                      className="accent-primary h-5 w-5 shrink-0"
-                    />
-                    {c}
-                  </label>
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
+        <CausasReversiveis
+          peso={peso}
+          hipoteses={s.causas}
+          onHipotese={(nome, marcada) => {
+            const novo = new Set(causas);
+            if (marcada) novo.add(nome);
+            else novo.delete(nome);
+            setCausas(novo);
+            if (marcada) registrar(`Hipótese: ${nome}`);
+          }}
+          registros={registros}
+          onRegistrar={
+            encerrada
+              ? undefined
+              : (t) => {
+                  registrar(t);
+                  toast.success("Registrado", { description: t });
+                }
+          }
+          onRegistrarDroga={encerrada ? undefined : registrarDroga}
+        />
       </Gaveta>
     </div>
   );

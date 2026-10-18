@@ -8,10 +8,7 @@ import {
   superficieCorporal,
 } from "../../../shared/pediatria/calculos";
 import { pasMinima, sinaisVitais, type Faixa } from "../../../shared/pediatria/sinaisVitais";
-import { viaAerea } from "../../../shared/pediatria/viaAerea";
-import { Coracao, Desfibrilador, Laringoscopio, Pulmoes, Tubo } from "./Ilustracoes";
-import { KIT_INTUBACAO } from "../../../shared/pediatria/kits";
-import { DoseRapida } from "./DoseRapida";
+import { Coracao, Desfibrilador, Pulmoes } from "./Ilustracoes";
 import type { Paciente } from "./Identificacao";
 
 type Modo = "desfibrilacao" | "cardioversao";
@@ -129,7 +126,6 @@ function Regua({ rotulo, faixa, unidade }: { rotulo: string; faixa: Faixa; unida
 
 export function ChoqueViaAerea({ paciente }: { paciente: Paciente }) {
   const { peso, idade, alturaCm } = paciente;
-  const va = idade ? viaAerea(idade) : null;
   const sv = idade ? sinaisVitais(idade) : null;
   const sc = superficieCorporal(peso, alturaCm);
 
@@ -138,66 +134,18 @@ export function ChoqueViaAerea({ paciente }: { paciente: Paciente }) {
       <Choque peso={peso} />
 
       <section
-        aria-labelledby="ped-via"
-        className="bg-card border-border grid content-start gap-4 rounded-3xl border p-4"
+        aria-labelledby="ped-sc"
+        className="bg-card border-border grid content-start gap-2 rounded-3xl border p-4"
       >
-        <h2 id="ped-via" className="t-title text-foreground">
-          Via aérea e intubação
+        <h2 id="ped-sc" className="t-title text-foreground">
+          Superfície corporal
         </h2>
-        {va ? (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid justify-items-center gap-1 text-center">
-                <Tubo diametro={va.tuboComCuff} className="h-20 w-32" />
-                <p className="text-2xl font-extrabold tabular-nums">
-                  {formatarNumero(va.tuboComCuff, 1)}
-                </p>
-                <p className="t-label text-muted-foreground">Tubo com cuff (mm)</p>
-                <p className="t-label text-muted-foreground">
-                  sem cuff: {formatarNumero(va.tuboSemCuff, 1)}
-                </p>
-              </div>
-              <div className="grid justify-items-center gap-1 text-center">
-                <Laringoscopio curva={va.lamina.tipo !== "Reta"} className="h-20 w-28" />
-                <p className="text-2xl font-extrabold tabular-nums">{va.lamina.numero}</p>
-                <p className="t-label text-muted-foreground">
-                  Lâmina {va.lamina.tipo.toLowerCase()}
-                </p>
-              </div>
-            </div>
-            <p className="t-body text-foreground">
-              Fixar em cerca de{" "}
-              <strong className="tabular-nums">{formatarNumero(va.profundidadeCm, 1)} cm</strong> no
-              lábio. Tenha à mão um tubo 0,5 mm acima e abaixo.
-            </p>
-            {va.avisoNeonato && (
-              <p className="t-body text-foreground flex gap-2">
-                <AlertTriangle className="text-warning h-5 w-5 shrink-0" aria-hidden="true" />
-                Neonato: escolha o tubo pelo peso e idade gestacional.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="t-body text-muted-foreground">Informe a idade para ver tubo e lâmina.</p>
-        )}
-        <p className="t-body text-foreground border-border border-t pt-3">
-          Superfície corporal: <strong className="tabular-nums">{formatarNumero(sc, 2)} m²</strong>
-          <span className="t-label text-muted-foreground">
-            {" "}
-            {alturaCm ? "(Mosteller)" : "(pelo peso)"}
-          </span>
+        <p className="text-foreground text-4xl font-black tabular-nums">
+          {formatarNumero(sc, 2)} <span className="text-xl font-bold">m²</span>
         </p>
-      </section>
-
-      <section aria-labelledby="ped-sri" className="grid content-start gap-3 lg:col-span-2">
-        <h2 id="ped-sri" className="t-title text-foreground">
-          Sequência rápida de intubação
-        </h2>
-        <ul className="grid gap-3 lg:grid-cols-2">
-          {KIT_INTUBACAO.map((it) => (
-            <DoseRapida key={it.droga.id} item={it} peso={peso} />
-          ))}
-        </ul>
+        <p className="t-label text-muted-foreground">
+          {alturaCm ? "Mosteller, com a altura informada" : "Pelo peso: (4P + 7) ÷ (P + 90)"}
+        </p>
       </section>
 
       <section

@@ -127,4 +127,69 @@ test.describe("emergência pediátrica", () => {
     await page.getByTestId("ped-pcr-pdf").click();
     expect((await download).suggestedFilename()).toMatch(/^rcp-pediatrica_.*\.pdf$/);
   });
+
+  test("peso estimado muda com o sexo: menino 2 × idade + 9, menina 2 × idade + 8", async ({
+    page,
+  }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-anos").fill("3");
+    await page.getByTestId("ped-sexo-M").click();
+    await expect(page.getByTestId("ped-usar-estimado")).toContainText("15 kg");
+    await page.getByTestId("ped-sexo-F").click();
+    await expect(page.getByTestId("ped-usar-estimado")).toContainText("14 kg");
+    await page.getByTestId("ped-usar-estimado").click();
+    await expect(page.getByTestId("ped-peso")).toHaveValue("14");
+  });
+
+  test("aba de intubação mostra tubo com e sem cuff e as duas lâminas", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("20");
+    await page.getByTestId("ped-anos").fill("6");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-aba-iot").click();
+    await expect(page.getByTestId("iot-cuff")).toContainText("5");
+    await expect(page.getByTestId("iot-sem-cuff")).toContainText("5,5");
+    await expect(page.getByTestId("iot-lamina-reta")).toContainText("2");
+    await expect(page.getByTestId("iot-lamina-curva")).toContainText("2");
+  });
+
+  test("criança e aba voltam depois de recarregar; nova criança limpa", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-aba-choque").click();
+    await page.reload();
+    await expect(page.getByTestId("ped-paciente-chip")).toContainText("11 kg");
+    await expect(page.getByTestId("ped-aba-choque")).toHaveAttribute("aria-current", "page");
+    await page.getByTestId("ped-nova-crianca").click();
+    await expect(page.getByTestId("ped-peso")).toHaveValue("");
+  });
+
+  test("Hs e Ts: tamponamento guia a pericardiocentese e registra", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByRole("button", { name: /Causas reversíveis/ }).click();
+    await page.getByTestId("ped-hipotese-tamponamento").check();
+    await expect(page.getByTestId("ped-proc-pericardiocentese")).toBeVisible();
+    await page.getByTestId("ped-proc-feito-pericardiocentese").click();
+    await page.keyboard.press("Escape");
+    const registro = page.getByTestId("ped-pcr-registro");
+    await expect(registro).toContainText("Hipótese: Tamponamento cardíaco");
+    await expect(registro).toContainText("pericardiocentese subxifoide realizada");
+  });
+
+  test("Hs e Ts: toxinas lista antídotos com dose pelo peso", async ({ page }) => {
+    await page.goto("/emergencia-pediatrica");
+    await page.getByTestId("ped-peso").fill("11");
+    await page.getByTestId("ped-calcular").click();
+    await page.getByTestId("ped-iniciar-rcp").click();
+    await page.getByRole("button", { name: /Causas reversíveis/ }).click();
+    await page.getByTestId("ped-conduta-toxinas").click();
+    const tox = page.getByTestId("ped-causa-toxinas");
+    await expect(tox).toContainText("Opioides");
+    await expect(tox).toContainText("Naloxona");
+    await expect(tox).toContainText("1,1 mg");
+  });
 });

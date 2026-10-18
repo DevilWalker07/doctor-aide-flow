@@ -35,27 +35,40 @@ export function pesoValido(peso: number): boolean {
   return Number.isFinite(peso) && peso >= PESO_MIN && peso <= PESO_MAX;
 }
 
+export type Sexo = "M" | "F";
+
 /**
- * Peso estimado pela idade. Até 12 meses: (meses + 9) ÷ 2 — é o que a
- * planilha reproduz (10,5 kg aos 12 meses). De 1 a 6 anos: 2 × idade + 8.
- * De 7 a 12: (7 × idade − 5) ÷ 2. Acima de 12 anos não estima: pesar.
+ * Peso estimado pela idade.
+ * - Até 12 meses: (meses + 9) ÷ 2 — é o que a planilha reproduz (10,5 kg aos
+ *   12 meses).
+ * - De 1 a 12 anos, com sexo informado: meninos 2 × idade + 9, meninas
+ *   2 × idade + 8.
+ * - De 1 a 12 anos, sem sexo: 2 × idade + 8 até 6 anos e (7 × idade − 5) ÷ 2
+ *   de 7 a 12.
+ * Acima de 12 anos não estima: pesar.
  */
-export function pesoEstimado(i: Idade): number | null {
+export function pesoEstimado(i: Idade, sexo: Sexo | null = null): number | null {
   const meses = idadeEmMeses(i);
   if (meses <= 12) return (Math.floor(meses) + 9) / 2;
   const anos = Math.floor(meses / 12);
+  if (anos > 12) return null;
+  if (sexo === "M") return 2 * anos + 9;
+  if (sexo === "F") return 2 * anos + 8;
   if (anos <= 6) return 2 * anos + 8;
-  if (anos <= 12) return (7 * anos - 5) / 2;
-  return null;
+  return (7 * anos - 5) / 2;
 }
 
 /**
  * Peso que destoa mais de 30% do estimado para a idade pede confirmação —
  * 25 kg num lactente de 1 ano é quase sempre erro de digitação.
  */
-export function pesoDestoaDaIdade(peso: number, i: Idade | null): boolean {
+export function pesoDestoaDaIdade(
+  peso: number,
+  i: Idade | null,
+  sexo: Sexo | null = null,
+): boolean {
   if (!idadeInformada(i)) return false;
-  const est = pesoEstimado(i);
+  const est = pesoEstimado(i, sexo);
   if (est === null) return false;
   return Math.abs(peso - est) / est > 0.3;
 }

@@ -140,7 +140,7 @@ export function Seringa({
               strokeOpacity="0.65"
               strokeWidth={maior ? 1.3 : 0.8}
             />
-            {maior && v > 0 && (
+            {maior && v > 0 && v < capacidadeMl - 1e-6 && (
               <text
                 x={mx}
                 y={yBase + 13}
@@ -226,7 +226,31 @@ const PORTE_NOME: Record<Porte, string> = {
  * A criança muda de porte com o peso/idade digitados — bebê, pré-escolar,
  * escolar, adolescente. Serve de checagem: 25 kg num bebê salta aos olhos.
  */
-export function Crianca({ porte, className = "" }: { porte: Porte; className?: string }) {
+export function Crianca({
+  porte,
+  sexo = null,
+  className = "",
+}: {
+  porte: Porte;
+  sexo?: "M" | "F" | null;
+  className?: string;
+}) {
+  const menina = sexo === "F";
+  /** Cabelo comprido atrás da cabeça + presilha: só para menina. */
+  const cabeloMenina = (cx: number, cy: number, r: number) =>
+    menina ? (
+      <path
+        d={`M${cx - r * 1.05} ${cy - r * 0.2} C ${cx - r * 1.25} ${cy + r * 1.1}, ${cx - r * 0.6} ${cy + r * 1.35}, ${cx - r * 0.35} ${cy + r * 1.05} L ${cx + r * 0.35} ${cy + r * 1.05} C ${cx + r * 0.6} ${cy + r * 1.35}, ${cx + r * 1.25} ${cy + r * 1.1}, ${cx + r * 1.05} ${cy - r * 0.2} Z`}
+        fill="var(--ped-cabelo)"
+      />
+    ) : null;
+  const presilha = (cx: number, cy: number, r: number) =>
+    menina ? (
+      <g>
+        <circle cx={cx + r * 0.62} cy={cy - r * 0.72} r={r * 0.16} fill="var(--destructive)" />
+        <circle cx={cx + r * 0.86} cy={cy - r * 0.62} r={r * 0.12} fill="var(--destructive)" />
+      </g>
+    ) : null;
   const pele = "var(--ped-pele)";
   const sombra = "var(--ped-pele-sombra)";
   const roupa = "var(--ped-roupa)";
@@ -265,6 +289,7 @@ export function Crianca({ porte, className = "" }: { porte: Porte; className?: s
           <circle cx="31" cy="60" r="7" fill={sombra} />
           <circle cx="89" cy="60" r="7" fill={sombra} />
           <circle cx="60" cy="58" r="30" fill={pele} />
+          {presilha(60, 58, 30)}
           <path d="M54 30 q6 -8 12 0 q-4 -2 -6 4 q-2 -6 -6 -4z" fill={cabelo} />
           <Rosto cx={60} cy={58} r={30} />
         </g>
@@ -291,12 +316,14 @@ export function Crianca({ porte, className = "" }: { porte: Porte; className?: s
             strokeLinecap="round"
             fill="none"
           />
+          {cabeloMenina(60, 40, 25)}
           <circle cx="60" cy="40" r="25" fill={pele} />
           <path
             d="M35 38 C 36 16, 84 14, 85 38 C 78 28, 66 24, 60 26 C 52 24, 42 28, 35 38 Z"
             fill={cabelo}
           />
           <Rosto cx={60} cy={42} r={24} />
+          {presilha(60, 40, 25)}
         </g>
       )}
       {porte === "escolar" && (
@@ -321,12 +348,14 @@ export function Crianca({ porte, className = "" }: { porte: Porte; className?: s
             fill="none"
           />
           <rect x="55" y="44" width="10" height="10" fill={sombra} />
+          {cabeloMenina(60, 30, 19)}
           <circle cx="60" cy="30" r="19" fill={pele} />
           <path
             d="M41 30 C 40 10, 80 8, 79 28 C 74 20, 64 17, 58 19 C 50 18, 44 22, 41 30 Z"
             fill={cabelo}
           />
           <Rosto cx={60} cy={32} r={18} />
+          {presilha(60, 30, 19)}
         </g>
       )}
       {porte === "adolescente" && (
@@ -351,12 +380,14 @@ export function Crianca({ porte, className = "" }: { porte: Porte; className?: s
             fill="none"
           />
           <rect x="55" y="36" width="10" height="11" fill={sombra} />
+          {cabeloMenina(60, 24, 16)}
           <ellipse cx="60" cy="24" rx="15" ry="17" fill={pele} />
           <path
             d="M44 24 C 42 4, 78 2, 76 22 C 72 14, 62 12, 56 13 C 50 13, 46 17, 44 24 Z"
             fill={cabelo}
           />
           <Rosto cx={60} cy={26} r={15} />
+          {presilha(60, 24, 16)}
         </g>
       )}
     </svg>
@@ -850,6 +881,157 @@ export function TracadoEcg({ className = "" }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────── procedimentos
+
+/** Tórax de frente: contorno, clavículas, esterno e costelas. */
+function Torax() {
+  return (
+    <g>
+      <path
+        d="M40 26 C 60 14, 140 14, 160 26 L 172 60 C 176 110, 168 160, 150 196 L 50 196 C 32 160, 24 110, 28 60 Z"
+        fill="var(--ped-pele)"
+        stroke={tinta}
+        strokeOpacity="0.35"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M100 30 C 80 26, 60 28, 42 34 M100 30 C 120 26, 140 28, 158 34"
+        fill="none"
+        stroke={tinta}
+        strokeOpacity="0.45"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <rect x="94" y="32" width="12" height="96" rx="5" fill="var(--ped-pele-sombra)" />
+      <path d="M100 128 l-6 4 l6 12 l6 -12 z" fill="var(--ped-pele-sombra)" />
+      {[52, 72, 92, 112].map((y, i) => (
+        <g key={y} fill="none" stroke={tinta} strokeOpacity="0.18" strokeWidth="2">
+          <path d={`M92 ${y} C 72 ${y + 2}, 52 ${y + 8 + i * 2}, 40 ${y + 20 + i * 3}`} />
+          <path d={`M108 ${y} C 128 ${y + 2}, 148 ${y + 8 + i * 2}, 160 ${y + 20 + i * 3}`} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Pericardiocentese: ponto subxifoide, agulha a 30–45° para o ombro esquerdo. */
+export function PontoPericardiocentese({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 200 232"
+      className={className}
+      role="img"
+      aria-label="Ponto da pericardiocentese: abaixo e à esquerda do xifoide, agulha para o ombro esquerdo"
+    >
+      <defs>
+        <marker
+          id="peri-seta"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto"
+        >
+          <path d="M0 0L10 5L0 10z" fill="var(--primary)" />
+        </marker>
+      </defs>
+      <Torax />
+      {/* coração e derrame (lado esquerdo do paciente = direita da imagem) */}
+      <ellipse
+        cx="112"
+        cy="104"
+        rx="34"
+        ry="28"
+        fill="var(--warning)"
+        fillOpacity="0.25"
+        stroke="var(--warning)"
+        strokeWidth="1.5"
+        strokeDasharray="4 3"
+      />
+      <path
+        d="M112 128 C 92 116, 88 100, 98 92 C 104 86, 110 90, 112 96 C 116 88, 126 86, 130 94 C 136 106, 128 118, 112 128 Z"
+        fill="var(--destructive)"
+        fillOpacity="0.8"
+      />
+      {/* trajeto */}
+      <line
+        x1="106"
+        y1="158"
+        x2="136"
+        y2="96"
+        stroke="var(--primary)"
+        strokeWidth="3"
+        strokeDasharray="5 4"
+        markerEnd="url(#peri-seta)"
+      />
+      <circle cx="106" cy="156" r="6" fill="var(--primary)" className="ped-anel" />
+      <circle cx="106" cy="156" r="4" fill="var(--primary)" />
+      <text x="100" y="212" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={tinta}>
+        1 cm abaixo e à esquerda do xifoide
+      </text>
+      <text x="100" y="226" textAnchor="middle" fontSize="10.5" fontWeight="800" fill={tinta}>
+        30–45°, rumo ao ombro esquerdo
+      </text>
+    </svg>
+  );
+}
+
+/** Descompressão: 2º EIC na linha hemiclavicular (e a alternativa no 4º–5º EIC, axilar média). */
+export function PontoDescompressao({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 200 210"
+      className={className}
+      role="img"
+      aria-label="Ponto da descompressão: segundo espaço intercostal na linha hemiclavicular do lado afetado"
+    >
+      <Torax />
+      {/* linha hemiclavicular e axilar média do lado afetado (direita do paciente = esquerda da imagem) */}
+      <line
+        x1="66"
+        y1="30"
+        x2="66"
+        y2="150"
+        stroke={tinta}
+        strokeOpacity="0.4"
+        strokeDasharray="3 4"
+      />
+      <line
+        x1="36"
+        y1="70"
+        x2="36"
+        y2="160"
+        stroke={tinta}
+        strokeOpacity="0.4"
+        strokeDasharray="3 4"
+      />
+      <circle
+        cx="66"
+        cy="60"
+        r="9"
+        fill="var(--destructive)"
+        fillOpacity="0.25"
+        className="ped-anel"
+      />
+      <circle cx="66" cy="60" r="5" fill="var(--destructive)" />
+      <circle cx="38" cy="116" r="5" fill="var(--warning)" stroke={tinta} strokeOpacity="0.4" />
+      <text x="76" y="62" fontSize="11" fontWeight="800" fill={tinta}>
+        2º EIC · hemiclavicular
+      </text>
+      <text x="48" y="120" fontSize="10" fontWeight="700" fill={tinta} fillOpacity="0.8">
+        alternativa: 4º–5º EIC
+      </text>
+      <text x="48" y="132" fontSize="10" fontWeight="700" fill={tinta} fillOpacity="0.8">
+        axilar média
+      </text>
+      <text x="44" y="206" fontSize="10" fontWeight="700" fill={tinta} fillOpacity="0.7">
+        Lado afetado (aqui, o direito)
+      </text>
     </svg>
   );
 }

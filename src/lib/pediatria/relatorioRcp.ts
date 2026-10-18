@@ -99,7 +99,7 @@ export function gerarRelatorioPdf(s: SessaoRcp, agora: number): jsPDF {
   const outras = Object.entries(s.registros).filter(([, n]) => n > 0);
   if (outras.length)
     resumo.push(["Outras drogas", outras.map(([id, n]) => `${nomeDroga(id)} ${n}×`).join("; ")]);
-  if (s.causas.length) resumo.push(["Causas avaliadas", s.causas.join("; ")]);
+  if (s.causas.length) resumo.push(["Hipóteses (Hs e Ts)", s.causas.join("; ")]);
 
   autoTable(doc, {
     startY: y,

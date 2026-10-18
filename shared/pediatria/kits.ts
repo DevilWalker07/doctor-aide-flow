@@ -26,7 +26,7 @@ export const MAGNESIO: DrogaBolus = {
 
 export const DROGAS_EXTRAS: DrogaBolus[] = [MAGNESIO];
 
-const porId = (id: string): DrogaBolus => {
+export const drogaPorId = (id: string): DrogaBolus => {
   const d = [...DROGAS_BOLUS, ...DROGAS_EXTRAS].find((x) => x.id === id);
   if (!d) throw new Error(`Droga desconhecida: ${id}`);
   return d;
@@ -39,7 +39,7 @@ export interface ItemKit {
 }
 
 const kit = (itens: [string, string][]): ItemKit[] =>
-  itens.map(([id, papel]) => ({ droga: porId(id), papel }));
+  itens.map(([id, papel]) => ({ droga: drogaPorId(id), papel }));
 
 /** Sequência rápida de intubação: pré-medicação, indução, bloqueio. */
 export const KIT_INTUBACAO: ItemKit[] = kit([
