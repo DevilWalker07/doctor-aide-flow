@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { setTokenProvider, setUnauthorizedHandler } from "@/lib/apiClient";
+import { liberarAparelho, revogarAparelho } from "@/lib/pediatria/acesso";
 import { hasSupabaseConfig, supabase } from "@/lib/supabase";
 
 export interface AuthApi {
@@ -32,6 +33,8 @@ function traduzErro(message: string): string {
   if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
   if (m.includes("user already registered")) return "Já existe uma conta com este e-mail.";
   if (m.includes("password should be at least")) return "A senha deve ter pelo menos 8 caracteres.";
+  if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+    return "Cadastro fechado: o acesso é só por convite.";
   if (m.includes("rate limit")) return "Muitas tentativas. Aguarde um instante.";
   if (m.includes("fetch") || m.includes("network"))
     return "Sem conexão com o servidor de autenticação.";
@@ -66,7 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // login renova a liberação do aparelho para a emergência pediátrica
+  const userIdSessao = session?.user.id;
+  useEffect(() => {
+    if (userIdSessao) liberarAparelho(userIdSessao);
+  }, [userIdSessao]);
+
   const signOut = useCallback(async () => {
+    revogarAparelho();
     if (hasSupabaseConfig) await supabase.auth.signOut();
     setSession(null);
   }, []);
@@ -87,8 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured: hasSupabaseConfig,
       async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
         if (error) throw new Error(traduzErro(error.message));
+        // já aqui, e não só no efeito: a tela navega antes do próximo render
+        if (data.user) liberarAparelho(data.user.id);
       },
       async signUp(email, password, name) {
         const { data, error } = await supabase.auth.signUp({

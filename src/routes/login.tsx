@@ -12,10 +12,23 @@ export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — MEDFLUXO" }] }),
 });
 
+/** Só caminho interno: "//outro.site" e "/\\outro" levariam para fora. */
+function destinoSeguro(redirect: string | undefined): string {
+  if (
+    !redirect ||
+    !redirect.startsWith("/") ||
+    redirect.startsWith("//") ||
+    redirect.startsWith("/\\")
+  )
+    return "/dashboard";
+  return redirect;
+}
+
 function LoginPage() {
   const { signIn, configured } = useAuth();
   const { redirect } = Route.useSearch();
   const nav = useNavigate();
+  const paraPediatria = redirect?.startsWith("/emergencia-pediatrica") ?? false;
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +38,8 @@ function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, senha);
-      nav({ to: redirect && redirect.startsWith("/") ? redirect : "/dashboard", replace: true });
+      // href, não to: o destino pode trazer busca (?rcp=1 do atalho do ícone)
+      nav({ href: destinoSeguro(redirect), replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao entrar.");
     } finally {
@@ -36,7 +50,11 @@ function LoginPage() {
   return (
     <AuthShell
       titulo="Entrar"
-      subtitulo="Acesse seus plantões e pacientes"
+      subtitulo={
+        paraPediatria
+          ? "A emergência pediátrica é só para contas convidadas"
+          : "Acesse seus plantões e pacientes"
+      }
       rodape={
         <>
           Ainda não tem conta?{" "}
@@ -50,6 +68,14 @@ function LoginPage() {
         </>
       }
     >
+      {paraPediatria && (
+        <p
+          className="t-label text-foreground bg-muted mb-4 rounded-xl px-4 py-3"
+          data-testid="login-aviso-pediatria"
+        >
+          Entre uma vez e este aparelho fica liberado por 30 dias, mesmo sem internet.
+        </p>
+      )}
       {!configured && (
         <p className="mb-4 text-xs font-bold text-warning-foreground bg-warning/15 rounded-xl px-4 py-3">
           Supabase não configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).

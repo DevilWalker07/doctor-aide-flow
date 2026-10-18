@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ChevronLeft, HeartPulse, Pencil, Search, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
   salvarPaciente,
   type AbaPed,
 } from "@/lib/pediatria/pacienteSalvo";
+import { podeEntrarNaPediatria } from "@/lib/pediatria/acesso";
 import { desfecho } from "@/lib/pediatria/relatorioRcp";
 import {
   apagarSessao,
@@ -30,6 +31,13 @@ import { Sons } from "@/lib/pediatria/som";
 import { formatarTempo } from "../../shared/pediatria/pcr";
 
 export const Route = createFileRoute("/emergencia-pediatrica")({
+  // Só com conta convidada. Um login libera o aparelho por 30 dias, inclusive
+  // offline — ver lib/pediatria/acesso.ts.
+  beforeLoad: ({ context, location }) => {
+    if (!podeEntrarNaPediatria(context.auth)) {
+      throw redirect({ to: "/login", search: { redirect: location.href } });
+    }
+  },
   component: EmergenciaPediatricaPage,
   head: () => ({ meta: [{ title: "Emergência pediátrica — MEDFLUXO" }] }),
 });
