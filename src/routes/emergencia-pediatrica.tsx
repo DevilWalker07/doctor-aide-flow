@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, HeartPulse, Pencil, UserPlus } from "lucide-react";
+import { ChevronLeft, HeartPulse, Pencil, Search, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { descreverIdade, formatarNumero } from "../../shared/pediatria/calculos";
 import { BotaoRcp } from "@/components/pediatria/BotaoRcp";
+import { BuscaGlobal } from "@/components/pediatria/BuscaGlobal";
 import { ChoqueViaAerea } from "@/components/pediatria/ChoqueViaAerea";
 import { FichaDrogas } from "@/components/pediatria/FichaDrogas";
 import { Identificacao, type Paciente } from "@/components/pediatria/Identificacao";
@@ -43,6 +44,8 @@ function EmergenciaPediatricaPage() {
   const [paciente, setPacienteEstado] = useState<Paciente | null>(() => carregarPaciente());
   const [editando, setEditando] = useState(() => carregarPaciente() === null);
   const [aba, setAbaEstado] = useState<AbaPed>(() => carregarAba());
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const [infusaoInicial, setInfusaoInicial] = useState<string | undefined>(undefined);
 
   const setPaciente = (p: Paciente | null) => {
     setPacienteEstado(p);
@@ -101,6 +104,22 @@ function EmergenciaPediatricaPage() {
     setPcr({ sessao: s, retomada: s.fase !== "fim" });
   };
 
+  // Atalho do ícone (?rcp=1): entra direto na RCP. Se já havia uma RCP em
+  // andamento salva, retoma essa em vez de começar outra. O parâmetro sai da
+  // URL para recarregar não abrir uma segunda RCP.
+  const atalhoTratado = useRef(false);
+  useEffect(() => {
+    if (atalhoTratado.current) return;
+    atalhoTratado.current = true;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("rcp") !== "1") return;
+    url.searchParams.delete("rcp");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    if (salva && salva.fase !== "fim") retomarRcp(salva);
+    else iniciarRcp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const descartarSalva = () => {
     apagarSessao();
     setSalva(null);
@@ -117,7 +136,20 @@ function EmergenciaPediatricaPage() {
           >
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
-          <h1 className="t-title text-foreground min-w-0 flex-1">Emergência pediátrica</h1>
+          <h1 className={mostrandoFicha ? "sr-only" : "t-title text-foreground min-w-0 flex-1"}>
+            Emergência pediátrica
+          </h1>
+          {mostrandoFicha && (
+            <button
+              type="button"
+              onClick={() => setBuscaAberta(true)}
+              data-testid="ped-abrir-busca"
+              className="border-border bg-card text-muted-foreground focus-visible:ring-ring t-body flex h-12 min-w-0 flex-1 items-center gap-2 rounded-2xl border px-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Search className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="truncate">Buscar</span>
+            </button>
+          )}
           {mostrandoFicha && (
             <button
               type="button"
@@ -236,7 +268,11 @@ function EmergenciaPediatricaPage() {
         ) : aba === "choque" ? (
           <ChoqueViaAerea paciente={paciente} />
         ) : (
-          <Infusoes peso={paciente.peso} />
+          <Infusoes
+            key={infusaoInicial ?? "padrao"}
+            peso={paciente.peso}
+            inicial={infusaoInicial}
+          />
         )}
 
         <p className="t-label text-muted-foreground mt-10 text-center font-normal">
@@ -244,6 +280,20 @@ function EmergenciaPediatricaPage() {
           (Flávio Valcácer e Tássio Campos); algoritmo, choque e sinais vitais: PALS 2020.
         </p>
       </main>
+
+      {mostrandoFicha && (
+        <BuscaGlobal
+          aberta={buscaAberta}
+          onFechar={() => setBuscaAberta(false)}
+          peso={paciente.peso}
+          onAba={setAba}
+          onInfusao={(id) => {
+            setInfusaoInicial(id);
+            setAba("infusoes");
+          }}
+          onRcp={iniciarRcp}
+        />
+      )}
 
       {mostrandoFicha && !pcr && <NavInferior aba={aba} onAba={setAba} onRcp={iniciarRcp} />}
 

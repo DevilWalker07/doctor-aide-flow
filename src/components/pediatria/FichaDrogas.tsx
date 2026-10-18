@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronDown, Search } from "lucide-react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { calcularBolus, formatarMl, formatarNumero } from "../../../shared/pediatria/calculos";
 import {
@@ -8,8 +8,6 @@ import {
   type GrupoDroga,
 } from "../../../shared/pediatria/drogas";
 import { Seringa } from "./Ilustracoes";
-
-const sem = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 const unidadeTexto = (u: DrogaBolus["unidade"]) => u;
 
@@ -126,14 +124,10 @@ function CartaoDroga({
 
 export function FichaDrogas({ peso }: { peso: number }) {
   const [grupo, setGrupo] = useState<GrupoDroga | "todas">("todas");
-  const [busca, setBusca] = useState("");
-
-  const lista = useMemo(() => {
-    const q = sem(busca.trim());
-    return DROGAS_BOLUS.filter((d) => grupo === "todas" || d.grupo === grupo).filter(
-      (d) => !q || [d.nome, d.via, ...d.sinonimos].some((t) => sem(t).includes(q)),
-    );
-  }, [grupo, busca]);
+  const lista = useMemo(
+    () => DROGAS_BOLUS.filter((d) => grupo === "todas" || d.grupo === grupo),
+    [grupo],
+  );
 
   const chip = (ativo: boolean) =>
     `touch-target t-label shrink-0 rounded-full border px-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
@@ -144,20 +138,6 @@ export function FichaDrogas({ peso }: { peso: number }) {
 
   return (
     <section aria-label="Drogas da ficha de parada" className="grid gap-4">
-      <label className="relative">
-        <span className="sr-only">Buscar droga</span>
-        <Search
-          className="text-muted-foreground absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar: adrenalina, Esmeron, Narcan…"
-          className="border-input bg-card text-foreground focus-visible:ring-ring t-body h-12 w-full rounded-2xl border pr-4 pl-12 focus-visible:ring-2 focus-visible:outline-none"
-        />
-      </label>
       <div
         className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
         role="group"

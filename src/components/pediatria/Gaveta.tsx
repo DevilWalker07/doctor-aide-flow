@@ -1,9 +1,11 @@
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { useVoltarFecha } from "@/lib/pediatria/voltar";
 
 /**
- * Painel que sobe do rodapé, sobre o modo RCP. Fecha no X, no fundo escuro e
- * no Esc. Não interrompe o metrônomo: a RCP continua enquanto se consulta.
+ * Painel que sobe do rodapé, sobre o modo RCP. Fecha no X, no fundo escuro, no
+ * Esc e no botão voltar do celular. Não interrompe o metrônomo: a RCP
+ * continua enquanto se consulta.
  */
 export function Gaveta({
   titulo,
@@ -18,6 +20,7 @@ export function Gaveta({
   onFechar: () => void;
   children: ReactNode;
 }) {
+  useVoltarFecha(aberta, onFechar);
   useEffect(() => {
     if (!aberta) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onFechar();

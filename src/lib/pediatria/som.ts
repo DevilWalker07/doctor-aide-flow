@@ -42,6 +42,11 @@ export class Sons {
     return this.ctx !== null;
   }
 
+  /** O navegador segurou o áudio (sem toque do usuário ainda): falta um toque. */
+  get suspenso() {
+    return this.ctx?.state === "suspended";
+  }
+
   private tom(
     freq: number,
     inicio: number,

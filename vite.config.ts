@@ -44,7 +44,15 @@ export default defineConfig({
             purpose: "maskable",
           },
         ],
+        // Segurar o ícone do app (Android) mostra "Iniciar RCP": abre direto no
+        // metrônomo, sem passar por menu.
         shortcuts: [
+          {
+            name: "Iniciar RCP",
+            short_name: "RCP",
+            url: "/emergencia-pediatrica?rcp=1",
+            icons: [{ src: "/icones/icone-192.png", sizes: "192x192" }],
+          },
           {
             name: "Emergência pediátrica",
             short_name: "Emergência",

@@ -285,8 +285,10 @@ function CalculadoraInfusao({ droga, peso }: { droga: DrogaInfusao; peso: number
   );
 }
 
-export function Infusoes({ peso }: { peso: number }) {
-  const [id, setId] = useState(DROGAS_INFUSAO[0].id);
+export function Infusoes({ peso, inicial }: { peso: number; inicial?: string }) {
+  const [id, setId] = useState(
+    DROGAS_INFUSAO.some((d) => d.id === inicial) ? inicial! : DROGAS_INFUSAO[0].id,
+  );
   const droga = DROGAS_INFUSAO.find((d) => d.id === id) ?? DROGAS_INFUSAO[0];
   return (
     <section aria-label="Infusões contínuas" className="grid gap-4 lg:grid-cols-[240px_1fr]">

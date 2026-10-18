@@ -86,7 +86,7 @@ function GuiaProcedimento({
   );
 }
 
-function Conduta({
+export function Conduta({
   causa,
   peso,
   registros,

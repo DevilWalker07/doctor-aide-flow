@@ -67,6 +67,7 @@ import {
   type SessaoRcp,
 } from "@/lib/pediatria/sessaoRcp";
 import { Metronomo, Sons, type Batida } from "@/lib/pediatria/som";
+import { useVoltarFecha } from "@/lib/pediatria/voltar";
 import { DoseRapida } from "./DoseRapida";
 import { Gaveta } from "./Gaveta";
 import { Identificacao, type Paciente } from "./Identificacao";
@@ -227,8 +228,24 @@ export function ModoPcr({
   const causas = new Set(s.causas);
   const registros = s.registros;
   const encerrada = fase === "fim";
+  const encerradaRef = useRef(encerrada);
+  encerradaRef.current = encerrada;
 
   useWakeLock(!encerrada);
+  // voltar do celular durante a RCP não sai da tela: pede confirmação.
+  // Com a RCP encerrada, voltar fecha o modo RCP.
+  useVoltarFecha(
+    true,
+    () => {
+      if (encerradaRef.current) {
+        sairRef.current();
+      } else {
+        setConfirmarSaida(true);
+        toast("Para sair, toque em Encerrar no topo", { duration: 2500 });
+      }
+    },
+    !encerrada,
+  );
 
   const decorrido = encerrada ? duracao(s, agora) : agora - inicio;
   const noCiclo = agora - cicloInicio;
@@ -459,6 +476,8 @@ export function ModoPcr({
     if (encerrada) apagarSessao();
     onSair();
   };
+  const sairRef = useRef(sair);
+  sairRef.current = sair;
 
   const sugeridas =
     ritmo === null
@@ -507,6 +526,10 @@ export function ModoPcr({
       aria-label="Modo RCP"
       data-testid="ped-modo-pcr"
       className="bg-background fixed inset-0 z-50 overflow-y-auto"
+      onPointerDown={() => {
+        // aberta pelo atalho, sem toque: o primeiro toque libera o som
+        if (sons.suspenso) sons.iniciar();
+      }}
     >
       {/* barra superior */}
       <header className="bg-navy text-navy-foreground sticky top-0 z-10">
@@ -610,6 +633,18 @@ export function ModoPcr({
           )}
         </div>
       </header>
+
+      {!mudo && sons.suspenso && (
+        <button
+          type="button"
+          onClick={() => sons.iniciar()}
+          data-testid="ped-pcr-som-bloqueado"
+          className="bg-warning text-warning-foreground focus-visible:ring-ring flex w-full items-center justify-center gap-2 px-4 py-3 text-lg font-bold focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Volume2 className="h-5 w-5" aria-hidden="true" />
+          Toque aqui para ligar o som do metrônomo
+        </button>
+      )}
 
       <main className="mx-auto grid max-w-5xl gap-4 px-4 py-4 lg:grid-cols-[1fr_380px]">
         <div className="grid content-start gap-4">
