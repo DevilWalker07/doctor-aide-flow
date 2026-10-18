@@ -429,6 +429,9 @@
 }
 .ped-anel {
   animation: ped-anel 1.6s ease-out infinite;
+  /* em SVG, sem isto a escala parte do canto da figura e o anel "anda" */
+  transform-box: fill-box;
+  transform-origin: center;
 }
 .ped-aparece {
   animation: ped-aparece 0.35s cubic-bezier(0.3, 0.7, 0.2, 1) both;

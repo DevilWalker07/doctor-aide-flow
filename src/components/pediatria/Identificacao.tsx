@@ -11,6 +11,7 @@ import {
   pesoEstimado,
   pesoValido,
   type Idade,
+  type Sexo,
 } from "../../../shared/pediatria/calculos";
 import { porteDe } from "@/lib/pediatria/porte";
 import { Crianca } from "./Ilustracoes";
@@ -20,6 +21,8 @@ export interface Paciente {
   pesoEstimado: boolean;
   idade: Idade | null;
   alturaCm: number | null;
+  /** Opcional; muda o peso estimado acima de 1 ano. Sessões antigas não têm. */
+  sexo?: Sexo | null;
 }
 
 const lerNumero = (t: string) => {
@@ -46,6 +49,7 @@ export function Identificacao({
   const [meses, setMeses] = useState(inicial?.idade ? String(inicial.idade.meses) : "");
   const [alturaTxt, setAlturaTxt] = useState(inicial?.alturaCm ? String(inicial.alturaCm) : "");
   const [usouEstimado, setUsouEstimado] = useState(inicial?.pesoEstimado ?? false);
+  const [sexo, setSexo] = useState<Sexo | null>(inicial?.sexo ?? null);
   const [confirmouDestoante, setConfirmouDestoante] = useState(false);
 
   const peso = lerNumero(pesoTxt);
@@ -58,9 +62,9 @@ export function Identificacao({
         }
       : null;
   const temIdade = idadeInformada(idade);
-  const estimado = temIdade ? pesoEstimado(idade) : null;
+  const estimado = temIdade ? pesoEstimado(idade, sexo) : null;
   const valido = peso !== null && pesoValido(peso);
-  const destoa = valido && !usouEstimado && pesoDestoaDaIdade(peso, idade);
+  const destoa = valido && !usouEstimado && pesoDestoaDaIdade(peso, idade, sexo);
   const pesado = valido && peso > PESO_CONFIRMAR;
   const precisaConfirmar = (destoa || pesado) && !confirmouDestoante;
   const porte = porteDe(valido ? peso : null, temIdade ? idadeEmAnos(idade) : null);
@@ -73,6 +77,7 @@ export function Identificacao({
       pesoEstimado: usouEstimado,
       idade: temIdade ? idade : null,
       alturaCm: altura && altura > 30 ? altura : null,
+      sexo,
     });
   };
 
@@ -89,7 +94,7 @@ export function Identificacao({
     >
       <div className="grid grid-cols-[112px_1fr] items-end gap-4">
         <div className="bg-muted grid h-36 place-items-end justify-center overflow-hidden rounded-3xl">
-          <Crianca porte={porte} className="h-32 w-28" />
+          <Crianca porte={porte} sexo={sexo} className="h-32 w-28" />
         </div>
         <div className="grid gap-1">
           <label htmlFor="ped-peso" className="t-label text-muted-foreground">
@@ -120,6 +125,39 @@ export function Identificacao({
           )}
         </div>
       </div>
+
+      <fieldset className="grid gap-2">
+        <legend className="t-label text-muted-foreground mb-1">Sexo (muda o peso estimado)</legend>
+        <div className="bg-muted grid grid-cols-2 rounded-2xl p-1" role="group">
+          {(
+            [
+              ["M", "Menino"],
+              ["F", "Menina"],
+            ] as const
+          ).map(([v, rotulo]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={sexo === v}
+              data-testid={`ped-sexo-${v}`}
+              onClick={() => {
+                const novo = sexo === v ? null : v;
+                setSexo(novo);
+                setConfirmouDestoante(false);
+                if (usouEstimado && temIdade) {
+                  const kg = pesoEstimado(idade, novo);
+                  if (kg !== null) setPesoTxt(virgula(kg));
+                }
+              }}
+              className={`touch-target t-body rounded-xl font-semibold transition-colors focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none ${
+                sexo === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      </fieldset>
 
       <fieldset className="grid gap-2">
         <legend className="t-label text-muted-foreground mb-1">
@@ -164,7 +202,17 @@ export function Identificacao({
             <Scale className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
             <span>
               Sem balança? Usar <strong className="tabular-nums">{virgula(estimado)} kg</strong>{" "}
-              estimados para {descreverIdade(idade!)}
+              estimados para {sexo === "M" ? "menino de " : sexo === "F" ? "menina de " : ""}
+              {descreverIdade(idade!)}
+              <span className="t-label text-muted-foreground block font-medium">
+                {idadeEmAnos(idade!) <= 1
+                  ? "(meses + 9) ÷ 2"
+                  : sexo === "M"
+                    ? "2 × idade + 9"
+                    : sexo === "F"
+                      ? "2 × idade + 8"
+                      : "Informe o sexo para refinar"}
+              </span>
             </span>
           </button>
         )}

@@ -139,6 +139,21 @@ describe("dados derivados", () => {
     expect(pesoEstimado({ anos: 14, meses: 0, dias: 0 })).toBeNull();
   });
 
+  it("com sexo, acima de 1 ano: meninos 2 × idade + 9, meninas 2 × idade + 8", () => {
+    const tres = { anos: 3, meses: 0, dias: 0 };
+    expect(pesoEstimado(tres, "M")).toBe(15);
+    expect(pesoEstimado(tres, "F")).toBe(14);
+    expect(pesoEstimado({ anos: 8, meses: 6, dias: 0 }, "M")).toBe(25);
+    expect(pesoEstimado({ anos: 8, meses: 6, dias: 0 }, "F")).toBe(24);
+    // até 12 meses o sexo não muda a fórmula
+    expect(pesoEstimado({ anos: 0, meses: 8, dias: 0 }, "M")).toBe(8.5);
+    expect(pesoEstimado({ anos: 0, meses: 8, dias: 0 }, "F")).toBe(8.5);
+    expect(pesoEstimado({ anos: 13, meses: 0, dias: 0 }, "F")).toBeNull();
+    // 13 kg num menino de 3 anos (esperado 15) não destoa; 25 kg destoa
+    expect(pesoDestoaDaIdade(13, tres, "M")).toBe(false);
+    expect(pesoDestoaDaIdade(25, tres, "F")).toBe(true);
+  });
+
   it("acusa peso que destoa da idade", () => {
     expect(pesoDestoaDaIdade(25, umAno)).toBe(true);
     expect(pesoDestoaDaIdade(11, umAno)).toBe(false);
@@ -260,5 +275,75 @@ describe("kits do modo RCP", () => {
       for (const it of kit) expect(it.droga.dosePorKg).toBeGreaterThan(0);
     }
     expect(k.KIT_INTUBACAO.map((i) => i.droga.id)).toContain("rocuronio");
+  });
+});
+
+describe("intubação", () => {
+  it("lâmina: reta abaixo de 2 anos, reta ou curva acima, com o número de cada", async () => {
+    const { viaAerea } = await import("../../shared/pediatria/viaAerea.js");
+    const lactente = viaAerea({ anos: 0, meses: 8, dias: 0 }, 8);
+    expect(lactente).toMatchObject({ laminaReta: "1", laminaCurva: null, laminaIndicada: "reta" });
+    const pre = viaAerea({ anos: 4, meses: 0, dias: 0 }, 16);
+    expect(pre).toMatchObject({ laminaReta: "2", laminaCurva: "2", laminaIndicada: "ambas" });
+    expect(viaAerea({ anos: 10, meses: 0, dias: 0 }).laminaCurva).toBe("3");
+    expect(viaAerea({ anos: 0, meses: 0, dias: 10 }).laminaReta).toBe("0");
+  });
+
+  it("aspiração = 2 × tubo sem cuff; máscara laríngea pelo peso", async () => {
+    const { viaAerea, mascaraLaringea } = await import("../../shared/pediatria/viaAerea.js");
+    const seis = viaAerea({ anos: 6, meses: 0, dias: 0 }, 20);
+    expect(seis.tuboSemCuff).toBe(5.5);
+    expect(seis.aspiracaoFr).toBe(11);
+    expect(seis.mascaraLaringea).toBe("2,5");
+    expect([4, 8, 15, 25, 40, 60, 80].map(mascaraLaringea)).toEqual([
+      "1",
+      "1,5",
+      "2",
+      "2,5",
+      "3",
+      "4",
+      "5",
+    ]);
+  });
+
+  it("sem idade, estima pela faixa de peso", async () => {
+    const { viaAereaPaciente } = await import("../../shared/pediatria/viaAerea.js");
+    const v = viaAereaPaciente(null, 11)!;
+    expect(v.fonte).toBe("peso");
+    expect(v).toMatchObject({ tuboComCuff: 3.5, tuboSemCuff: 4, laminaReta: "1" });
+    expect(viaAereaPaciente(null, 20)).toMatchObject({ tuboComCuff: 5, laminaCurva: "2" });
+    expect(viaAereaPaciente({ anos: 6, meses: 0, dias: 0 }, 20)!.fonte).toBe("idade");
+    expect(viaAereaPaciente(null, null)).toBeNull();
+  });
+});
+
+describe("6 Hs e 5 Ts", () => {
+  it("cobre as 11 causas com os mesmos nomes da RCP", async () => {
+    const { CAUSAS } = await import("../../shared/pediatria/causas.js");
+    const { CAUSAS_REVERSIVEIS } = await import("../../shared/pediatria/pcr.js");
+    expect(CAUSAS.filter((c) => c.grupo === "H")).toHaveLength(6);
+    expect(CAUSAS.filter((c) => c.grupo === "T")).toHaveLength(5);
+    expect(CAUSAS.map((c) => c.nome).sort()).toEqual(
+      [...CAUSAS_REVERSIVEIS.H, ...CAUSAS_REVERSIVEIS.T].sort(),
+    );
+  });
+
+  it("toda droga e antídoto citados existem na ficha", async () => {
+    const { CAUSAS } = await import("../../shared/pediatria/causas.js");
+    const { drogaPorId } = await import("../../shared/pediatria/kits.js");
+    for (const c of CAUSAS) {
+      for (const d of c.drogas ?? []) expect(() => drogaPorId(d.id)).not.toThrow();
+      for (const a of c.antidotos ?? []) expect(() => drogaPorId(a.drogaId)).not.toThrow();
+    }
+  });
+
+  it("tamponamento guia pericardiocentese; pneumotórax, descompressão", async () => {
+    const { CAUSAS, volumeBolus } = await import("../../shared/pediatria/causas.js");
+    expect(CAUSAS.find((c) => c.id === "tamponamento")?.procedimento).toBe("pericardiocentese");
+    expect(CAUSAS.find((c) => c.id === "pneumotorax")?.procedimento).toBe("descompressao");
+    expect(volumeBolus(20, 11)).toBe(220);
+    // naloxona: 0,1 mg/kg, teto 2 mg
+    const nal = calcularBolus(DROGAS_BOLUS.find((d) => d.id === "naloxona")!, 30);
+    expect(nal.dose).toBeCloseTo(2, 6);
   });
 });

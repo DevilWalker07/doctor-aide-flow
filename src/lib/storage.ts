@@ -4,6 +4,13 @@ export const storage = {
   setRcpSessao: (json: string) => localStorage.setItem("da_rcp_sessao", json),
   clearRcpSessao: () => localStorage.removeItem("da_rcp_sessao"),
 
+  // Emergência pediátrica: criança atual e última aba (conveniência; somem em 12 h)
+  getPedPaciente: () => localStorage.getItem("da_ped_paciente"),
+  setPedPaciente: (json: string) => localStorage.setItem("da_ped_paciente", json),
+  clearPedPaciente: () => localStorage.removeItem("da_ped_paciente"),
+  getPedAba: () => localStorage.getItem("da_ped_aba"),
+  setPedAba: (aba: string) => localStorage.setItem("da_ped_aba", aba),
+
   // Shift ativo
   getShiftId: () => localStorage.getItem("da_shift_id"),
   setShiftId: (id: string) => localStorage.setItem("da_shift_id", id),
