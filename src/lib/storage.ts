@@ -10,6 +10,10 @@ export const storage = {
   clearPedPaciente: () => localStorage.removeItem("da_ped_paciente"),
   getPedAba: () => localStorage.getItem("da_ped_aba"),
   setPedAba: (aba: string) => localStorage.setItem("da_ped_aba", aba),
+  // Aparelho liberado para a emergência pediátrica depois de um login (offline-first)
+  getPedAcesso: () => localStorage.getItem("da_ped_acesso"),
+  setPedAcesso: (json: string) => localStorage.setItem("da_ped_acesso", json),
+  clearPedAcesso: () => localStorage.removeItem("da_ped_acesso"),
 
   // Shift ativo
   getShiftId: () => localStorage.getItem("da_shift_id"),

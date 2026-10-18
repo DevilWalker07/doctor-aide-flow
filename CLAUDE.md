@@ -80,6 +80,15 @@ O app é usado de pé, com pressa, com uma mão, muitas vezes à noite. Isso dit
   sobrando apontando para o host antigo mandava todo fetch do navegador para um
   serviço inexistente — com o `/health` consultado de fora respondendo 200. Não
   reintroduza base de API por ambiente.
+- **A emergência pediátrica exige conta convidada, mas não tranca na sala
+  vermelha.** O `beforeLoad` da rota usa `podeEntrarNaPediatria`
+  (`src/lib/pediatria/acesso.ts`): sessão ativa **ou** aparelho liberado. Todo
+  login libera o aparelho por 30 dias (`da_ped_acesso`), e isso vale offline e
+  com o Supabase fora do ar — token vencido sem sinal deixaria o supabase-js
+  com sessão nula no meio de uma parada. Sair revoga. É porta, não cofre:
+  cobrança futura se confere no servidor. O cadastro público fica desligado no
+  painel do Supabase; contas entram por convite. O EMER PED
+  (`emerped.vercel.app`) é um repositório separado, sem login.
 - Chaves de localStorage têm prefixo `da_` e ficam centralizadas em `src/lib/storage.ts`.
 
 ## Deploy
